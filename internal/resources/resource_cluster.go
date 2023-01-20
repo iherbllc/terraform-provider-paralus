@@ -2,15 +2,12 @@ package resources
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
-	"github.com/paralus/cli/pkg/authprofile"
-	"github.com/paralus/cli/pkg/config"
-	"github.com/paralus/cli/pkg/constants"
-	"github.com/paralus/cli/pkg/rerror"
+	paralusUtils "github.com/iherbllc/terraform-provider-paralus/internal/utils"
 
-	commonv3 "github.com/paralus/paralus/proto/types/commonpb/v3"
+	"github.com/paralus/cli/pkg/authprofile"
+
 	infrav3 "github.com/paralus/paralus/proto/types/infrapb/v3"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -35,32 +32,32 @@ func ResourceCluster() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
-			"clusterType": {
+			"cluster_type": {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
 			},
-			"provisionType": {
+			"provision_type": {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
 			},
-			"provisionEnvironment": {
+			"provision_environment": {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
 			},
-			"provisionPackageType": {
+			"provision_package_type": {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
 			},
-			"environmentProvider": {
+			"environment_provider": {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
 			},
-			"kubernetesProvider": {
+			"kubernetes_provider": {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
@@ -117,7 +114,7 @@ func resourceClusterUpdate(ctx context.Context, d *schema.ResourceData, m interf
 func createOrUpdateCluster(ctx context.Context, d *schema.ResourceData, auth *authprofile.Profile, requestType string) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	clusterStruct := buildClusterStructFromResource(d)
+	clusterStruct := paralusUtils.BuildClusterStructFromResource(d)
 
 	// first check to make sure the project exists
 	uri := fmt.Sprintf("/infra/v3/project/%s", d.Get("project"))
@@ -141,7 +138,7 @@ func createOrUpdateCluster(ctx context.Context, d *schema.ResourceData, auth *au
 	}
 
 	// Update resource information from updated cluster
-	if err := buildResourceFromClusterString(resp, d); err != nil {
+	if err := paralusUtils.BuildResourceFromClusterString(resp, d); err != nil {
 		return diag.FromErr(errors.Wrap(err,
 			fmt.Sprintf("Failed to convert cluster string %s to resource", resp)))
 	}
@@ -156,9 +153,9 @@ func resourceClusterRead(ctx context.Context, d *schema.ResourceData, m interfac
 	auth := m.(*authprofile.Profile)
 
 	// first try using the name filter
-	cluster, err := getClusterFast(auth, d)
+	cluster, err := paralusUtils.GetClusterFast(auth, d.Get("project").(string), d.Get("name").(string))
 	if err == nil {
-		if err := buildResourceFromClusterString(cluster, d); err == nil {
+		if err := paralusUtils.BuildResourceFromClusterString(cluster, d); err == nil {
 			return diag.FromErr(errors.Wrap(err,
 				fmt.Sprintf("Failed to build resource from get response: %s", cluster)))
 		}
@@ -166,7 +163,7 @@ func resourceClusterRead(ctx context.Context, d *schema.ResourceData, m interfac
 	}
 
 	// get list of clusters
-	c, err := listAllClusters(auth, d.Get("project").(string))
+	c, err := paralusUtils.ListAllClusters(auth, d.Get("project").(string))
 	if err != nil {
 		return diag.FromErr(errors.Wrap(err,
 			fmt.Sprintf("Failed to retrieve all clusters")))
@@ -175,91 +172,28 @@ func resourceClusterRead(ctx context.Context, d *schema.ResourceData, m interfac
 	for _, a := range c {
 		if a.Metadata.Name == d.Get("name") {
 			// Update resource information from updated cluster
-			buildResourceFromClusterStruct(a, d)
-			return diags
+			paralusUtils.BuildResourceFromClusterStruct(a, d)
+			break
 		}
 	}
 
-	d.SetId("")
-	return diag.FromErr(errors.Wrap(err,
-		fmt.Sprintf("Failed to locate cluster %s in project %s", d.Get("name"), d.Get("project"))))
+	paralusUtils.BuildResourceFromClusterStruct(&infrav3.Cluster{}, d)
+	return diags
 
-}
-
-// Looks directly for a cluster based on info provided
-func getClusterFast(auth *authprofile.Profile, d *schema.ResourceData) (string, error) {
-
-	if auth == nil {
-		auth = config.GetConfig().GetAppAuthProfile()
-	}
-
-	uri := fmt.Sprintf("/infra/v3/project/%s/cluster/%s", d.Get("project"), d.Get("name"))
-	return auth.AuthAndRequest(uri, "GET", nil)
-
-}
-
-// retrieve all clusters from paralus
-func listAllClusters(auth *authprofile.Profile, projectId string) ([]*infrav3.Cluster, error) {
-	var clusters []*infrav3.Cluster
-	limit := 10000
-	c, count, err := listClusters(auth, projectId, limit, 0)
-	if err != nil {
-		return nil, err
-	}
-	clusters = c
-	for count > limit {
-		offset := limit
-		limit = count
-		c, _, err = listClusters(auth, projectId, limit, offset)
-		if err != nil {
-			return clusters, err
-		}
-		clusters = append(clusters, c...)
-	}
-	return clusters, nil
-}
-
-// build a list of all clusters
-func listClusters(auth *authprofile.Profile, project string, limit, offset int) ([]*infrav3.Cluster, int, error) {
-	// check to make sure the limit or offset is not negative
-	if limit < 0 || offset < 0 {
-		return nil, 0, fmt.Errorf("provided limit (%d) or offset (%d) cannot be negative", limit, offset)
-	}
-
-	uri := fmt.Sprintf("/infra/v3/project/%s/cluster?limit=%d&offset=%d", project, limit, offset)
-	resp, err := auth.AuthAndRequest(uri, "GET", nil)
-	if err != nil {
-		return nil, 0, rerror.CrudErr{
-			Type: "cluster",
-			Name: "",
-			Op:   "list",
-		}
-	}
-	a := infrav3.ClusterList{}
-
-	if err := json.Unmarshal([]byte(resp), &a); err != nil {
-		return nil, 0, err
-	}
-
-	return a.Items, int(a.Metadata.Count), nil
 }
 
 // Delete an existing cluster
 func resourceClusterDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	resourceClusterRead(ctx, d, m)
-
 	auth := m.(*authprofile.Profile)
 	uri := fmt.Sprintf("/infra/v3/project/%s/cluster/%s", d.Get("project"), d.Get("name"))
-	resp, err := auth.AuthAndRequest(uri, "DELETE", nil)
+	_, err := auth.AuthAndRequest(uri, "DELETE", nil)
 	if err != nil {
 		return diag.FromErr(errors.Wrap(err,
 			fmt.Sprintf("Failed to delete cluster %s in project %s", d.Get("name"), d.Get("project"))))
 	}
-	buildClusterStructFromClusterString(resp)
 
-	d.SetId("")
 	return diags
 }
 
@@ -275,78 +209,4 @@ func getClusterYAMLs(ctx context.Context, d *schema.ResourceData, auth *authprof
 
 	d.Set("k8s_yamls", resp)
 	return nil
-}
-
-// Build a cluster struct from a string
-func buildClusterStructFromClusterString(cluster string) (*infrav3.Cluster, error) {
-	// Need to take json cluster and convert to the new version
-	clusterBytes := []byte(cluster)
-	clusterStruct := infrav3.Cluster{}
-	if err := json.Unmarshal(clusterBytes, &clusterStruct); err != nil {
-		return nil, err
-	}
-	return &clusterStruct, nil
-}
-
-// Build the cluster struct from a schema resource
-func buildClusterStructFromResource(d *schema.ResourceData) *infrav3.Cluster {
-	clusterStruct := infrav3.Cluster{
-		Kind: "Cluster",
-		Metadata: &commonv3.Metadata{
-			Name:        d.Get("name").(string),
-			Description: d.Get("description").(string),
-			Project:     d.Get("project").(string),
-		},
-		Spec: &infrav3.ClusterSpec{
-			Metro:       &infrav3.Metro{},
-			ClusterType: constants.CLUSTER_TYPE_IMPORT,
-			Params: &infrav3.ProvisionParams{
-				EnvironmentProvider:  d.Get("environmentProvider").(string),
-				KubernetesProvider:   d.Get("kubernetesProvider").(string),
-				ProvisionEnvironment: d.Get("provisionEnvironment").(string),
-				ProvisionPackageType: d.Get("provisionPackageType").(string),
-				ProvisionType:        d.Get("provisionType").(string),
-				State:                d.Get("state").(string),
-			},
-		},
-	}
-
-	if d.Get("labels") != nil {
-		clusterStruct.Metadata.Labels = d.Get("labels").(map[string]string)
-	}
-
-	if d.Get("annotations") != nil {
-		clusterStruct.Metadata.Annotations = d.Get("annotations").(map[string]string)
-	}
-
-	return &clusterStruct
-}
-
-// Build a resource from a cluster struct
-func buildResourceFromClusterString(cluster string, d *schema.ResourceData) error {
-	// Need to take json cluster and convert to the new version
-	clusterBytes := []byte(cluster)
-	clusterStruct := infrav3.Cluster{}
-	if err := json.Unmarshal(clusterBytes, &clusterStruct); err != nil {
-		return err
-	}
-
-	buildResourceFromClusterStruct(&clusterStruct, d)
-
-	return nil
-}
-
-// Build the schema resource from Cluster Struct
-func buildResourceFromClusterStruct(cluster *infrav3.Cluster, d *schema.ResourceData) {
-	d.Set("name", cluster.Metadata.Name)
-	d.Set("description", cluster.Metadata.Description)
-	d.Set("project", cluster.Metadata.Project)
-	d.Set("environmentProvider", cluster.Spec.Params.EnvironmentProvider)
-	d.Set("kubernetesProvider", cluster.Spec.Params.KubernetesProvider)
-	d.Set("provisionEnvironment", cluster.Spec.Params.ProvisionEnvironment)
-	d.Set("provisionPackageType", cluster.Spec.Params.ProvisionPackageType)
-	d.Set("provisionType", cluster.Spec.Params.ProvisionType)
-	d.Set("state", cluster.Spec.Params.State)
-	d.Set("labels", cluster.Metadata.Labels)
-	d.Set("annotations", cluster.Metadata.Annotations)
 }
