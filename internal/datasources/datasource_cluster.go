@@ -29,32 +29,32 @@ func DataSourceCluster() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
-			"clusterType": {
+			"cluster_type": {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
 			},
-			"provisionType": {
+			"provision_type": {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
 			},
-			"provisionEnvironment": {
+			"provision_environment": {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
 			},
-			"provisionPackageType": {
+			"provision_package_type": {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
 			},
-			"environmentProvider": {
+			"environment_provider": {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
 			},
-			"kubernetesProvider": {
+			"kubernetes_provider": {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
@@ -100,7 +100,7 @@ func datasourceClusterRead(ctx context.Context, d *schema.ResourceData, m interf
 	auth := m.(*authprofile.Profile)
 
 	// first try using the name filter
-	cluster, err := paralusUtils.GetClusterFast(auth, d.Get("project").(string), d.Get("name").(string))
+	cluster, err := paralusUtils.GetClusterFast(ctx, auth, d.Get("project").(string), d.Get("name").(string))
 	if err == nil {
 		if err := paralusUtils.BuildResourceFromClusterString(cluster, d); err == nil {
 			return diag.FromErr(errors.Wrap(err,
@@ -110,10 +110,9 @@ func datasourceClusterRead(ctx context.Context, d *schema.ResourceData, m interf
 	}
 
 	// get list of clusters
-	c, err := paralusUtils.ListAllClusters(auth, d.Get("project").(string))
+	c, err := paralusUtils.ListAllClusters(ctx, auth, d.Get("project").(string))
 	if err != nil {
-		return diag.FromErr(errors.Wrap(err,
-			fmt.Sprintf("Failed to retrieve all clusters")))
+		return diag.FromErr(errors.Wrap(err, "Failed to retrieve all clusters"))
 	}
 
 	for _, a := range c {

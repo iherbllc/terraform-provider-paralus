@@ -4,12 +4,14 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
 	paralusUtils "github.com/iherbllc/terraform-provider-paralus/internal/utils"
 
 	"github.com/paralus/cli/pkg/authprofile"
 
 	infrav3 "github.com/paralus/paralus/proto/types/infrapb/v3"
 
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/pkg/errors"
@@ -118,14 +120,39 @@ func createOrUpdateCluster(ctx context.Context, d *schema.ResourceData, auth *au
 
 	// first check to make sure the project exists
 	uri := fmt.Sprintf("/infra/v3/project/%s", d.Get("project"))
+
+	tflog.Trace(ctx, "Project Info API Request", map[string]interface{}{
+		"uri":    uri,
+		"method": "GET",
+	})
+
 	resp, err := auth.AuthAndRequest(uri, "GET", nil)
 	if err != nil {
 		return diag.FromErr(errors.Wrap(err,
 			fmt.Sprintf("Unknown project %s", d.Get("project"))))
 	}
 
+	resp_interf, err := utils.JsonToMap(resp)
+
+	if err != nil {
+		return diag.FromErr(errors.Wrap(err,
+			fmt.Sprintf("Failed converting project API response to map %s", resp)))
+	}
+
+	tflog.Trace(ctx, "Project Info API Response", resp_interf)
+
+	uri = uri + "/cluster"
+
+	clusterStr, _ := paralusUtils.BuildStringFromClusterStruct(clusterStruct)
+
+	tflog.Trace(ctx, "Cluster Info API Request", map[string]interface{}{
+		"uri":     uri,
+		"method":  requestType,
+		"payload": clusterStr,
+	})
+
 	// make a post call to create the cluster entry provided it exists
-	resp, err = auth.AuthAndRequest(uri+"/cluster", requestType, clusterStruct)
+	resp, err = auth.AuthAndRequest(uri, requestType, clusterStruct)
 
 	if err != nil {
 		howFail := "create"
@@ -136,6 +163,15 @@ func createOrUpdateCluster(ctx context.Context, d *schema.ResourceData, auth *au
 			fmt.Sprintf("Failed to %s cluster %s in project %s", howFail,
 				d.Get("name"), d.Get("project"))))
 	}
+
+	resp_interf, err = utils.JsonToMap(resp)
+
+	if err != nil {
+		return diag.FromErr(errors.Wrap(err,
+			fmt.Sprintf("Failed converting cluster API response to map %s", resp)))
+	}
+
+	tflog.Trace(ctx, "Cluster Info API Response", resp_interf)
 
 	// Update resource information from updated cluster
 	if err := paralusUtils.BuildResourceFromClusterString(resp, d); err != nil {
@@ -153,7 +189,7 @@ func resourceClusterRead(ctx context.Context, d *schema.ResourceData, m interfac
 	auth := m.(*authprofile.Profile)
 
 	// first try using the name filter
-	cluster, err := paralusUtils.GetClusterFast(auth, d.Get("project").(string), d.Get("name").(string))
+	cluster, err := paralusUtils.GetClusterFast(ctx, auth, d.Get("project").(string), d.Get("name").(string))
 	if err == nil {
 		if err := paralusUtils.BuildResourceFromClusterString(cluster, d); err == nil {
 			return diag.FromErr(errors.Wrap(err,
@@ -163,10 +199,9 @@ func resourceClusterRead(ctx context.Context, d *schema.ResourceData, m interfac
 	}
 
 	// get list of clusters
-	c, err := paralusUtils.ListAllClusters(auth, d.Get("project").(string))
+	c, err := paralusUtils.ListAllClusters(ctx, auth, d.Get("project").(string))
 	if err != nil {
-		return diag.FromErr(errors.Wrap(err,
-			fmt.Sprintf("Failed to retrieve all clusters")))
+		return diag.FromErr(errors.Wrap(err, "Failed to retrieve all clusters"))
 	}
 
 	for _, a := range c {
@@ -188,6 +223,12 @@ func resourceClusterDelete(ctx context.Context, d *schema.ResourceData, m interf
 
 	auth := m.(*authprofile.Profile)
 	uri := fmt.Sprintf("/infra/v3/project/%s/cluster/%s", d.Get("project"), d.Get("name"))
+
+	tflog.Trace(ctx, "Cluster Delete API Request", map[string]interface{}{
+		"uri":    uri,
+		"method": "DELETE",
+	})
+
 	_, err := auth.AuthAndRequest(uri, "DELETE", nil)
 	if err != nil {
 		return diag.FromErr(errors.Wrap(err,
@@ -201,6 +242,12 @@ func resourceClusterDelete(ctx context.Context, d *schema.ResourceData, m interf
 func getClusterYAMLs(ctx context.Context, d *schema.ResourceData, auth *authprofile.Profile) diag.Diagnostics {
 
 	uri := fmt.Sprintf("/infra/v3/project/%s/cluster/%s/download", d.Get("project"), d.Get("name"))
+
+	tflog.Trace(ctx, "Cluster YAML GET API Request", map[string]interface{}{
+		"uri":    uri,
+		"method": "GET",
+	})
+
 	resp, err := auth.AuthAndRequest(uri, "GET", nil)
 	if err != nil {
 		return diag.FromErr(errors.Wrap(err,

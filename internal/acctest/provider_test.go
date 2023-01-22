@@ -2,7 +2,6 @@ package acctest
 
 import (
 	"fmt"
-	"log"
 	"regexp"
 	"strings"
 	"testing"
@@ -10,7 +9,6 @@ import (
 	"github.com/iherbllc/terraform-provider-paralus/internal/paralus"
 	"github.com/iherbllc/terraform-provider-paralus/internal/provider"
 	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
-	"github.com/joho/godotenv"
 	"github.com/paralus/cli/pkg/config"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -40,19 +38,14 @@ var configEnvVars = []string{
 func init() {
 	testAccProvider = provider.Provider()
 	testAccProviders = map[string]*schema.Provider{
-		"paralus": testAccProvider,
+		"paralus-ctl": testAccProvider,
 	}
 }
 
 // Return test provider config
 func paralusProviderConfig() *config.Config {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	} else {
-		return paralus.NewConfig()
-	}
-	return nil
+	// utils.LoadEnv()
+	return paralus.NewConfig()
 }
 
 func TestProvider(t *testing.T) {
@@ -79,20 +72,20 @@ func testAccPreCheck(t *testing.T) {
 	}
 }
 
-// testAccPreCheck ensures at least one of the config env variables is set.
-func getTestConfigsFromEnv() string {
-	return utils.MultiEnvSearch(configEnvVars)
-}
+// // testAccPreCheck ensures at least one of the config env variables is set.
+// func getTestConfigsFromEnv() string {
+// 	return utils.MultiEnvSearch(configEnvVars)
+// }
 
-// testAccPreCheck ensures at least one of the credentials env variables is set.
-func getTestCredsFromEnv() string {
-	return utils.MultiEnvSearch(credsEnvVars)
-}
+// // testAccPreCheck ensures at least one of the credentials env variables is set.
+// func getTestCredsFromEnv() string {
+// 	return utils.MultiEnvSearch(credsEnvVars)
+// }
 
-// testAccPreCheck ensures at least one of the endpoint env variables is set.
-func getTestEndpointsFromEnv() string {
-	return utils.MultiEnvSearch(endpointEnvVars)
-}
+// // testAccPreCheck ensures at least one of the endpoint env variables is set.
+// func getTestEndpointsFromEnv() string {
+// 	return utils.MultiEnvSearch(endpointEnvVars)
+// }
 
 func TestAccProviderEndpoints_setInvalidRestEndpoints(t *testing.T) {
 	t.Parallel()
@@ -111,9 +104,10 @@ func TestAccProviderEndpoints_setInvalidRestEndpoints(t *testing.T) {
 
 func testAccProviderEndpoints_setRestEndpoint(endpoint, name string) string {
 	return fmt.Sprintf(`
-provider "paralus" {
-  alias                   = "custom_rest_endpoint"
-  rest_endpoint = "%s"
+provider "paralus-ctl" {
+  version = "1.0"
+  alias = "custom_rest_endpoint"
+  rest_endpoint = "%1s"
 }
 
 resource "cluster" "default" {
@@ -122,15 +116,15 @@ resource "cluster" "default" {
   }`, endpoint, name)
 }
 
-func testAccProviderEndpoints_setOpsEndpoint(endpoint, name string) string {
-	return fmt.Sprintf(`
-provider "google" {
-  alias                   = "custom_ops_endpoint"
-  ops_endpoint = "%s"
-}
+// func testAccProviderEndpoints_setOpsEndpoint(endpoint, name string) string {
+// 	return fmt.Sprintf(`
+// provider "google" {
+//   alias                   = "custom_ops_endpoint"
+//   ops_endpoint = "%s"
+// }
 
-resource "cluster" "default" {
-	provider = paralus.custom_ops_endpoint
-	name     = "tf-cluster-%s"
-  }`, endpoint, name)
-}
+// resource "cluster" "default" {
+// 	provider = paralus.custom_ops_endpoint
+// 	name     = "tf-cluster-%s"
+//   }`, endpoint, name)
+// }

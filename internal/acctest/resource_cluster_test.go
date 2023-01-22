@@ -38,7 +38,9 @@ func testAccClusterConfig() string {
 
 	config := paralusProviderConfig()
 	return fmt.Sprintf(`
-		provider "paralus" {
+		provider "paralus-ctl" {
+			version = "1.0"
+			alias = "cluster_test"
 			profile = "%s"
 			rest_endpoint = "%s"
 			ops_endpoint = "%s"
@@ -47,6 +49,7 @@ func testAccClusterConfig() string {
 		}
 
 		resource "cluster" "test" {
+			provider = "paralus-ctl.cluster_test"
 			name = "test"
 			description = "test cluster"
 			project = "default"
@@ -149,7 +152,7 @@ func testAccCheckClusterExists(resourceName string, cluster *infrav3.Cluster) fu
 		cluster_id := rs.Primary.ID
 
 		// first try using the name filter
-		cluster_json, err := paralusUtils.GetClusterFast(auth, project, cluster_id)
+		cluster_json, _ := paralusUtils.GetClusterFast(auth, project, cluster_id)
 
 		if cluster_json != "" {
 			paralusUtils.BuildClusterStructFromString(cluster_json, cluster)

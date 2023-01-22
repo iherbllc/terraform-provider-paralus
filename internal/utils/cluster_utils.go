@@ -1,9 +1,11 @@
 package utils
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	commonv3 "github.com/paralus/paralus/proto/types/commonpb/v3"
@@ -16,22 +18,29 @@ import (
 )
 
 // Looks directly for a cluster based on info provided
-func GetClusterFast(auth *authprofile.Profile, project string, cluster string) (string, error) {
+func GetClusterFast(ctx context.Context, auth *authprofile.Profile,
+	project string, cluster string) (string, error) {
 
 	if auth == nil {
 		auth = config.GetConfig().GetAppAuthProfile()
 	}
 
 	uri := fmt.Sprintf("/infra/v3/project/%s/cluster/%s", project, cluster)
+
+	tflog.Trace(ctx, "Cluster GET API Request", map[string]interface{}{
+		"uri":    uri,
+		"method": "GET",
+	})
+
 	return auth.AuthAndRequest(uri, "GET", nil)
 
 }
 
 // retrieve all clusters from paralus
-func ListAllClusters(auth *authprofile.Profile, project string) ([]*infrav3.Cluster, error) {
+func ListAllClusters(ctx context.Context, auth *authprofile.Profile, project string) ([]*infrav3.Cluster, error) {
 	var clusters []*infrav3.Cluster
 	limit := 10000
-	c, count, err := listClusters(auth, project, limit, 0)
+	c, count, err := listClusters(ctx, auth, project, limit, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +48,7 @@ func ListAllClusters(auth *authprofile.Profile, project string) ([]*infrav3.Clus
 	for count > limit {
 		offset := limit
 		limit = count
-		c, _, err = listClusters(auth, project, limit, offset)
+		c, _, err = listClusters(ctx, auth, project, limit, offset)
 		if err != nil {
 			return clusters, err
 		}
@@ -49,13 +58,20 @@ func ListAllClusters(auth *authprofile.Profile, project string) ([]*infrav3.Clus
 }
 
 // build a list of all clusters
-func listClusters(auth *authprofile.Profile, project string, limit, offset int) ([]*infrav3.Cluster, int, error) {
+func listClusters(ctx context.Context, auth *authprofile.Profile,
+	project string, limit, offset int) ([]*infrav3.Cluster, int, error) {
 	// check to make sure the limit or offset is not negative
 	if limit < 0 || offset < 0 {
 		return nil, 0, fmt.Errorf("provided limit (%d) or offset (%d) cannot be negative", limit, offset)
 	}
 
 	uri := fmt.Sprintf("/infra/v3/project/%s/cluster?limit=%d&offset=%d", project, limit, offset)
+
+	tflog.Trace(ctx, "All Clusters GET API Request", map[string]interface{}{
+		"uri":    uri,
+		"method": "GET",
+	})
+
 	resp, err := auth.AuthAndRequest(uri, "GET", nil)
 	if err != nil {
 		return nil, 0, rerror.CrudErr{
@@ -64,6 +80,15 @@ func listClusters(auth *authprofile.Profile, project string, limit, offset int) 
 			Op:   "list",
 		}
 	}
+
+	resp_interf, err := JsonToMap(resp)
+
+	if err != nil {
+		return nil, 0, err
+	}
+
+	tflog.Trace(ctx, "All Clusters GET API Request", resp_interf)
+
 	a := infrav3.ClusterList{}
 
 	if err := json.Unmarshal([]byte(resp), &a); err != nil {
@@ -82,6 +107,16 @@ func BuildClusterStructFromString(clusterStr string, cluster *infrav3.Cluster) e
 	}
 
 	return nil
+}
+
+// Build a cluster struct from a resource
+func BuildStringFromClusterStruct(cluster *infrav3.Cluster) (string, error) {
+	clusterBytes, err := json.Marshal(&cluster)
+	if err != nil {
+		return "", err
+	}
+
+	return string(clusterBytes), nil
 }
 
 // Build the cluster struct from a schema resource

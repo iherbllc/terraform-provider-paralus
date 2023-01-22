@@ -26,7 +26,7 @@ func Provider() *schema.Provider {
 				Required:  true,
 				Sensitive: true,
 			},
-			"ops_endpoit": {
+			"ops_endpoint": {
 				Type:      schema.TypeString,
 				Required:  true,
 				Sensitive: true,
@@ -42,10 +42,10 @@ func Provider() *schema.Provider {
 			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
-			"cluster": resources.ResourceCluster(),
+			"paralus_cluster": resources.ResourceCluster(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
-			"cluster": datasources.DataSourceCluster(),
+			"paralus_cluster": datasources.DataSourceCluster(),
 		},
 		ConfigureContextFunc: providerConfigure,
 	}
@@ -54,7 +54,7 @@ func Provider() *schema.Provider {
 func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
 	os.Setenv("PCTL_PROFILE", d.Get("profile").(string))
 	os.Setenv("PCTL_REST_ENDPOINT", d.Get("rest_endpoint").(string))
-	os.Setenv("PCTL_OPS_ENDPOINT", d.Get("ops_endpoit").(string))
+	os.Setenv("PCTL_OPS_ENDPOINT", d.Get("ops_endpoint").(string))
 	os.Setenv("PCTL_API_KEY", d.Get("api_key").(string))
 	os.Setenv("PCTL_API_SECRET", d.Get("api_secret").(string))
 
