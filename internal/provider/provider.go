@@ -12,33 +12,47 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-// provider instance
+// provider instance. Schema must either have all individual values set
+// or a path to a config file that can be loaded.
 func Provider() *schema.Provider {
 	return &schema.Provider{
 		Schema: map[string]*schema.Schema{
 			"profile": {
 				Type:      schema.TypeString,
-				Required:  true,
+				Optional:  true,
 				Sensitive: true,
 			},
 			"rest_endpoint": {
 				Type:      schema.TypeString,
-				Required:  true,
+				Optional:  true,
 				Sensitive: true,
 			},
 			"ops_endpoint": {
 				Type:      schema.TypeString,
-				Required:  true,
+				Optional:  true,
 				Sensitive: true,
 			},
 			"api_key": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:      schema.TypeString,
+				Optional:  true,
+				Sensitive: true,
 			},
 			"api_secret": {
 				Type:      schema.TypeString,
-				Required:  true,
+				Optional:  true,
 				Sensitive: true,
+			},
+			"config_json": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"partner": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"organization": {
+				Type:     schema.TypeString,
+				Optional: true,
 			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
@@ -61,5 +75,5 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	return paralus.NewProfile(), diags
+	return paralus.NewProfile(d.Get("config_json").(string)), diags
 }

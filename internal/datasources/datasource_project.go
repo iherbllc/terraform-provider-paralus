@@ -16,73 +16,28 @@ import (
 )
 
 // / Paralus DataSource Cluster
-func DataSourceCluster() *schema.Resource {
+func DataSourceProject() *schema.Resource {
 	return &schema.Resource{
-		ReadContext: datasourceClusterRead,
+		ReadContext: datasourceProjectRead,
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:     schema.TypeString,
-				Required: true,
+				Optional: true,
 			},
-			"project": {
+			"partner": {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"description": {
+			"organization": {
 				Type:     schema.TypeString,
-				Optional: true,
-			},
-			"cluster_type": {
-				Type:     schema.TypeString,
-				Optional: true,
-				ForceNew: true,
-			},
-			"params": {
-				Type:     schema.TypeSet,
-				Optional: true,
-				ForceNew: true,
-				MaxItems: 1,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"provision_type": {
-							Type:     schema.TypeString,
-							Required: true,
-							ForceNew: true,
-						},
-						"provision_environment": {
-							Type:     schema.TypeString,
-							Required: true,
-							ForceNew: true,
-						},
-						"provision_package_type": {
-							Type:     schema.TypeString,
-							Optional: true,
-							ForceNew: true,
-						},
-						"environment_provider": {
-							Type:     schema.TypeString,
-							Optional: true,
-							ForceNew: true,
-						},
-						"kubernetes_provider": {
-							Type:     schema.TypeString,
-							Required: true,
-							ForceNew: true,
-						},
-						"state": {
-							Type:     schema.TypeString,
-							Required: true,
-							ForceNew: true,
-						},
-					},
-				},
+				Required: true,
 			},
 		},
 	}
 }
 
-// Retreive cluster JSON info
-func datasourceClusterRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+// Retreive project JSON info
+func datasourceProjectRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	auth := m.(*authprofile.Profile)

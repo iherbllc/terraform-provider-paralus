@@ -42,3 +42,13 @@ func JsonToMap(jsonStr string) (map[string]interface{}, error) {
 	}
 	return result, nil
 }
+
+// Convert a map to json string
+func MapToJsonString(jsonMap map[string]string) (string, error) {
+	jsonBytes, err := json.Marshal(&jsonMap)
+	if err != nil {
+		return "", err
+	}
+
+	return string(jsonBytes), nil
+}

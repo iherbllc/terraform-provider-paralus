@@ -2,7 +2,7 @@ export VERSION := $(shell gogitver)
 export KEY_ID := F238881FA1E6EA2A
 export ORGANIZATION := iherbllc
 
-NAME := paralus
+NAME := paralusctl
 BINARY := terraform-provider-${NAME}
 HOSTNAME := hashicorp.com
 NAMESPACE := iherbllc

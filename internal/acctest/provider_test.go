@@ -2,50 +2,72 @@ package acctest
 
 import (
 	"fmt"
-	"regexp"
-	"strings"
 	"testing"
 
 	"github.com/iherbllc/terraform-provider-paralus/internal/paralus"
 	"github.com/iherbllc/terraform-provider-paralus/internal/provider"
-	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
 	"github.com/paralus/cli/pkg/config"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 var testAccProviders map[string]*schema.Provider
 var testAccProvider *schema.Provider
 
-// credential ENV vars
-var credsEnvVars = []string{
-	"PCTL_API_KEY",
-	"PCTL_API_SECRET",
-}
+// // credential ENV vars
+// var credsEnvVars = []string{
+// 	"PCTL_API_KEY",
+// 	"PCTL_API_SECRET",
+// }
 
-// endpoint ENV vars
-var endpointEnvVars = []string{
-	"PCTL_REST_ENDPOINT",
-	"PCTL_OPS_ENDPOINT",
-}
+// // endpoint ENV vars
+// var endpointEnvVars = []string{
+// 	"PCTL_REST_ENDPOINT",
+// 	"PCTL_OPS_ENDPOINT",
+// }
 
-var configEnvVars = []string{
-	"PCTL_PROFILE",
-}
+// var configEnvVars = []string{
+// 	"PCTL_PROFILE",
+// }
 
 func init() {
 	testAccProvider = provider.Provider()
 	testAccProviders = map[string]*schema.Provider{
-		"paralus-ctl": testAccProvider,
+		"paralusctl": testAccProvider,
 	}
 }
 
 // Return test provider config
 func paralusProviderConfig() *config.Config {
 	// utils.LoadEnv()
-	return paralus.NewConfig()
+	return paralus.NewConfig("")
+}
+
+// Return provider string
+func providerString(config *config.Config, alias ...string) string {
+
+	aliasStr := ""
+	if len(alias) > 0 {
+		aliasStr = "alias = \"" + alias[0] + "\""
+	}
+
+	if config == nil {
+		config = paralusProviderConfig()
+	}
+
+	return fmt.Sprintf(`
+		provider "paralusctl" {
+			version = "1.0"
+			profile = "%s"
+			rest_endpoint = "%s"
+			ops_endpoint = "%s"
+			api_key = "%s"
+			api_secret = "%s"
+			%s
+		}
+
+	`, config.Profile, config.RESTEndpoint, config.OPSEndpoint,
+		config.APIKey, config.APISecret, aliasStr)
 }
 
 func TestProvider(t *testing.T) {
@@ -58,73 +80,27 @@ func TestProvider_impl(t *testing.T) {
 	var _ *schema.Provider = provider.Provider()
 }
 
-func testAccPreCheck(t *testing.T) {
-	if v := utils.MultiEnvSearch(credsEnvVars); v == "" {
-		t.Fatalf("One of %s must be set for acceptance tests", strings.Join(credsEnvVars, ", "))
+// makes sure necessary PCTL values are set
+func testAccConfigPreCheck(t *testing.T) {
+
+	config := paralusProviderConfig()
+
+	if v := config.Profile; v == "" {
+		t.Fatal("PCTL_PROFILE env var or config value must be set for acceptance tests")
+	}
+	if v := config.RESTEndpoint; v == "" {
+		t.Fatal("PCTL_REST_ENDPOINT env var or config value must be set for acceptance tests")
 	}
 
-	if v := utils.MultiEnvSearch(configEnvVars); v == "" {
-		t.Fatalf("One of %s must be set for acceptance tests", strings.Join(configEnvVars, ", "))
+	if v := config.OPSEndpoint; v == "" {
+		t.Fatal("PCTL_OPS_ENDPOINT env value or config value must be set for acceptance tests")
 	}
 
-	if v := utils.MultiEnvSearch(endpointEnvVars); v == "" {
-		t.Fatalf("One of %s must be set for acceptance tests", strings.Join(endpointEnvVars, ", "))
+	if v := config.APIKey; v == "" {
+		t.Fatal("PCTL_API_KEY env var or config value must be set for acceptance tests")
+	}
+
+	if v := config.APISecret; v == "" {
+		t.Fatal("PCTL_API_SECRET env var or config value must be set for acceptance tests")
 	}
 }
-
-// // testAccPreCheck ensures at least one of the config env variables is set.
-// func getTestConfigsFromEnv() string {
-// 	return utils.MultiEnvSearch(configEnvVars)
-// }
-
-// // testAccPreCheck ensures at least one of the credentials env variables is set.
-// func getTestCredsFromEnv() string {
-// 	return utils.MultiEnvSearch(credsEnvVars)
-// }
-
-// // testAccPreCheck ensures at least one of the endpoint env variables is set.
-// func getTestEndpointsFromEnv() string {
-// 	return utils.MultiEnvSearch(endpointEnvVars)
-// }
-
-func TestAccProviderEndpoints_setInvalidRestEndpoints(t *testing.T) {
-	t.Parallel()
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccPreCheck(t) },
-		Providers: testAccProviders,
-		Steps: []resource.TestStep{
-			{
-				Config:      testAccProviderEndpoints_setRestEndpoint("https://www.example.com", acctest.RandString(10)),
-				ExpectError: regexp.MustCompile("got HTTP response code 404 with body"),
-			},
-		},
-	})
-}
-
-func testAccProviderEndpoints_setRestEndpoint(endpoint, name string) string {
-	return fmt.Sprintf(`
-provider "paralus-ctl" {
-  version = "1.0"
-  alias = "custom_rest_endpoint"
-  rest_endpoint = "%1s"
-}
-
-resource "cluster" "default" {
-	provider = paralus.custom_rest_endpoint
-	name     = "tf-cluster-%s"
-  }`, endpoint, name)
-}
-
-// func testAccProviderEndpoints_setOpsEndpoint(endpoint, name string) string {
-// 	return fmt.Sprintf(`
-// provider "google" {
-//   alias                   = "custom_ops_endpoint"
-//   ops_endpoint = "%s"
-// }
-
-// resource "cluster" "default" {
-// 	provider = paralus.custom_ops_endpoint
-// 	name     = "tf-cluster-%s"
-//   }`, endpoint, name)
-// }

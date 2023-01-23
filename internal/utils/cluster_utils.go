@@ -13,7 +13,6 @@ import (
 
 	"github.com/paralus/cli/pkg/authprofile"
 	"github.com/paralus/cli/pkg/config"
-	"github.com/paralus/cli/pkg/constants"
 	"github.com/paralus/cli/pkg/rerror"
 )
 
@@ -121,6 +120,7 @@ func BuildStringFromClusterStruct(cluster *infrav3.Cluster) (string, error) {
 
 // Build the cluster struct from a schema resource
 func BuildClusterStructFromResource(d *schema.ResourceData) *infrav3.Cluster {
+
 	clusterStruct := infrav3.Cluster{
 		Kind: "Cluster",
 		Metadata: &commonv3.Metadata{
@@ -130,24 +130,36 @@ func BuildClusterStructFromResource(d *schema.ResourceData) *infrav3.Cluster {
 		},
 		Spec: &infrav3.ClusterSpec{
 			Metro:       &infrav3.Metro{},
-			ClusterType: constants.CLUSTER_TYPE_IMPORT,
-			Params: &infrav3.ProvisionParams{
-				EnvironmentProvider:  d.Get("environmentProvider").(string),
-				KubernetesProvider:   d.Get("kubernetesProvider").(string),
-				ProvisionEnvironment: d.Get("provisionEnvironment").(string),
-				ProvisionPackageType: d.Get("provisionPackageType").(string),
-				ProvisionType:        d.Get("provisionType").(string),
-				State:                d.Get("state").(string),
-			},
+			ClusterType: d.Get("cluster_type").(string),
 		},
 	}
 
-	if d.Get("labels") != nil {
-		clusterStruct.Metadata.Labels = d.Get("labels").(map[string]string)
+	// If we have params, let's add them into the struct
+	if params, ok := d.GetOk("params"); ok {
+		clusterSet := params.(*schema.Set).List()
+		for _, cluster := range clusterSet {
+			cluster_params, ok := cluster.(map[string]interface{})
+			if ok {
+				provisionParams := &infrav3.ProvisionParams{
+					EnvironmentProvider:  cluster_params["environment_provider"].(string),
+					KubernetesProvider:   cluster_params["kubernetes_provider"].(string),
+					ProvisionEnvironment: cluster_params["provision_environment"].(string),
+					ProvisionPackageType: cluster_params["provision_package_type"].(string),
+					ProvisionType:        cluster_params["provision_type"].(string),
+					State:                cluster_params["state"].(string),
+				}
+
+				clusterStruct.Spec.Params = provisionParams
+			}
+		}
 	}
 
-	if d.Get("annotations") != nil {
-		clusterStruct.Metadata.Annotations = d.Get("annotations").(map[string]string)
+	if labels, ok := d.GetOk("labels"); ok {
+		clusterStruct.Metadata.Labels = labels.(map[string]string)
+	}
+
+	if annotations, ok := d.GetOk("annotations"); ok {
+		clusterStruct.Metadata.Annotations = annotations.(map[string]string)
 	}
 
 	return &clusterStruct
@@ -172,12 +184,15 @@ func BuildResourceFromClusterStruct(cluster *infrav3.Cluster, d *schema.Resource
 	d.Set("name", cluster.Metadata.Name)
 	d.Set("description", cluster.Metadata.Description)
 	d.Set("project", cluster.Metadata.Project)
-	d.Set("environment_provider", cluster.Spec.Params.EnvironmentProvider)
-	d.Set("kubernetes_provider", cluster.Spec.Params.KubernetesProvider)
-	d.Set("provision_environment", cluster.Spec.Params.ProvisionEnvironment)
-	d.Set("provision_package_type", cluster.Spec.Params.ProvisionPackageType)
-	d.Set("provision_type", cluster.Spec.Params.ProvisionType)
-	d.Set("state", cluster.Spec.Params.State)
+	params := map[string]interface{}{
+		"environment_provider":   cluster.Spec.Params.EnvironmentProvider,
+		"kubernetes_provider":    cluster.Spec.Params.KubernetesProvider,
+		"provision_environment":  cluster.Spec.Params.ProvisionEnvironment,
+		"provision_package_type": cluster.Spec.Params.ProvisionPackageType,
+		"provision_type":         cluster.Spec.Params.ProvisionType,
+		"state":                  cluster.Spec.Params.State,
+	}
+	d.Set("params", params)
 	d.Set("labels", cluster.Metadata.Labels)
 	d.Set("annotations", cluster.Metadata.Annotations)
 }

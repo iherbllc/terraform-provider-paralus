@@ -3,6 +3,7 @@ package resources
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
 	paralusUtils "github.com/iherbllc/terraform-provider-paralus/internal/utils"
@@ -39,35 +40,45 @@ func ResourceCluster() *schema.Resource {
 				Optional: true,
 				ForceNew: true,
 			},
-			"provision_type": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
-			},
-			"provision_environment": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
-			},
-			"provision_package_type": {
-				Type:     schema.TypeString,
+			"params": {
+				Type:     schema.TypeSet,
 				Optional: true,
 				ForceNew: true,
-			},
-			"environment_provider": {
-				Type:     schema.TypeString,
-				Optional: true,
-				ForceNew: true,
-			},
-			"kubernetes_provider": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
-			},
-			"state": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				MaxItems: 1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"provision_type": {
+							Type:     schema.TypeString,
+							Required: true,
+							ForceNew: true,
+						},
+						"provision_environment": {
+							Type:     schema.TypeString,
+							Required: true,
+							ForceNew: true,
+						},
+						"provision_package_type": {
+							Type:     schema.TypeString,
+							Optional: true,
+							ForceNew: true,
+						},
+						"environment_provider": {
+							Type:     schema.TypeString,
+							Optional: true,
+							ForceNew: true,
+						},
+						"kubernetes_provider": {
+							Type:     schema.TypeString,
+							Required: true,
+							ForceNew: true,
+						},
+						"state": {
+							Type:     schema.TypeString,
+							Required: true,
+							ForceNew: true,
+						},
+					},
+				},
 			},
 			"project": {
 				Type:     schema.TypeString,
@@ -118,30 +129,7 @@ func createOrUpdateCluster(ctx context.Context, d *schema.ResourceData, auth *au
 
 	clusterStruct := paralusUtils.BuildClusterStructFromResource(d)
 
-	// first check to make sure the project exists
-	uri := fmt.Sprintf("/infra/v3/project/%s", d.Get("project"))
-
-	tflog.Trace(ctx, "Project Info API Request", map[string]interface{}{
-		"uri":    uri,
-		"method": "GET",
-	})
-
-	resp, err := auth.AuthAndRequest(uri, "GET", nil)
-	if err != nil {
-		return diag.FromErr(errors.Wrap(err,
-			fmt.Sprintf("Unknown project %s", d.Get("project"))))
-	}
-
-	resp_interf, err := utils.JsonToMap(resp)
-
-	if err != nil {
-		return diag.FromErr(errors.Wrap(err,
-			fmt.Sprintf("Failed converting project API response to map %s", resp)))
-	}
-
-	tflog.Trace(ctx, "Project Info API Response", resp_interf)
-
-	uri = uri + "/cluster"
+	uri := fmt.Sprintf("/infra/v3/project/%s/cluster", d.Get("project"))
 
 	clusterStr, _ := paralusUtils.BuildStringFromClusterStruct(clusterStruct)
 
@@ -152,7 +140,7 @@ func createOrUpdateCluster(ctx context.Context, d *schema.ResourceData, auth *au
 	})
 
 	// make a post call to create the cluster entry provided it exists
-	resp, err = auth.AuthAndRequest(uri, requestType, clusterStruct)
+	resp, err := auth.AuthAndRequest(uri, requestType, clusterStruct)
 
 	if err != nil {
 		howFail := "create"
@@ -230,7 +218,8 @@ func resourceClusterDelete(ctx context.Context, d *schema.ResourceData, m interf
 	})
 
 	_, err := auth.AuthAndRequest(uri, "DELETE", nil)
-	if err != nil {
+	// ignore delete return of "no rows in result set" which mean sit could not be found
+	if err != nil && !strings.Contains(err.Error(), "sql: no rows in result set") {
 		return diag.FromErr(errors.Wrap(err,
 			fmt.Sprintf("Failed to delete cluster %s in project %s", d.Get("name"), d.Get("project"))))
 	}
@@ -250,6 +239,11 @@ func getClusterYAMLs(ctx context.Context, d *schema.ResourceData, auth *authprof
 
 	resp, err := auth.AuthAndRequest(uri, "GET", nil)
 	if err != nil {
+		// ignore YAML pull if there is no cluster.
+		if strings.Contains(err.Error(), "sql: no rows in result set") {
+			tflog.Warn(ctx, fmt.Sprintf("Cluster %s does not exist. No YAML obtained.", d.Get("name")))
+			return nil
+		}
 		return diag.FromErr(errors.Wrap(err,
 			fmt.Sprintf("Failed to retrieve K8s YAMLs for cluster %s in project %s", d.Get("name"), d.Get("project"))))
 	}
