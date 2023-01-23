@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"os"
 
 	"github.com/iherbllc/terraform-provider-paralus/internal/datasources"
 	"github.com/iherbllc/terraform-provider-paralus/internal/paralus"
@@ -18,33 +17,39 @@ func Provider() *schema.Provider {
 	return &schema.Provider{
 		Schema: map[string]*schema.Schema{
 			"profile": {
-				Type:      schema.TypeString,
-				Optional:  true,
-				Sensitive: true,
+				Type:        schema.TypeString,
+				Description: "PCTL Profile",
+				Optional:    true,
+				Sensitive:   true,
 			},
 			"rest_endpoint": {
-				Type:      schema.TypeString,
-				Optional:  true,
-				Sensitive: true,
+				Type:        schema.TypeString,
+				Description: "Rest Endpoint",
+				Optional:    true,
+				Sensitive:   true,
 			},
 			"ops_endpoint": {
-				Type:      schema.TypeString,
-				Optional:  true,
-				Sensitive: true,
+				Type:        schema.TypeString,
+				Description: "OPS Endpoint",
+				Optional:    true,
+				Sensitive:   true,
 			},
 			"api_key": {
-				Type:      schema.TypeString,
-				Optional:  true,
-				Sensitive: true,
+				Type:        schema.TypeString,
+				Description: "PCTL API Key (obtained from UI). Either this and api_secret must be set config_json set",
+				Optional:    true,
+				Sensitive:   true,
 			},
 			"api_secret": {
-				Type:      schema.TypeString,
-				Optional:  true,
-				Sensitive: true,
+				Type:        schema.TypeString,
+				Description: "PCTL API Secret (obtained from UI). Either this and api_key must be set config_json set",
+				Optional:    true,
+				Sensitive:   true,
 			},
 			"config_json": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:        schema.TypeString,
+				Description: "Config JSON (obtained from UI). Either this must be set or api_key/api_secret set",
+				Optional:    true,
 			},
 			"partner": {
 				Type:     schema.TypeString,
@@ -54,26 +59,25 @@ func Provider() *schema.Provider {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
+			"skip_server_cert_valid": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
 			"paralus_cluster": resources.ResourceCluster(),
+			"paralus_project": resources.ResourceProject(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
 			"paralus_cluster": datasources.DataSourceCluster(),
+			"paralus_project": datasources.DataSourceProject(),
 		},
 		ConfigureContextFunc: providerConfigure,
 	}
 }
 
+// Configure provider
 func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
-	os.Setenv("PCTL_PROFILE", d.Get("profile").(string))
-	os.Setenv("PCTL_REST_ENDPOINT", d.Get("rest_endpoint").(string))
-	os.Setenv("PCTL_OPS_ENDPOINT", d.Get("ops_endpoint").(string))
-	os.Setenv("PCTL_API_KEY", d.Get("api_key").(string))
-	os.Setenv("PCTL_API_SECRET", d.Get("api_secret").(string))
 
-	// Warning or errors can be collected in a slice type
-	var diags diag.Diagnostics
-
-	return paralus.NewProfile(d.Get("config_json").(string)), diags
+	return paralus.NewConfig(d)
 }

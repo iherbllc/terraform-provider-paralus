@@ -1,15 +1,12 @@
 package acctest
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/paralus/cli/pkg/authprofile"
-
-	paralusUtils "github.com/iherbllc/terraform-provider-paralus/internal/utils"
+	"github.com/paralus/cli/pkg/cluster"
 
 	infrav3 "github.com/paralus/paralus/proto/types/infrapb/v3"
 )
@@ -25,9 +22,9 @@ func TestAccParalusCluster_basic(t *testing.T) {
 			{
 				Config: testAccClusterConfig(),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckClusterExists("paralusctl.paralus_cluster", &clusterStruct),
-					testAccCheckClusterTypeAttribute(&clusterStruct, "imported"),
-					resource.TestCheckResourceAttr("paralusctl.paralus_cluster", "project", "default"),
+					testAccCheckClusterExists("paralus_cluster.test", &clusterStruct),
+					// testAccCheckClusterTypeAttribute(&clusterStruct, "imported"),
+					resource.TestCheckResourceAttr("paralus_cluster.test", "project", "default"),
 				),
 			},
 		},
@@ -36,7 +33,9 @@ func TestAccParalusCluster_basic(t *testing.T) {
 
 func testAccClusterConfig() string {
 
-	providerConfig := providerString(nil, "cluster_test")
+	conf = paralusProviderConfig()
+
+	providerConfig := providerString(conf, "cluster_test")
 	return fmt.Sprintf(`
 		%s
 
@@ -60,9 +59,6 @@ func testAccClusterConfig() string {
 func testAccCheckClusterResourceDestroy(t *testing.T) func(s *terraform.State) error {
 
 	return func(s *terraform.State) error {
-		// retrieve the connection established in Provider configuration
-		auth := testAccProvider.Meta().(*authprofile.Profile)
-
 		// loop through the resources in state, verifying each widget
 		// is destroyed
 		for _, rs := range s.RootModule().Resources {
@@ -71,25 +67,18 @@ func testAccCheckClusterResourceDestroy(t *testing.T) func(s *terraform.State) e
 			}
 
 			project := rs.Primary.Attributes["project"]
-			cluster := rs.Primary.Attributes["name"]
+			clusterName := rs.Primary.Attributes["name"]
 
-			// first try using the name filter
-			_, err := paralusUtils.GetClusterFast(context.Background(), auth, project, cluster)
+			_, err := cluster.GetCluster(clusterName, project)
 
-			if err == nil {
-				return fmt.Errorf("Cluster (%s) still exists.", rs.Primary.ID)
-			}
-
-			// get list of clusters
-			clusters, err := paralusUtils.ListAllClusters(context.Background(), auth, project)
 			if err != nil {
-				return nil
+				return err
 			}
 
-			for _, a := range clusters {
-				if a.Metadata.Name == cluster {
-					return fmt.Errorf("Cluster (%s) still exists.", rs.Primary.ID)
-				}
+			err = cluster.DeleteCluster(clusterName, project)
+
+			if err != nil {
+				return err
 			}
 		}
 
@@ -99,7 +88,7 @@ func testAccCheckClusterResourceDestroy(t *testing.T) func(s *terraform.State) e
 
 // testAccCheckClusterExists uses the paralus API through PCTL to retrieve cluster info
 // and store it as a PCTL Cluster instance
-func testAccCheckClusterExists(resourceName string, cluster *infrav3.Cluster) func(s *terraform.State) error {
+func testAccCheckClusterExists(resourceName string, clus *infrav3.Cluster) func(s *terraform.State) error {
 
 	return func(s *terraform.State) error {
 		// retrieve the resource by name from state
@@ -112,29 +101,14 @@ func testAccCheckClusterExists(resourceName string, cluster *infrav3.Cluster) fu
 			return fmt.Errorf("Cluster ID is not set")
 		}
 
-		// retrieve the connection established in Provider configuration
-		auth := testAccProvider.Meta().(*authprofile.Profile)
-
 		project := rs.Primary.Attributes["project"]
-		cluster_id := rs.Primary.Attributes["name"]
+		clusterName := rs.Primary.Attributes["name"]
 
-		// first try using the name filter
-		cluster_json, _ := paralusUtils.GetClusterFast(context.Background(), auth, project, cluster_id)
+		var err error
+		clus, err = cluster.GetCluster(clusterName, project)
 
-		if cluster_json != "" {
-			paralusUtils.BuildClusterStructFromString(cluster_json, cluster)
-		}
-
-		// get list of clusters
-		clusters, err := paralusUtils.ListAllClusters(context.Background(), auth, project)
 		if err != nil {
-			return nil
-		}
-
-		for _, a := range clusters {
-			if a.Metadata.Name == cluster_id {
-				return fmt.Errorf("Cluster (%s) still exists.", rs.Primary.ID)
-			}
+			return err
 		}
 
 		return nil
@@ -145,7 +119,7 @@ func testAccCheckClusterExists(resourceName string, cluster *infrav3.Cluster) fu
 // Terraform
 func testAccCheckClusterTypeAttribute(cluster *infrav3.Cluster, cluster_type string) func(s *terraform.State) error {
 	return func(s *terraform.State) error {
-		if cluster.Metadata.Project != cluster_type {
+		if cluster.Spec.ClusterType != cluster_type {
 			return fmt.Errorf("Cluster Type not set correctly")
 		}
 

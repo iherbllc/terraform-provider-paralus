@@ -2,33 +2,21 @@ package acctest
 
 import (
 	"fmt"
+	"os"
+	"regexp"
 	"testing"
 
 	"github.com/iherbllc/terraform-provider-paralus/internal/paralus"
 	"github.com/iherbllc/terraform-provider-paralus/internal/provider"
 	"github.com/paralus/cli/pkg/config"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 var testAccProviders map[string]*schema.Provider
 var testAccProvider *schema.Provider
-
-// // credential ENV vars
-// var credsEnvVars = []string{
-// 	"PCTL_API_KEY",
-// 	"PCTL_API_SECRET",
-// }
-
-// // endpoint ENV vars
-// var endpointEnvVars = []string{
-// 	"PCTL_REST_ENDPOINT",
-// 	"PCTL_OPS_ENDPOINT",
-// }
-
-// var configEnvVars = []string{
-// 	"PCTL_PROFILE",
-// }
+var conf *config.Config
 
 func init() {
 	testAccProvider = provider.Provider()
@@ -40,19 +28,19 @@ func init() {
 // Return test provider config
 func paralusProviderConfig() *config.Config {
 	// utils.LoadEnv()
-	return paralus.NewConfig("")
+	newConfig, err := paralus.NewConfigFromFile(os.Getenv("CONFIG_JSON"))
+	if err != nil {
+		panic(err)
+	}
+	return newConfig
 }
 
 // Return provider string
-func providerString(config *config.Config, alias ...string) string {
+func providerString(conf *config.Config, alias ...string) string {
 
 	aliasStr := ""
 	if len(alias) > 0 {
 		aliasStr = "alias = \"" + alias[0] + "\""
-	}
-
-	if config == nil {
-		config = paralusProviderConfig()
 	}
 
 	return fmt.Sprintf(`
@@ -63,11 +51,13 @@ func providerString(config *config.Config, alias ...string) string {
 			ops_endpoint = "%s"
 			api_key = "%s"
 			api_secret = "%s"
+			partner = "%s"
+			organization = "%s"
 			%s
 		}
 
-	`, config.Profile, config.RESTEndpoint, config.OPSEndpoint,
-		config.APIKey, config.APISecret, aliasStr)
+	`, conf.Profile, conf.RESTEndpoint, conf.OPSEndpoint,
+		conf.APIKey, conf.APISecret, conf.Partner, conf.Organization, aliasStr)
 }
 
 func TestProvider(t *testing.T) {
@@ -83,24 +73,96 @@ func TestProvider_impl(t *testing.T) {
 // makes sure necessary PCTL values are set
 func testAccConfigPreCheck(t *testing.T) {
 
-	config := paralusProviderConfig()
-
-	if v := config.Profile; v == "" {
+	if v := conf.Profile; v == "" {
 		t.Fatal("PCTL_PROFILE env var or config value must be set for acceptance tests")
 	}
-	if v := config.RESTEndpoint; v == "" {
+	if v := conf.RESTEndpoint; v == "" {
 		t.Fatal("PCTL_REST_ENDPOINT env var or config value must be set for acceptance tests")
 	}
 
-	if v := config.OPSEndpoint; v == "" {
+	if v := conf.OPSEndpoint; v == "" {
 		t.Fatal("PCTL_OPS_ENDPOINT env value or config value must be set for acceptance tests")
 	}
 
-	if v := config.APIKey; v == "" {
+	if v := conf.APIKey; v == "" {
 		t.Fatal("PCTL_API_KEY env var or config value must be set for acceptance tests")
 	}
 
-	if v := config.APISecret; v == "" {
+	if v := conf.APISecret; v == "" {
 		t.Fatal("PCTL_API_SECRET env var or config value must be set for acceptance tests")
 	}
+}
+
+func TestAccProviderEndpoints_setInvalidRestEndpoints(t *testing.T) {
+	t.Parallel()
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccConfigPreCheck(t) },
+		Providers: testAccProviders,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccProviderEndpoints_setRestEndpoint("console.paralus.blahblahblah.com"),
+				ExpectError: regexp.MustCompile(".*no such host.*"),
+			},
+		},
+	})
+}
+
+// set rest endpoint value in provider
+func testAccProviderEndpoints_setRestEndpoint(endpoint string) string {
+
+	// var conf *config.Config
+	if testAccProvider.Meta() == nil {
+		conf = paralusProviderConfig()
+	} else {
+		conf = testAccProvider.Meta().(*config.Config)
+	}
+
+	conf.RESTEndpoint = endpoint
+
+	return fmt.Sprintf(`
+%s
+
+resource "paralus_cluster" "default" {
+	provider = paralusctl.custom_rest_endpoint
+	name     = "tf-cluster-test"
+	project = "blah1"
+  }`, providerString(conf, "custom_rest_endpoint"))
+}
+
+func TestAccProviderEndpoints_setInvalidPartner(t *testing.T) {
+	t.Parallel()
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccConfigPreCheck(t) },
+		Providers: testAccProviders,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccProviderEndpoints_setPartner("howdy"),
+				ExpectError: regexp.MustCompile(".*no such host.*"),
+			},
+		},
+	})
+}
+
+// set partner value in provider
+func testAccProviderEndpoints_setPartner(partner string) string {
+
+	// var conf *config.Config
+	if testAccProvider.Meta() == nil {
+		conf = paralusProviderConfig()
+	} else {
+		conf = testAccProvider.Meta().(*config.Config)
+	}
+
+	conf.Partner = partner
+
+	return fmt.Sprintf(`
+%s
+
+resource "paralus_cluster" "default" {
+	provider = paralusctl.custom_partner
+	name     = "tf-cluster-test"
+	project = "default"
+  }`, providerString(conf, "custom_partner"))
 }

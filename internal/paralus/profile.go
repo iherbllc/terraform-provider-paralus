@@ -1,39 +1,53 @@
 package paralus
 
 import (
-	"context"
-	"os"
+	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/paralus/cli/pkg/authprofile"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/paralus/cli/pkg/config"
+	"github.com/pkg/errors"
 )
 
-// Generate a new proflie for making the call
-func NewProfile(configJson string) *authprofile.Profile {
-	return NewConfig(configJson).GetAppAuthProfile()
-}
+// Generates a new config either from a json file or via environment variables
+func NewConfig(d *schema.ResourceData) (*config.Config, diag.Diagnostics) {
 
-// Generates a new config
-func NewConfig(configJson string) *config.Config {
+	// Warning or errors can be collected in a slice type
+	var diags diag.Diagnostics
 
-	if configJson != "" {
-		newConfig := config.GetConfig()
-		if err := newConfig.Load(configJson); err != nil {
-			tflog.Error(context.Background(), "Failed to load config from file.", map[string]interface{}{
-				"config_json": configJson,
-				"error":       err.Error(),
-			})
+	if configJson, ok := d.GetOk("config_Json"); ok {
+		newConfig, err := NewConfigFromFile(configJson.(string))
+		if err != nil {
+			return nil, diag.FromErr(errors.Wrap(err,
+				fmt.Sprintf("Error parsing config_json file %s", configJson)))
 		}
-		return newConfig
+		return newConfig, diags
+	}
+
+	apiKey, ok := d.GetOk("api_key")
+	if !ok {
+		return nil, diag.FromErr(errors.Wrap(nil, "api_key must be set if config_json is not"))
+	}
+
+	apiSecret, ok := d.GetOk("api_secret")
+	if !ok {
+		return nil, diag.FromErr(errors.Wrap(nil, "api_secret must be set if config_json is not"))
 	}
 
 	return &config.Config{
-		Profile:             os.Getenv("PCTL_PROFILE"),
-		RESTEndpoint:        os.Getenv("PCTL_REST_ENDPOINT"),
-		OPSEndpoint:         os.Getenv("PCTL_OPS_ENDPOINT"),
-		APIKey:              os.Getenv("PCTL_API_KEY"),
-		APISecret:           os.Getenv("PCTL_API_SECRET"),
-		SkipServerCertValid: os.Getenv("PCTL_SKIP_SERVER_CERT_VALIDATION"),
-	}
+		Profile:             d.Get("profile").(string),
+		RESTEndpoint:        d.Get("rest_endpoint").(string),
+		OPSEndpoint:         d.Get("ops_endpoint").(string),
+		APIKey:              apiKey.(string),
+		APISecret:           apiSecret.(string),
+		SkipServerCertValid: d.Get("skip_server_cert_valid").(string),
+		Partner:             d.Get("partner").(string),
+		Organization:        d.Get("organization").(string),
+	}, diags
+}
+
+// Generate a new PCTL Config from a json path
+func NewConfigFromFile(configJson string) (*config.Config, error) {
+	newConfig := config.GetConfig()
+	return newConfig, newConfig.Load(configJson)
 }

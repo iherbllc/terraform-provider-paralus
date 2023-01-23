@@ -1,101 +1,13 @@
 package utils
 
 import (
-	"context"
 	"encoding/json"
-	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	commonv3 "github.com/paralus/paralus/proto/types/commonpb/v3"
 	infrav3 "github.com/paralus/paralus/proto/types/infrapb/v3"
-
-	"github.com/paralus/cli/pkg/authprofile"
-	"github.com/paralus/cli/pkg/config"
-	"github.com/paralus/cli/pkg/rerror"
 )
-
-// Looks directly for a cluster based on info provided
-func GetClusterFast(ctx context.Context, auth *authprofile.Profile,
-	project string, cluster string) (string, error) {
-
-	if auth == nil {
-		auth = config.GetConfig().GetAppAuthProfile()
-	}
-
-	uri := fmt.Sprintf("/infra/v3/project/%s/cluster/%s", project, cluster)
-
-	tflog.Trace(ctx, "Cluster GET API Request", map[string]interface{}{
-		"uri":    uri,
-		"method": "GET",
-	})
-
-	return auth.AuthAndRequest(uri, "GET", nil)
-
-}
-
-// retrieve all clusters from paralus
-func ListAllClusters(ctx context.Context, auth *authprofile.Profile, project string) ([]*infrav3.Cluster, error) {
-	var clusters []*infrav3.Cluster
-	limit := 10000
-	c, count, err := listClusters(ctx, auth, project, limit, 0)
-	if err != nil {
-		return nil, err
-	}
-	clusters = c
-	for count > limit {
-		offset := limit
-		limit = count
-		c, _, err = listClusters(ctx, auth, project, limit, offset)
-		if err != nil {
-			return clusters, err
-		}
-		clusters = append(clusters, c...)
-	}
-	return clusters, nil
-}
-
-// build a list of all clusters
-func listClusters(ctx context.Context, auth *authprofile.Profile,
-	project string, limit, offset int) ([]*infrav3.Cluster, int, error) {
-	// check to make sure the limit or offset is not negative
-	if limit < 0 || offset < 0 {
-		return nil, 0, fmt.Errorf("provided limit (%d) or offset (%d) cannot be negative", limit, offset)
-	}
-
-	uri := fmt.Sprintf("/infra/v3/project/%s/cluster?limit=%d&offset=%d", project, limit, offset)
-
-	tflog.Trace(ctx, "All Clusters GET API Request", map[string]interface{}{
-		"uri":    uri,
-		"method": "GET",
-	})
-
-	resp, err := auth.AuthAndRequest(uri, "GET", nil)
-	if err != nil {
-		return nil, 0, rerror.CrudErr{
-			Type: "cluster",
-			Name: "",
-			Op:   "list",
-		}
-	}
-
-	resp_interf, err := JsonToMap(resp)
-
-	if err != nil {
-		return nil, 0, err
-	}
-
-	tflog.Trace(ctx, "All Clusters GET API Request", resp_interf)
-
-	a := infrav3.ClusterList{}
-
-	if err := json.Unmarshal([]byte(resp), &a); err != nil {
-		return nil, 0, err
-	}
-
-	return a.Items, int(a.Metadata.Count), nil
-}
 
 // Build a cluster struct from a resource
 func BuildClusterStructFromString(clusterStr string, cluster *infrav3.Cluster) error {
@@ -184,15 +96,15 @@ func BuildResourceFromClusterStruct(cluster *infrav3.Cluster, d *schema.Resource
 	d.Set("name", cluster.Metadata.Name)
 	d.Set("description", cluster.Metadata.Description)
 	d.Set("project", cluster.Metadata.Project)
-	params := map[string]interface{}{
+	params := d.Get("params").(*schema.Set)
+	params.Add(map[string]interface{}{
 		"environment_provider":   cluster.Spec.Params.EnvironmentProvider,
 		"kubernetes_provider":    cluster.Spec.Params.KubernetesProvider,
 		"provision_environment":  cluster.Spec.Params.ProvisionEnvironment,
 		"provision_package_type": cluster.Spec.Params.ProvisionPackageType,
 		"provision_type":         cluster.Spec.Params.ProvisionType,
 		"state":                  cluster.Spec.Params.State,
-	}
-	d.Set("params", params)
+	})
 	d.Set("labels", cluster.Metadata.Labels)
 	d.Set("annotations", cluster.Metadata.Annotations)
 }

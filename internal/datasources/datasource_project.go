@@ -2,17 +2,15 @@ package datasources
 
 import (
 	"context"
-	"fmt"
 
 	paralusUtils "github.com/iherbllc/terraform-provider-paralus/internal/utils"
+	"github.com/pkg/errors"
 
-	"github.com/paralus/cli/pkg/authprofile"
+	"github.com/paralus/cli/pkg/project"
 
-	infrav3 "github.com/paralus/paralus/proto/types/infrapb/v3"
-
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/pkg/errors"
 )
 
 // / Paralus DataSource Cluster
@@ -22,7 +20,7 @@ func DataSourceProject() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:     schema.TypeString,
-				Optional: true,
+				Required: true,
 			},
 			"partner": {
 				Type:     schema.TypeString,
@@ -32,6 +30,46 @@ func DataSourceProject() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
+			"project_roles": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"project": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"role": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"namespace": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"group": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+					},
+				},
+			},
+			"user_roles": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"user": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"role": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -40,33 +78,16 @@ func DataSourceProject() *schema.Resource {
 func datasourceProjectRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	auth := m.(*authprofile.Profile)
+	tflog.Trace(ctx, "Retrieving project info", map[string]interface{}{
+		"project": d.Get("name").(string),
+	})
 
-	// first try using the name filter
-	cluster, err := paralusUtils.GetClusterFast(ctx, auth, d.Get("project").(string), d.Get("name").(string))
-	if err == nil {
-		if err := paralusUtils.BuildResourceFromClusterString(cluster, d); err == nil {
-			return diag.FromErr(errors.Wrap(err,
-				fmt.Sprintf("Failed to build resource from get response: %s", cluster)))
-		}
-		return diags
-	}
-
-	// get list of clusters
-	c, err := paralusUtils.ListAllClusters(ctx, auth, d.Get("project").(string))
+	project, err := project.GetProjectByName(d.Get("project").(string))
 	if err != nil {
-		return diag.FromErr(errors.Wrap(err, "Failed to retrieve all clusters"))
+		return diag.FromErr(errors.Wrap(err, "Project does not exist"))
 	}
 
-	for _, a := range c {
-		if a.Metadata.Name == d.Get("name") {
-			// Update resource information from updated cluster
-			paralusUtils.BuildResourceFromClusterStruct(a, d)
-			break
-		}
-	}
-
-	paralusUtils.BuildResourceFromClusterStruct(&infrav3.Cluster{}, d)
+	paralusUtils.BuildResourceFromProjectStruct(project, d)
 	return diags
 
 }

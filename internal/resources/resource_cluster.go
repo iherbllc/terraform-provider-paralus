@@ -3,14 +3,11 @@ package resources
 import (
 	"context"
 	"fmt"
-	"strings"
 
-	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
 	paralusUtils "github.com/iherbllc/terraform-provider-paralus/internal/utils"
 
-	"github.com/paralus/cli/pkg/authprofile"
-
-	infrav3 "github.com/paralus/paralus/proto/types/infrapb/v3"
+	"github.com/paralus/cli/pkg/cluster"
+	"github.com/paralus/cli/pkg/project"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -85,7 +82,7 @@ func ResourceCluster() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
-			"k8s_yamls": {
+			"bootstrap_file": {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
@@ -97,14 +94,6 @@ func ResourceCluster() *schema.Resource {
 				Type:     schema.TypeMap,
 				Optional: true,
 			},
-			"organization": {
-				Type:     schema.TypeString,
-				Optional: true,
-			},
-			"partner": {
-				Type:     schema.TypeString,
-				Optional: true,
-			},
 		},
 	}
 }
@@ -112,60 +101,76 @@ func ResourceCluster() *schema.Resource {
 // Import an existing K8S cluster into a designated project
 func resourceClusterCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 
-	d.SetId(d.Get("name").(string) + d.Get("project").(string))
+	project := d.Get("project").(string)
+	cluster := d.Get("name").(string)
 
-	auth := m.(*authprofile.Profile)
+	d.SetId(cluster + project)
 
-	return append(createOrUpdateCluster(ctx, d, auth, "POST"), getClusterYAMLs(ctx, d, auth)...)
+	return append(createOrUpdateCluster(ctx, d, "POST"), getClusterYAMLs(ctx, d)...)
 }
 
 func resourceClusterUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	return createOrUpdateCluster(ctx, d, m.(*authprofile.Profile), "PUT")
+	return createOrUpdateCluster(ctx, d, "PUT")
 }
 
 // Creates a new cluster or updates an existing one
-func createOrUpdateCluster(ctx context.Context, d *schema.ResourceData, auth *authprofile.Profile, requestType string) diag.Diagnostics {
+func createOrUpdateCluster(ctx context.Context, d *schema.ResourceData, requestType string) diag.Diagnostics {
 	var diags diag.Diagnostics
+
+	tflog.Trace(ctx, fmt.Sprintf("Checking for project %s existance", d.Get("project")))
+
+	projectStruct, err := project.GetProjectByName(d.Get("project").(string))
+	if projectStruct == nil {
+		return diag.FromErr(errors.Wrap(err,
+			fmt.Sprintf("Project %s does not exist", d.Get("project"))))
+	}
+
+	howFail := "create"
+	if requestType == "PUT" {
+		howFail = "update"
+	}
 
 	clusterStruct := paralusUtils.BuildClusterStructFromResource(d)
 
-	uri := fmt.Sprintf("/infra/v3/project/%s/cluster", d.Get("project"))
-
-	clusterStr, _ := paralusUtils.BuildStringFromClusterStruct(clusterStruct)
-
-	tflog.Trace(ctx, "Cluster Info API Request", map[string]interface{}{
-		"uri":     uri,
-		"method":  requestType,
-		"payload": clusterStr,
+	tflog.Trace(ctx, fmt.Sprintf("Cluster %s request", requestType), map[string]interface{}{
+		"cluster": d.Get("name").(string),
+		"project": d.Get("project").(string),
 	})
 
-	// make a post call to create the cluster entry provided it exists
-	resp, err := auth.AuthAndRequest(uri, requestType, clusterStruct)
+	if requestType == "POST" {
+		err := cluster.CreateCluster(clusterStruct)
+		if err != nil {
+			return diag.FromErr(errors.Wrap(err,
+				fmt.Sprintf("Failed to %s cluster %s in project %s", howFail,
+					d.Get("name"), d.Get("project"))))
+		}
+	} else if requestType == "PUT" {
+		err := cluster.UpdateCluster(clusterStruct)
+		if err != nil {
+			return diag.FromErr(errors.Wrap(err,
+				fmt.Sprintf("Failed to %s cluster %s in project %s", howFail,
+					d.Get("name"), d.Get("project"))))
+		}
+	} else {
+		return diag.FromErr(errors.Wrap(err,
+			fmt.Sprintf("Unknown request type %s", requestType)))
+	}
+
+	tflog.Trace(ctx, "Retrieving cluster info", map[string]interface{}{
+		"cluster": d.Get("name").(string),
+		"project": d.Get("project").(string),
+	})
+
+	clusterStruct, err = cluster.GetCluster(d.Get("name").(string), d.Get("project").(string))
 
 	if err != nil {
-		howFail := "create"
-		if requestType == "PUT" {
-			howFail = "update"
-		}
 		return diag.FromErr(errors.Wrap(err,
 			fmt.Sprintf("Failed to %s cluster %s in project %s", howFail,
 				d.Get("name"), d.Get("project"))))
 	}
 
-	resp_interf, err = utils.JsonToMap(resp)
-
-	if err != nil {
-		return diag.FromErr(errors.Wrap(err,
-			fmt.Sprintf("Failed converting cluster API response to map %s", resp)))
-	}
-
-	tflog.Trace(ctx, "Cluster Info API Response", resp_interf)
-
 	// Update resource information from updated cluster
-	if err := paralusUtils.BuildResourceFromClusterString(resp, d); err != nil {
-		return diag.FromErr(errors.Wrap(err,
-			fmt.Sprintf("Failed to convert cluster string %s to resource", resp)))
-	}
+	paralusUtils.BuildResourceFromClusterStruct(clusterStruct, d)
 
 	return diags
 }
@@ -174,33 +179,19 @@ func createOrUpdateCluster(ctx context.Context, d *schema.ResourceData, auth *au
 func resourceClusterRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	auth := m.(*authprofile.Profile)
+	tflog.Trace(ctx, "Retrieving cluster info", map[string]interface{}{
+		"cluster": d.Get("name").(string),
+		"project": d.Get("project").(string),
+	})
 
-	// first try using the name filter
-	cluster, err := paralusUtils.GetClusterFast(ctx, auth, d.Get("project").(string), d.Get("name").(string))
-	if err == nil {
-		if err := paralusUtils.BuildResourceFromClusterString(cluster, d); err == nil {
-			return diag.FromErr(errors.Wrap(err,
-				fmt.Sprintf("Failed to build resource from get response: %s", cluster)))
-		}
-		return diags
-	}
+	cluster, err := cluster.GetCluster(d.Get("name").(string), d.Get("project").(string))
 
-	// get list of clusters
-	c, err := paralusUtils.ListAllClusters(ctx, auth, d.Get("project").(string))
 	if err != nil {
-		return diag.FromErr(errors.Wrap(err, "Failed to retrieve all clusters"))
+		return diag.FromErr(errors.Wrap(err, fmt.Sprintf("Cluster %s does not exist in project %s",
+			d.Get("name").(string), d.Get("project").(string))))
 	}
 
-	for _, a := range c {
-		if a.Metadata.Name == d.Get("name") {
-			// Update resource information from updated cluster
-			paralusUtils.BuildResourceFromClusterStruct(a, d)
-			break
-		}
-	}
-
-	paralusUtils.BuildResourceFromClusterStruct(&infrav3.Cluster{}, d)
+	paralusUtils.BuildResourceFromClusterStruct(cluster, d)
 	return diags
 
 }
@@ -209,45 +200,48 @@ func resourceClusterRead(ctx context.Context, d *schema.ResourceData, m interfac
 func resourceClusterDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	auth := m.(*authprofile.Profile)
-	uri := fmt.Sprintf("/infra/v3/project/%s/cluster/%s", d.Get("project"), d.Get("name"))
-
-	tflog.Trace(ctx, "Cluster Delete API Request", map[string]interface{}{
-		"uri":    uri,
-		"method": "DELETE",
+	tflog.Trace(ctx, "Deleting cluster info", map[string]interface{}{
+		"cluster": d.Get("name").(string),
+		"project": d.Get("project").(string),
 	})
 
-	_, err := auth.AuthAndRequest(uri, "DELETE", nil)
-	// ignore delete return of "no rows in result set" which mean sit could not be found
-	if err != nil && !strings.Contains(err.Error(), "sql: no rows in result set") {
-		return diag.FromErr(errors.Wrap(err,
-			fmt.Sprintf("Failed to delete cluster %s in project %s", d.Get("name"), d.Get("project"))))
+	// Make sure cluster exists before we attempt to delete it
+	clusterStruct, _ := cluster.GetCluster(d.Get("project").(string), d.Get("name").(string))
+	if clusterStruct == nil {
+		return diags
+	}
+
+	err := cluster.DeleteCluster(d.Get("name").(string), d.Get("project").(string))
+
+	if err != nil {
+		return diag.FromErr(errors.Wrap(err, fmt.Sprintf("Failed to delete cluster %s in project %s",
+			d.Get("name").(string), d.Get("project").(string))))
 	}
 
 	return diags
 }
 
 // Retrieve the YAML files that will be used to setup paralus agents in cluster
-func getClusterYAMLs(ctx context.Context, d *schema.ResourceData, auth *authprofile.Profile) diag.Diagnostics {
+func getClusterYAMLs(ctx context.Context, d *schema.ResourceData) diag.Diagnostics {
 
-	uri := fmt.Sprintf("/infra/v3/project/%s/cluster/%s/download", d.Get("project"), d.Get("name"))
-
-	tflog.Trace(ctx, "Cluster YAML GET API Request", map[string]interface{}{
-		"uri":    uri,
-		"method": "GET",
+	tflog.Trace(ctx, "Retrieving Bootstrap File", map[string]interface{}{
+		"cluster": d.Get("name").(string),
+		"project": d.Get("project").(string),
 	})
 
-	resp, err := auth.AuthAndRequest(uri, "GET", nil)
-	if err != nil {
-		// ignore YAML pull if there is no cluster.
-		if strings.Contains(err.Error(), "sql: no rows in result set") {
-			tflog.Warn(ctx, fmt.Sprintf("Cluster %s does not exist. No YAML obtained.", d.Get("name")))
-			return nil
-		}
-		return diag.FromErr(errors.Wrap(err,
-			fmt.Sprintf("Failed to retrieve K8s YAMLs for cluster %s in project %s", d.Get("name"), d.Get("project"))))
+	// Make sure cluster exists before we attempt to get the bootstrap file
+	clusterStruct, _ := cluster.GetCluster(d.Get("project").(string), d.Get("name").(string))
+	if clusterStruct == nil {
+		return nil
 	}
 
-	d.Set("k8s_yamls", resp)
+	bootstrapFile, err := cluster.GetBootstrapFile(d.Get("project").(string), d.Get("name").(string))
+
+	if err != nil {
+		return diag.FromErr(errors.Wrap(err, fmt.Sprintf("Error retrieving bootstrap file for cluster %s in project %s",
+			d.Get("name").(string), d.Get("project").(string))))
+	}
+
+	d.Set("bootstrap_file", bootstrapFile)
 	return nil
 }
