@@ -92,8 +92,6 @@ func DataSourceCluster() *schema.Resource {
 func datasourceClusterRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	d.SetId(d.Get("name").(string) + d.Get("project").(string) + "ds")
-
 	tflog.Trace(ctx, "Retrieving cluster info", map[string]interface{}{
 		"cluster": d.Get("name").(string),
 		"project": d.Get("project").(string),
@@ -107,6 +105,9 @@ func datasourceClusterRead(ctx context.Context, d *schema.ResourceData, m interf
 	}
 
 	paralusUtils.BuildResourceFromClusterStruct(cluster, d)
+
+	d.SetId(d.Get("name").(string) + ":" + d.Get("project").(string))
+
 	return diags
 
 }

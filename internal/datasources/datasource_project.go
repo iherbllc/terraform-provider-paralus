@@ -75,8 +75,6 @@ func DataSourceProject() *schema.Resource {
 func datasourceProjectRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	d.SetId(d.Get("name").(string) + "ds")
-
 	tflog.Trace(ctx, "Retrieving project info", map[string]interface{}{
 		"project": d.Get("name").(string),
 	})
@@ -88,6 +86,9 @@ func datasourceProjectRead(ctx context.Context, d *schema.ResourceData, m interf
 	}
 
 	paralusUtils.BuildResourceFromProjectStruct(project, d)
+
+	d.SetId(d.Get("name").(string))
+
 	return diags
 
 }

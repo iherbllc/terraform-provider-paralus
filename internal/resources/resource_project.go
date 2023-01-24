@@ -21,6 +21,9 @@ func ResourceProject() *schema.Resource {
 		ReadContext:   resourceProjectRead,
 		UpdateContext: resourceProjectUpdate,
 		DeleteContext: resourceProjectDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: schema.ImportStatePassthroughContext,
+		},
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:     schema.TypeString,
@@ -77,10 +80,11 @@ func ResourceProject() *schema.Resource {
 // Import an existing K8S cluster into a designated project
 func resourceProjectCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 
-	project := d.Get("name").(string)
-	d.SetId(project)
+	diags := createOrUpdateProject(ctx, d, "POST")
 
-	return createOrUpdateProject(ctx, d, "POST")
+	d.SetId(d.Get("name").(string))
+
+	return diags
 }
 
 func resourceProjectUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -147,6 +151,7 @@ func resourceProjectRead(ctx context.Context, d *schema.ResourceData, m interfac
 
 	_, err := project.GetProjectByName(d.Get("name").(string))
 	if err != nil {
+		d.SetId("")
 		return diag.FromErr(errors.Wrap(err, "Project does not exist"))
 	}
 
@@ -167,6 +172,6 @@ func resourceProjectDelete(ctx context.Context, d *schema.ResourceData, m interf
 		return diag.FromErr(errors.Wrap(err, fmt.Sprintf("Failed to delete project %s",
 			d.Get("name").(string))))
 	}
-
+	d.SetId("")
 	return diags
 }

@@ -22,6 +22,9 @@ func ResourceCluster() *schema.Resource {
 		ReadContext:   resourceClusterRead,
 		UpdateContext: resourceClusterUpdate,
 		DeleteContext: resourceClusterDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: schema.ImportStatePassthroughContext,
+		},
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:     schema.TypeString,
@@ -104,9 +107,11 @@ func resourceClusterCreate(ctx context.Context, d *schema.ResourceData, m interf
 	project := d.Get("project").(string)
 	cluster := d.Get("name").(string)
 
-	d.SetId(cluster + project + "rs")
+	diags := append(createOrUpdateCluster(ctx, d, "POST"), getClusterYAMLs(ctx, d)...)
 
-	return append(createOrUpdateCluster(ctx, d, "POST"), getClusterYAMLs(ctx, d)...)
+	d.SetId(project + ":" + cluster)
+
+	return diags
 }
 
 func resourceClusterUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -187,6 +192,7 @@ func resourceClusterRead(ctx context.Context, d *schema.ResourceData, m interfac
 	_, err := cluster.GetCluster(d.Get("name").(string), d.Get("project").(string))
 
 	if err != nil {
+		d.SetId("")
 		return diag.FromErr(errors.Wrap(err, fmt.Sprintf("Cluster %s does not exist in project %s",
 			d.Get("name").(string), d.Get("project").(string))))
 	}
@@ -207,6 +213,7 @@ func resourceClusterDelete(ctx context.Context, d *schema.ResourceData, m interf
 	// Make sure cluster exists before we attempt to delete it
 	clusterStruct, _ := cluster.GetCluster(d.Get("name").(string), d.Get("project").(string))
 	if clusterStruct == nil {
+		d.SetId("")
 		return diags
 	}
 
@@ -217,6 +224,7 @@ func resourceClusterDelete(ctx context.Context, d *schema.ResourceData, m interf
 			d.Get("name").(string), d.Get("project").(string))))
 	}
 
+	d.SetId("")
 	return diags
 }
 
