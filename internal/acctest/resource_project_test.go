@@ -9,7 +9,7 @@ import (
 	"github.com/paralus/cli/pkg/project"
 )
 
-func TestAccParalusProject_basic(t *testing.T) {
+func TestAccParalusResourceProject_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccConfigPreCheck(t) },
@@ -17,10 +17,10 @@ func TestAccParalusProject_basic(t *testing.T) {
 		CheckDestroy: testAccCheckProjectResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProjectConfig(),
+				Config: testAccProjectResourceConfig(),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckProjectExists("paralus_project.test"),
-					testAccCheckProjectTypeAttribute("paralus_project.test", "test project"),
+					testAccCheckResourceProjectExists("paralus_project.test"),
+					testAccCheckResourceProjectTypeAttribute("paralus_project.test", "test project"),
 					resource.TestCheckResourceAttr("paralus_project.test", "description", "test project"),
 				),
 			},
@@ -28,7 +28,7 @@ func TestAccParalusProject_basic(t *testing.T) {
 	})
 }
 
-func testAccProjectConfig() string {
+func testAccProjectResourceConfig() string {
 
 	conf = paralusProviderConfig()
 
@@ -70,7 +70,7 @@ func testAccCheckProjectResourceDestroy(t *testing.T) func(s *terraform.State) e
 
 // testAccCheckProjectExists uses the paralus API through PCTL to retrieve cluster info
 // and store it as a PCTL Project instance
-func testAccCheckProjectExists(resourceName string) func(s *terraform.State) error {
+func testAccCheckResourceProjectExists(resourceName string) func(s *terraform.State) error {
 
 	return func(s *terraform.State) error {
 		// retrieve the resource by name from state
@@ -96,7 +96,7 @@ func testAccCheckProjectExists(resourceName string) func(s *terraform.State) err
 
 // testAccCheckProjectTypeAttribute verifies project attribute is set correctly by
 // Terraform
-func testAccCheckProjectTypeAttribute(resourceName string, description string) func(s *terraform.State) error {
+func testAccCheckResourceProjectTypeAttribute(resourceName string, description string) func(s *terraform.State) error {
 
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[resourceName]

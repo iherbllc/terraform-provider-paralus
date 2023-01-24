@@ -9,7 +9,57 @@ import (
 	"github.com/paralus/cli/pkg/cluster"
 )
 
-func TestAccParalusCluster_basic(t *testing.T) {
+func TestAccParalusResourceProjectCluster_basic(t *testing.T) {
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccConfigPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckClusterResourceDestroy(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProjectClusterConfig(),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckClusterExists("paralus_cluster.testcluster"),
+					testAccCheckClusterTypeAttribute("paralus_cluster.testcluster", "imported"),
+					resource.TestCheckResourceAttr("paralus_project.testproject", "description", "from unit test"),
+					resource.TestCheckResourceAttr("paralus_cluster.testcluster", "project", "projectresource"),
+				),
+			},
+		},
+	})
+}
+
+func testAccProjectClusterConfig() string {
+
+	conf = paralusProviderConfig()
+
+	providerConfig := providerString(conf, "project_cluster_test")
+	return fmt.Sprintf(`
+		%s
+
+		resource "paralus_project" "testproject" {
+			provider = "paralusctl.project_cluster_test"
+			name = "projectresource"
+			description = "from unit test"
+		}
+
+		resource "paralus_cluster" "testcluster" {
+			provider = "paralusctl.project_cluster_test"
+			name = "clusterresource"
+			description = "from unit test"
+			project = paralus_project.testproject.name
+			cluster_type = "imported"
+			params {
+				provision_type = "IMPORT"
+				provision_environment = "CLOUD"
+				kubernetes_provider = "EKS"
+				state = "PROVISION"
+			}
+		}
+	`, providerConfig)
+}
+
+func TestAccParalusResourceCluster_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccConfigPreCheck(t) },

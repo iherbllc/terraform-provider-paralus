@@ -2,6 +2,7 @@ package datasources
 
 import (
 	"context"
+	"fmt"
 
 	paralusUtils "github.com/iherbllc/terraform-provider-paralus/internal/utils"
 	"github.com/pkg/errors"
@@ -22,13 +23,9 @@ func DataSourceProject() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"partner": {
+			"description": {
 				Type:     schema.TypeString,
-				Required: true,
-			},
-			"organization": {
-				Type:     schema.TypeString,
-				Required: true,
+				Optional: true,
 			},
 			"project_roles": {
 				Type:     schema.TypeList,
@@ -78,13 +75,16 @@ func DataSourceProject() *schema.Resource {
 func datasourceProjectRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 
+	d.SetId(d.Get("name").(string) + "ds")
+
 	tflog.Trace(ctx, "Retrieving project info", map[string]interface{}{
 		"project": d.Get("name").(string),
 	})
 
-	project, err := project.GetProjectByName(d.Get("project").(string))
+	project, err := project.GetProjectByName(d.Get("name").(string))
 	if err != nil {
-		return diag.FromErr(errors.Wrap(err, "Project does not exist"))
+		return diag.FromErr(errors.Wrap(err, fmt.Sprintf("Error locating project %s",
+			d.Get("name").(string))))
 	}
 
 	paralusUtils.BuildResourceFromProjectStruct(project, d)

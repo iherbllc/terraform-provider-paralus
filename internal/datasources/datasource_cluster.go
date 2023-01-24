@@ -76,6 +76,14 @@ func DataSourceCluster() *schema.Resource {
 					},
 				},
 			},
+			"labels": {
+				Type:     schema.TypeMap,
+				Optional: true,
+			},
+			"annotations": {
+				Type:     schema.TypeMap,
+				Optional: true,
+			},
 		},
 	}
 }
@@ -84,15 +92,17 @@ func DataSourceCluster() *schema.Resource {
 func datasourceClusterRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 
+	d.SetId(d.Get("name").(string) + d.Get("project").(string) + "ds")
+
 	tflog.Trace(ctx, "Retrieving cluster info", map[string]interface{}{
 		"cluster": d.Get("name").(string),
 		"project": d.Get("project").(string),
 	})
 
-	cluster, err := cluster.GetCluster(d.Get("project").(string), d.Get("name").(string))
+	cluster, err := cluster.GetCluster(d.Get("name").(string), d.Get("project").(string))
 
 	if err != nil {
-		return diag.FromErr(errors.Wrap(err, fmt.Sprintf("Cluster %s does not exist in project %s",
+		return diag.FromErr(errors.Wrap(err, fmt.Sprintf("Error locating cluster %s in project %s",
 			d.Get("name").(string), d.Get("project").(string))))
 	}
 

@@ -104,7 +104,7 @@ func resourceClusterCreate(ctx context.Context, d *schema.ResourceData, m interf
 	project := d.Get("project").(string)
 	cluster := d.Get("name").(string)
 
-	d.SetId(cluster + project)
+	d.SetId(cluster + project + "rs")
 
 	return append(createOrUpdateCluster(ctx, d, "POST"), getClusterYAMLs(ctx, d)...)
 }
