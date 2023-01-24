@@ -37,10 +37,8 @@ func BuildProjectStructFromResource(d *schema.ResourceData) *systemv3.Project {
 	projectStruct := systemv3.Project{
 		Kind: "Project",
 		Metadata: &commonv3.Metadata{
-			Name:         d.Get("name").(string),
-			Description:  d.Get("description").(string),
-			Organization: d.Get("organization").(string),
-			Partner:      d.Get("partner").(string),
+			Name:        d.Get("name").(string),
+			Description: d.Get("description").(string),
 		},
 	}
 
@@ -64,8 +62,6 @@ func BuildProjectStructFromResource(d *schema.ResourceData) *systemv3.Project {
 func BuildResourceFromProjectStruct(project *systemv3.Project, d *schema.ResourceData) {
 	d.Set("name", project.Metadata.Name)
 	d.Set("description", project.Metadata.Description)
-	d.Set("organization", project.Metadata.Organization)
-	d.Set("partner", project.Metadata.Partner)
 	project_roles := make([]map[string]interface{}, 0)
 	for _, role := range project.Spec.GetProjectNamespaceRoles() {
 		project_roles = append(project_roles, map[string]interface{}{

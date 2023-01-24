@@ -104,7 +104,7 @@ func createOrUpdateProject(ctx context.Context, d *schema.ResourceData, requestT
 		err := project.CreateProject(d.Get("name").(string), d.Get("description").(string))
 		if err != nil {
 			return diag.FromErr(errors.Wrap(err,
-				fmt.Sprintf("Failed to %s project %s", howFail, d.Get("project"))))
+				fmt.Sprintf("Failed to %s project %s", howFail, d.Get("name"))))
 		}
 	} else if requestType == "PUT" {
 		projectStruct := paralusUtils.BuildProjectStructFromResource(d)
@@ -145,12 +145,11 @@ func resourceProjectRead(ctx context.Context, d *schema.ResourceData, m interfac
 		"project": d.Get("name").(string),
 	})
 
-	project, err := project.GetProjectByName(d.Get("project").(string))
+	_, err := project.GetProjectByName(d.Get("name").(string))
 	if err != nil {
 		return diag.FromErr(errors.Wrap(err, "Project does not exist"))
 	}
 
-	paralusUtils.BuildResourceFromProjectStruct(project, d)
 	return diags
 }
 
