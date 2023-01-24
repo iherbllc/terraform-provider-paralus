@@ -1,6 +1,6 @@
 ## Provider string 
 
-provider "paralusctl" {
+provider "paralus" {
     version = "1.0"
     profile = "test"
     rest_endpoint = "https://paralus.example.com:443"
