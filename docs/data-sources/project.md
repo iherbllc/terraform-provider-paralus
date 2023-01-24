@@ -3,12 +3,12 @@
 page_title: "paralus_project Data Source - terraform-provider-paralus"
 subcategory: ""
 description: |-
-  Retrieves a paralus project's information. Uses the [pctl|https://github.com/paralus/cli] library
+  Retrieves a paralus project's information. Uses the pctl https://github.com/paralus/cli library
 ---
 
 # paralus_project (Data Source)
 
-Retrieves a paralus project's information. Uses the [pctl|https://github.com/paralus/cli] library
+Retrieves a paralus project's information. Uses the [pctl](https://github.com/paralus/cli) library
 
 ## Example Usage
 

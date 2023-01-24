@@ -3,12 +3,12 @@
 page_title: "paralus_project Resource - terraform-provider-paralus"
 subcategory: ""
 description: |-
-  Creates a new paralus project. Uses the [pctl|https://github.com/paralus/cli] library
+  Resource containing paralus project information. Uses the pctl https://github.com/paralus/cli library
 ---
 
 # paralus_project (Resource)
 
-Creates a new paralus project. Uses the [pctl|https://github.com/paralus/cli] library
+Resource containing paralus project information. Uses the [pctl](https://github.com/paralus/cli) library
 
 ## Example Usage
 
@@ -65,5 +65,10 @@ Required:
 Import is supported using the following syntax:
 
 ```shell
+# Import an existing project into TF
+# Format should be: terraform import paralus_project.<RESOURCE_NAME> <PROJECT_NAME>
+#
+# NOTE: Project must exist and provider must have designated Partner and Organization value or request will fail
+
 terraform import paralus_project.test myproject
 ```

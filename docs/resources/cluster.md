@@ -3,12 +3,12 @@
 page_title: "paralus_cluster Resource - terraform-provider-paralus"
 subcategory: ""
 description: |-
-  Creates a new paralus cluster. Uses the [pctl|https://github.com/paralus/cli] library
+  Resource containing paralus cluster information. Uses the pctl https://github.com/paralus/cli library
 ---
 
 # paralus_cluster (Resource)
 
-Creates a new paralus cluster. Uses the [pctl|https://github.com/paralus/cli] library
+Resource containing paralus cluster information. Uses the [pctl](https://github.com/paralus/cli) library
 
 ## Example Usage
 
@@ -70,5 +70,10 @@ Optional:
 Import is supported using the following syntax:
 
 ```shell
+# Import an existing cluster into TF
+# Format should be: terraform import paralus_cluster.<RESOURCE_NAME> <PROJECT_NAME>:<CLUSTER_NAME>
+#
+# NOTE: Both project and cluster must exist or the request will fail
+
 terraform import paralus_cluster.test myproject:mycluster
 ```
