@@ -161,7 +161,7 @@ func createOrUpdateCluster(ctx context.Context, d *schema.ResourceData, requestT
 		"project": d.Get("project").(string),
 	})
 
-	clusterStruct, err = cluster.GetCluster(d.Get("name").(string), d.Get("project").(string))
+	_, err = cluster.GetCluster(d.Get("name").(string), d.Get("project").(string))
 
 	if err != nil {
 		return diag.FromErr(errors.Wrap(err,
@@ -184,14 +184,13 @@ func resourceClusterRead(ctx context.Context, d *schema.ResourceData, m interfac
 		"project": d.Get("project").(string),
 	})
 
-	cluster, err := cluster.GetCluster(d.Get("name").(string), d.Get("project").(string))
+	_, err := cluster.GetCluster(d.Get("name").(string), d.Get("project").(string))
 
 	if err != nil {
 		return diag.FromErr(errors.Wrap(err, fmt.Sprintf("Cluster %s does not exist in project %s",
 			d.Get("name").(string), d.Get("project").(string))))
 	}
 
-	paralusUtils.BuildResourceFromClusterStruct(cluster, d)
 	return diags
 
 }
@@ -206,7 +205,7 @@ func resourceClusterDelete(ctx context.Context, d *schema.ResourceData, m interf
 	})
 
 	// Make sure cluster exists before we attempt to delete it
-	clusterStruct, _ := cluster.GetCluster(d.Get("project").(string), d.Get("name").(string))
+	clusterStruct, _ := cluster.GetCluster(d.Get("name").(string), d.Get("project").(string))
 	if clusterStruct == nil {
 		return diags
 	}
