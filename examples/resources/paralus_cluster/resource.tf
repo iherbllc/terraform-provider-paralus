@@ -2,7 +2,6 @@
 
 resource "paralus_cluster" "testcluster" {
     name = "clusterresource"
-    description = "from unit test"
     project = "test"
     cluster_type = "imported"
     params {

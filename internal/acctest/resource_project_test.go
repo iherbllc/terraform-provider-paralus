@@ -2,6 +2,7 @@ package acctest
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -9,7 +10,42 @@ import (
 	"github.com/paralus/cli/pkg/project"
 )
 
+// Test fail create project if organization name not same as UI configuration
+func TestAccParalusResourceProjectBadOrg_basic(t *testing.T) {
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccConfigPreCheck(t) },
+		Providers: testAccProviders,
+		// CheckDestroy: testAccCheckProjectResourceDestroy(t),
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccProjectResourceConfigBadOrg(),
+				ExpectError: regexp.MustCompile(".*not authorized to perform action.*"),
+			},
+		},
+	})
+}
+
+func testAccProjectResourceConfigBadOrg() string {
+
+	conf = paralusProviderConfig()
+	conf.Organization = "blah"
+
+	providerConfig := providerString(conf, "project_badorg_test")
+	return fmt.Sprintf(`
+		%s
+
+		resource "paralus_project" "badorg_test" {
+			provider = paralus.project_badorg_test
+			name = "badorg_project"
+		}
+	`, providerConfig)
+}
+
+// General Paralus project resource creation
 func TestAccParalusResourceProject_basic(t *testing.T) {
+
+	projectRsName := "paralus_project.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccConfigPreCheck(t) },
@@ -17,31 +53,24 @@ func TestAccParalusResourceProject_basic(t *testing.T) {
 		CheckDestroy: testAccCheckProjectResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProjectResourceConfig(),
+				Config: `
+				resource "paralus_project" "test" {
+					name = "test"
+					description = "test project"
+				}`,
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckResourceProjectExists("paralus_project.test"),
-					testAccCheckResourceProjectTypeAttribute("paralus_project.test", "test project"),
-					resource.TestCheckResourceAttr("paralus_project.test", "description", "test project"),
+					testAccCheckResourceProjectExists(projectRsName),
+					testAccCheckResourceProjectTypeAttribute(projectRsName, "test project"),
+					resource.TestCheckResourceAttr(projectRsName, "description", "test project"),
 				),
+			},
+			{
+				ResourceName:      projectRsName,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
-}
-
-func testAccProjectResourceConfig() string {
-
-	conf = paralusProviderConfig()
-
-	providerConfig := providerString(conf, "project_test")
-	return fmt.Sprintf(`
-		%s
-
-		resource "paralus_project" "test" {
-			provider = "paralusctl.project_test"
-			name = "test"
-			description = "test project"
-		}
-	`, providerConfig)
 }
 
 // testAccCheckProjectResourceDestroy verifies the cluster has been destroyed

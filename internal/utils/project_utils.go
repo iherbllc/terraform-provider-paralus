@@ -1,35 +1,12 @@
 package utils
 
 import (
-	"encoding/json"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	commonv3 "github.com/paralus/paralus/proto/types/commonpb/v3"
 	systemv3 "github.com/paralus/paralus/proto/types/systempb/v3"
 	userv3 "github.com/paralus/paralus/proto/types/userpb/v3"
 )
-
-// Build a project struct from a resource
-func BuildProjectStructFromString(projectStr string, project *systemv3.Project) error {
-	// Need to take json project and convert to the new version
-	projectBytes := []byte(projectStr)
-	if err := json.Unmarshal(projectBytes, &project); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// Build a project struct from a resource
-func BuildStringFromProjectStruct(project *systemv3.Project) (string, error) {
-	projectBytes, err := json.Marshal(&project)
-	if err != nil {
-		return "", err
-	}
-
-	return string(projectBytes), nil
-}
 
 // Build the project struct from a schema resource
 func BuildProjectStructFromResource(d *schema.ResourceData) *systemv3.Project {

@@ -21,8 +21,10 @@ var conf *config.Config
 func init() {
 	testAccProvider = provider.Provider()
 	testAccProviders = map[string]*schema.Provider{
-		"paralusctl": testAccProvider,
+		"paralus": testAccProvider,
 	}
+	conf = paralusProviderConfig()
+
 }
 
 // Return test provider config
@@ -43,16 +45,20 @@ func providerString(conf *config.Config, alias ...string) string {
 		aliasStr = "alias = \"" + alias[0] + "\""
 	}
 
+	if conf == nil {
+		conf = paralusProviderConfig()
+	}
+
 	return fmt.Sprintf(`
-		provider "paralusctl" {
+		provider "paralus" {
 			version = "1.0"
-			profile = "%s"
-			rest_endpoint = "%s"
-			ops_endpoint = "%s"
-			api_key = "%s"
-			api_secret = "%s"
-			partner = "%s"
-			organization = "%s"
+			pctl_profile = "%s"
+			pctl_rest_endpoint = "%s"
+			pctl_ops_endpoint = "%s"
+			pctl_api_key = "%s"
+			pctl_api_secret = "%s"
+			pctl_partner = "%s"
+			pctl_organization = "%s"
 			%s
 		}
 
@@ -93,7 +99,8 @@ func testAccConfigPreCheck(t *testing.T) {
 	}
 }
 
-func TestAccProviderEndpoints_setInvalidRestEndpoints(t *testing.T) {
+// Test invaid API provider endpoint
+func TestAccProviderAttr_setInvalidAPISecret(t *testing.T) {
 	t.Parallel()
 
 	resource.Test(t, resource.TestCase{
@@ -101,30 +108,86 @@ func TestAccProviderEndpoints_setInvalidRestEndpoints(t *testing.T) {
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{
-				Config:      testAccProviderEndpoints_setRestEndpoint("console.paralus.blahblahblah.com"),
+				Config:      testAccProvider_setInvalidSecret(),
+				ExpectError: regexp.MustCompile(".*{\"code\":13,\"message\":\"Internal\"}.*"),
+			},
+		},
+	})
+}
+
+// Test invaid API provider endpoint
+func TestAccProviderAttr_setInvalidAPIKey(t *testing.T) {
+	t.Parallel()
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccConfigPreCheck(t) },
+		Providers: testAccProviders,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccProvider_setInvalidAPIKey(),
+				ExpectError: regexp.MustCompile(".*{\"code\":13,\"message\":\"Internal\"}.*"),
+			},
+		},
+	})
+}
+
+// Test invaid API provider endpoint
+func TestAccProviderAttr_setInvalidEndpoint(t *testing.T) {
+	t.Parallel()
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccConfigPreCheck(t) },
+		Providers: testAccProviders,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccProvider_setRestEndpoint("console.paralus.blahblahblah.com"),
 				ExpectError: regexp.MustCompile(".*no such host.*"),
 			},
 		},
 	})
 }
 
+// set invaid api secret in provider
+func testAccProvider_setInvalidSecret() string {
+
+	conf = paralusProviderConfig()
+	conf.APISecret = "smackety"
+
+	return fmt.Sprintf(`
+%s
+
+data "paralus_project" "default" {
+	provider = paralus.custom_api_secret
+	name = "default"
+  }`, providerString(conf, "custom_api_secret"))
+}
+
+// set invaid api key in provider
+func testAccProvider_setInvalidAPIKey() string {
+
+	conf = paralusProviderConfig()
+	conf.APIKey = "yackity"
+
+	return fmt.Sprintf(`
+%s
+
+data "paralus_project" "default" {
+	provider = paralus.custom_api_key
+	name = "default"
+  }`, providerString(conf, "custom_api_key"))
+}
+
 // set rest endpoint value in provider
-func testAccProviderEndpoints_setRestEndpoint(endpoint string) string {
+func testAccProvider_setRestEndpoint(endpoint string) string {
 
-	// var conf *config.Config
-	if testAccProvider.Meta() == nil {
-		conf = paralusProviderConfig()
-	} else {
-		conf = testAccProvider.Meta().(*config.Config)
-	}
-
+	conf = paralusProviderConfig()
 	conf.RESTEndpoint = endpoint
 
 	return fmt.Sprintf(`
 %s
 
 resource "paralus_cluster" "default" {
-	provider = paralusctl.custom_rest_endpoint
+	provider = paralus.custom_rest_endpoint
 	name     = "tf-cluster-test"
 	project = "blah1"
   }`, providerString(conf, "custom_rest_endpoint"))
@@ -148,20 +211,14 @@ func TestAccProviderEndpoints_setInvalidPartner(t *testing.T) {
 // set partner value in provider
 func testAccProviderEndpoints_setPartner(partner string) string {
 
-	// var conf *config.Config
-	if testAccProvider.Meta() == nil {
-		conf = paralusProviderConfig()
-	} else {
-		conf = testAccProvider.Meta().(*config.Config)
-	}
-
+	conf = paralusProviderConfig()
 	conf.Partner = partner
 
 	return fmt.Sprintf(`
 %s
 
 resource "paralus_cluster" "default" {
-	provider = paralusctl.custom_partner
+	provider = paralus.custom_partner
 	name     = "tf-cluster-test"
 	project = "default"
   }`, providerString(conf, "custom_partner"))

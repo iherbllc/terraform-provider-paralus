@@ -16,52 +16,61 @@ import (
 func Provider() *schema.Provider {
 	return &schema.Provider{
 		Schema: map[string]*schema.Schema{
-			"profile": {
+			"pctl_profile": {
 				Type:        schema.TypeString,
 				Description: "PCTL Profile",
 				Optional:    true,
 				Sensitive:   true,
+				DefaultFunc: schema.EnvDefaultFunc("PCTL_PROFILE", nil),
 			},
-			"rest_endpoint": {
+			"pctl_rest_endpoint": {
 				Type:        schema.TypeString,
 				Description: "Rest Endpoint",
 				Optional:    true,
 				Sensitive:   true,
+				DefaultFunc: schema.EnvDefaultFunc("PCTL_REST_ENDPOINT", nil),
 			},
-			"ops_endpoint": {
+			"pctl_ops_endpoint": {
 				Type:        schema.TypeString,
 				Description: "OPS Endpoint",
 				Optional:    true,
 				Sensitive:   true,
+				DefaultFunc: schema.EnvDefaultFunc("PCTL_OPS_ENDPOINT", nil),
 			},
-			"api_key": {
+			"pctl_api_key": {
 				Type:        schema.TypeString,
 				Description: "PCTL API Key (obtained from UI). Either this and api_secret must be set config_json set",
 				Optional:    true,
 				Sensitive:   true,
+				DefaultFunc: schema.EnvDefaultFunc("PCTL_API_KEY", nil),
 			},
-			"api_secret": {
+			"pctl_api_secret": {
 				Type:        schema.TypeString,
 				Description: "PCTL API Secret (obtained from UI). Either this and api_key must be set config_json set",
 				Optional:    true,
 				Sensitive:   true,
+				DefaultFunc: schema.EnvDefaultFunc("PCTL_API_SECRET", nil),
 			},
-			"config_json": {
+			"pctl_config_json": {
 				Type:        schema.TypeString,
 				Description: "Config JSON (obtained from UI). Either this must be set or api_key/api_secret set",
 				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("PCTL_CONFIG_JSON", nil),
 			},
-			"partner": {
-				Type:     schema.TypeString,
-				Optional: true,
+			"pctl_partner": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("PCTL_PARTNER", nil),
 			},
-			"organization": {
-				Type:     schema.TypeString,
-				Optional: true,
+			"pctl_organization": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("PCTL_ORGANIZATION", nil),
 			},
-			"skip_server_cert_valid": {
-				Type:     schema.TypeString,
-				Optional: true,
+			"pctl_skip_server_cert_valid": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("PCTL_SKIP_SERVER_CERT_VALID", nil),
 			},
 		},
 		ResourcesMap: map[string]*schema.Resource{

@@ -17,7 +17,6 @@ Resource containing paralus cluster information. Uses the [pctl](https://github.
 
 resource "paralus_cluster" "testcluster" {
     name = "clusterresource"
-    description = "from unit test"
     project = "test"
     cluster_type = "imported"
     params {
@@ -40,14 +39,14 @@ resource "paralus_cluster" "testcluster" {
 ### Optional
 
 - `annotations` (Map of String) Map of annotations to include for cluster
-- `bootstrap_file` (String) YAML files used to deploy paralus agent to the cluster
 - `cluster_type` (String) Cluster type. For example, "imported."
-- `description` (String) Cluster description
 - `labels` (Map of String) Map of lables to include for cluster
 - `params` (Block Set, Max: 1) Import parameters (see [below for nested schema](#nestedblock--params))
 
 ### Read-Only
 
+- `bootstrap_file` (String) YAML files used to deploy paralus agent to the cluster
+- `description` (String) Cluster description. Paralus API sets it the same as cluster name
 - `id` (String) Cluster ID in the format "PROJECT_NAME:CLUSTER_NAME"
 
 <a id="nestedblock--params"></a>

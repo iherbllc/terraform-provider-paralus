@@ -45,18 +45,12 @@ func TestAccParalusDataSourceCluster_basic(t *testing.T) {
 
 func testAccDataSourceClusterConfig(clusterName string) string {
 
-	conf = paralusProviderConfig()
-
-	providerConfig := providerString(conf, "cluster_ds_test")
 	return fmt.Sprintf(`
-		%s
-
 		data "paralus_cluster" "test" {
-			provider = "paralusctl.cluster_ds_test"
 			name = "%s"
 			project = "default"
 		}
-	`, providerConfig, clusterName)
+	`, clusterName)
 }
 
 // testAccCheckClusterExists uses the paralus API through PCTL to retrieve cluster info

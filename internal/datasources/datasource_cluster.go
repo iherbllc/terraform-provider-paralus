@@ -17,7 +17,7 @@ import (
 // / Paralus DataSource Cluster
 func DataSourceCluster() *schema.Resource {
 	return &schema.Resource{
-		Description: "Retrieves a paralus cluster's information. Uses the [pctl|https://github.com/paralus/cli] library",
+		Description: "Retrieves a paralus cluster's information. Uses the [pctl](https://github.com/paralus/cli) library",
 		ReadContext: datasourceClusterRead,
 		Schema: map[string]*schema.Schema{
 			"id": {
@@ -33,49 +33,48 @@ func DataSourceCluster() *schema.Resource {
 			"description": {
 				Type:        schema.TypeString,
 				Description: "Cluster description",
-				Optional:    true,
+				Computed:    true,
 			},
 			"cluster_type": {
 				Type:        schema.TypeString,
 				Description: "Cluster type. For example, \"imported.\" ",
-				Optional:    true,
+				Computed:    true,
 			},
 			"params": {
 				Type:        schema.TypeSet,
 				Description: "Import parameters",
-				Optional:    true,
-				MaxItems:    1,
+				Computed:    true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"provision_type": {
 							Type:        schema.TypeString,
 							Description: "Provision Type. For example, \"IMPORT\"",
-							Required:    true,
+							Computed:    true,
 						},
 						"provision_environment": {
 							Type:        schema.TypeString,
 							Description: "Provision Environment. For example, \"CLOUD\"",
-							Required:    true,
+							Computed:    true,
 						},
 						"provision_package_type": {
 							Type:        schema.TypeString,
 							Description: "Provision Type. For example, \"LINUX\"",
-							Optional:    true,
+							Computed:    true,
 						},
 						"environment_provider": {
 							Type:        schema.TypeString,
 							Description: "Provision Type. For example, \"GCP\"",
-							Optional:    true,
+							Computed:    true,
 						},
 						"kubernetes_provider": {
 							Type:        schema.TypeString,
 							Description: "Provision Type. For example, \"EKS\"",
-							Required:    true,
+							Computed:    true,
 						},
 						"state": {
 							Type:        schema.TypeString,
 							Description: "Provision Type. For example, \"PROVISION\"",
-							Required:    true,
+							Computed:    true,
 						},
 					},
 				},
@@ -88,17 +87,17 @@ func DataSourceCluster() *schema.Resource {
 			"bootstrap_file": {
 				Type:        schema.TypeString,
 				Description: "YAML files used to deploy paralus agent to the cluster",
-				Optional:    true,
+				Computed:    true,
 			},
 			"labels": {
 				Type:        schema.TypeMap,
 				Description: "Map of lables to include for cluster",
-				Optional:    true,
+				Computed:    true,
 			},
 			"annotations": {
 				Type:        schema.TypeMap,
 				Description: "Map of annotations to include for cluster",
-				Optional:    true,
+				Computed:    true,
 			},
 		},
 	}
@@ -108,32 +107,35 @@ func DataSourceCluster() *schema.Resource {
 func datasourceClusterRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 
+	clusterId := d.Get("name").(string)
+	projectId := d.Get("project").(string)
+
 	tflog.Trace(ctx, "Retrieving cluster info", map[string]interface{}{
-		"cluster": d.Get("name").(string),
-		"project": d.Get("project").(string),
+		"cluster": clusterId,
+		"project": projectId,
 	})
 
-	clusterStruct, err := cluster.GetCluster(d.Get("name").(string), d.Get("project").(string))
+	clusterStruct, err := cluster.GetCluster(clusterId, projectId)
 
 	if err != nil {
 		d.SetId("")
 		return diag.FromErr(errors.Wrap(err, fmt.Sprintf("Error locating cluster %s in project %s",
-			d.Get("name").(string), d.Get("project").(string))))
+			clusterId, projectId)))
 	}
 
 	paralusUtils.BuildResourceFromClusterStruct(clusterStruct, d)
 
-	bootstrapFile, err := cluster.GetBootstrapFile(d.Get("project").(string), d.Get("name").(string))
+	bootstrapFile, err := cluster.GetBootstrapFile(clusterId, projectId)
 
 	if err != nil {
 		d.SetId("")
 		return diag.FromErr(errors.Wrap(err, fmt.Sprintf("Error retrieving bootstrap file for cluster %s in project %s",
-			d.Get("name").(string), d.Get("project").(string))))
+			clusterId, projectId)))
 	}
 
 	d.Set("bootstrap_file", bootstrapFile)
 
-	d.SetId(d.Get("name").(string) + ":" + d.Get("project").(string))
+	d.SetId(clusterId + ":" + projectId)
 
 	return diags
 

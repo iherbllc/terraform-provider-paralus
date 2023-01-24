@@ -26,10 +26,6 @@ func NewConfig(d *schema.ResourceData) (*config.Config, diag.Diagnostics) {
 			return nil, diag.FromErr(errors.Wrap(nil, "organization missing from config_json file"))
 		}
 
-		if newConfig.Partner == "" {
-			return nil, diag.FromErr(errors.Wrap(nil, "partner missing from config_json file"))
-		}
-
 		return newConfig, diags
 	}
 

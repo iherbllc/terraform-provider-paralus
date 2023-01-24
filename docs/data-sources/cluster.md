@@ -3,12 +3,12 @@
 page_title: "paralus_cluster Data Source - terraform-provider-paralus"
 subcategory: ""
 description: |-
-  Retrieves a paralus cluster's information. Uses the [pctl|https://github.com/paralus/cli] library
+  Retrieves a paralus cluster's information. Uses the pctl https://github.com/paralus/cli library
 ---
 
 # paralus_cluster (Data Source)
 
-Retrieves a paralus cluster's information. Uses the [pctl|https://github.com/paralus/cli] library
+Retrieves a paralus cluster's information. Uses the [pctl](https://github.com/paralus/cli) library
 
 ## Example Usage
 
@@ -29,32 +29,26 @@ data "paralus_cluster" "test" {
 - `name` (String) Cluster name
 - `project` (String) Project containing cluster
 
-### Optional
+### Read-Only
 
 - `annotations` (Map of String) Map of annotations to include for cluster
 - `bootstrap_file` (String) YAML files used to deploy paralus agent to the cluster
 - `cluster_type` (String) Cluster type. For example, "imported."
 - `description` (String) Cluster description
-- `labels` (Map of String) Map of lables to include for cluster
-- `params` (Block Set, Max: 1) Import parameters (see [below for nested schema](#nestedblock--params))
-
-### Read-Only
-
 - `id` (String) Cluster ID in the format "PROJECT_NAME:CLUSTER_NAME"
+- `labels` (Map of String) Map of lables to include for cluster
+- `params` (Set of Object) Import parameters (see [below for nested schema](#nestedatt--params))
 
-<a id="nestedblock--params"></a>
+<a id="nestedatt--params"></a>
 ### Nested Schema for `params`
 
-Required:
+Read-Only:
 
-- `kubernetes_provider` (String) Provision Type. For example, "EKS"
-- `provision_environment` (String) Provision Environment. For example, "CLOUD"
-- `provision_type` (String) Provision Type. For example, "IMPORT"
-- `state` (String) Provision Type. For example, "PROVISION"
-
-Optional:
-
-- `environment_provider` (String) Provision Type. For example, "GCP"
-- `provision_package_type` (String) Provision Type. For example, "LINUX"
+- `environment_provider` (String)
+- `kubernetes_provider` (String)
+- `provision_environment` (String)
+- `provision_package_type` (String)
+- `provision_type` (String)
+- `state` (String)
 
 

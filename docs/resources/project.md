@@ -30,7 +30,7 @@ resource "paralus_project" "test" {
 
 ### Optional
 
-- `description` (String) Project description
+- `description` (String) Project description.
 - `project_roles` (Block List) Project roles attached to project, containing group or namespace (see [below for nested schema](#nestedblock--project_roles))
 - `user_roles` (Block List) User roles attached to project (see [below for nested schema](#nestedblock--user_roles))
 

@@ -39,7 +39,7 @@ func ResourceProject() *schema.Resource {
 			},
 			"description": {
 				Type:        schema.TypeString,
-				Description: "Project description",
+				Description: "Project description.",
 				Optional:    true,
 			},
 			"project_roles": {
@@ -97,9 +97,11 @@ func ResourceProject() *schema.Resource {
 // Import an existing K8S cluster into a designated project
 func resourceProjectCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 
+	projectId := d.Get("name").(string)
+
 	diags := createOrUpdateProject(ctx, d, "POST")
 
-	d.SetId(d.Get("name").(string))
+	d.SetId(projectId)
 
 	return diags
 }
@@ -112,20 +114,22 @@ func resourceProjectUpdate(ctx context.Context, d *schema.ResourceData, m interf
 func createOrUpdateProject(ctx context.Context, d *schema.ResourceData, requestType string) diag.Diagnostics {
 	var diags diag.Diagnostics
 
+	projectId := d.Get("name").(string)
+
 	howFail := "create"
 	if requestType == "PUT" {
 		howFail = "update"
 	}
 
 	tflog.Trace(ctx, fmt.Sprintf("Project %s request", requestType), map[string]interface{}{
-		"project": d.Get("name").(string),
+		"project": projectId,
 	})
 
 	if requestType == "POST" {
-		err := project.CreateProject(d.Get("name").(string), d.Get("description").(string))
+		err := project.CreateProject(projectId, d.Get("description").(string))
 		if err != nil {
 			return diag.FromErr(errors.Wrap(err,
-				fmt.Sprintf("Failed to %s project %s", howFail, d.Get("name"))))
+				fmt.Sprintf("Failed to %s project %s", howFail, projectId)))
 		}
 	} else if requestType == "PUT" {
 		projectStruct := paralusUtils.BuildProjectStructFromResource(d)
@@ -133,7 +137,7 @@ func createOrUpdateProject(ctx context.Context, d *schema.ResourceData, requestT
 		if err != nil {
 			return diag.FromErr(errors.Wrap(err,
 				fmt.Sprintf("Failed to %s project %s", howFail,
-					d.Get("name"))))
+					projectId)))
 		}
 	} else {
 		return diag.FromErr(errors.Wrap(nil,
@@ -141,15 +145,15 @@ func createOrUpdateProject(ctx context.Context, d *schema.ResourceData, requestT
 	}
 
 	tflog.Trace(ctx, "Retrieving project info", map[string]interface{}{
-		"project": d.Get("name").(string),
+		"project": projectId,
 	})
 
-	projectStruct, err := project.GetProjectByName(d.Get("name").(string))
+	projectStruct, err := project.GetProjectByName(projectId)
 
 	if err != nil {
 		return diag.FromErr(errors.Wrap(err,
 			fmt.Sprintf("Failed to %s project %s", howFail,
-				d.Get("name"))))
+				projectId)))
 	}
 
 	// Update resource information from updated cluster
@@ -162,11 +166,13 @@ func createOrUpdateProject(ctx context.Context, d *schema.ResourceData, requestT
 func resourceProjectRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 
+	projectId := d.Get("name").(string)
+
 	tflog.Trace(ctx, "Retrieving project info", map[string]interface{}{
-		"project": d.Get("name").(string),
+		"project": projectId,
 	})
 
-	_, err := project.GetProjectByName(d.Get("name").(string))
+	_, err := project.GetProjectByName(projectId)
 	if err != nil {
 		d.SetId("")
 		return diag.FromErr(errors.Wrap(err, "Project does not exist"))
@@ -178,13 +184,13 @@ func resourceProjectRead(ctx context.Context, d *schema.ResourceData, m interfac
 // Import project into TF
 func resourceProjectImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
 
-	projectID := d.Id()
+	projectId := d.Id()
 
 	tflog.Trace(ctx, "Retrieving project info", map[string]interface{}{
-		"project": projectID,
+		"project": projectId,
 	})
 
-	projectStruct, err := project.GetProjectByName(projectID)
+	projectStruct, err := project.GetProjectByName(projectId)
 	if err != nil {
 		d.SetId("")
 		return nil, errors.Wrap(err, "Project does not exist")
@@ -202,15 +208,26 @@ func resourceProjectImport(ctx context.Context, d *schema.ResourceData, m interf
 func resourceProjectDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 
+	projectId := d.Get("name").(string)
+
 	tflog.Trace(ctx, "Deleting Project info", map[string]interface{}{
-		"project": d.Get("name").(string),
+		"project": projectId,
 	})
 
-	err := project.DeleteProject(d.Get("name").(string))
+	// Make sure the project exists before we attempt to delete it
+	projectStruct, _ := project.GetProjectByName(projectId)
+	if projectStruct == nil {
+		tflog.Warn(ctx, fmt.Sprintf("Project %s does not exist",
+			projectId))
+		d.SetId("")
+		return diags
+	}
+
+	err := project.DeleteProject(projectId)
 
 	if err != nil {
 		return diag.FromErr(errors.Wrap(err, fmt.Sprintf("Failed to delete project %s",
-			d.Get("name").(string))))
+			projectId)))
 	}
 	d.SetId("")
 	return diags

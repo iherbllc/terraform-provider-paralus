@@ -27,34 +27,28 @@ data "paralus_project" "default" {
 
 - `name` (String) Project name
 
-### Optional
-
-- `description` (String) Project description
-- `project_roles` (Block List) Project roles attached to project, containing group or namespace (see [below for nested schema](#nestedblock--project_roles))
-- `user_roles` (Block List) User roles attached to project (see [below for nested schema](#nestedblock--user_roles))
-
 ### Read-Only
 
+- `description` (String) Project description
 - `id` (String) Project ID in the format "PROJECT_NAME"
+- `project_roles` (List of Object) Project roles attached to project, containing group or namespace (see [below for nested schema](#nestedatt--project_roles))
+- `user_roles` (List of Object) User roles attached to project (see [below for nested schema](#nestedatt--user_roles))
 
-<a id="nestedblock--project_roles"></a>
+<a id="nestedatt--project_roles"></a>
 ### Nested Schema for `project_roles`
 
-Required:
-
-- `project` (String)
-- `role` (String)
-
-Optional:
+Read-Only:
 
 - `group` (String)
 - `namespace` (String)
+- `project` (String)
+- `role` (String)
 
 
-<a id="nestedblock--user_roles"></a>
+<a id="nestedatt--user_roles"></a>
 ### Nested Schema for `user_roles`
 
-Required:
+Read-Only:
 
 - `role` (String)
 - `user` (String)

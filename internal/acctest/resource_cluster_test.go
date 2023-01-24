@@ -2,6 +2,7 @@ package acctest
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -9,97 +10,120 @@ import (
 	"github.com/paralus/cli/pkg/cluster"
 )
 
+// Test project and cluster creation
 func TestAccParalusResourceProjectCluster_basic(t *testing.T) {
 
+	projectRsName := "paralus_project.testproject"
+	clusterRsName := "paralus_cluster.testcluster"
+
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccConfigPreCheck(t) },
 		Providers:    testAccProviders,
 		CheckDestroy: testAccCheckClusterResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProjectClusterConfig(),
+				Config: `
+				resource "paralus_project" "testproject" {
+					name = "projectresource"
+					description = "from acct test"
+				}
+		
+				resource "paralus_cluster" "testcluster" {
+					name = "clusterresource"
+					project = paralus_project.testproject.name
+					cluster_type = "imported"
+					params {
+						provision_type = "IMPORT"
+						provision_environment = "CLOUD"
+						kubernetes_provider = "EKS"
+						state = "PROVISION"
+					}
+				}
+				`,
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckClusterExists("paralus_cluster.testcluster"),
-					testAccCheckClusterTypeAttribute("paralus_cluster.testcluster", "imported"),
-					resource.TestCheckResourceAttr("paralus_project.testproject", "description", "from unit test"),
-					resource.TestCheckResourceAttr("paralus_cluster.testcluster", "project", "projectresource"),
+					testAccCheckResourceProjectExists(projectRsName),
+					testAccCheckResourceClusterExists(clusterRsName),
+					testAccCheckResourceProjectTypeAttribute(projectRsName, "from acct test"),
+					testAccCheckResourceClusterTypeAttribute(clusterRsName, "imported"),
+					resource.TestCheckResourceAttr(projectRsName, "description", "from acct test"),
+					resource.TestCheckResourceAttr(clusterRsName, "project", "projectresource"),
 				),
+			},
+			{
+				ResourceName:      projectRsName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				ResourceName:      clusterRsName,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
 }
 
-func testAccProjectClusterConfig() string {
+// Test unknown project
+func TestAccParalusResourceClusterUnknownProject_basic(t *testing.T) {
 
-	conf = paralusProviderConfig()
-
-	providerConfig := providerString(conf, "project_cluster_test")
-	return fmt.Sprintf(`
-		%s
-
-		resource "paralus_project" "testproject" {
-			provider = "paralusctl.project_cluster_test"
-			name = "projectresource"
-			description = "from unit test"
-		}
-
-		resource "paralus_cluster" "testcluster" {
-			provider = "paralusctl.project_cluster_test"
-			name = "clusterresource"
-			description = "from unit test"
-			project = paralus_project.testproject.name
-			cluster_type = "imported"
-			params {
-				provision_type = "IMPORT"
-				provision_environment = "CLOUD"
-				kubernetes_provider = "EKS"
-				state = "PROVISION"
-			}
-		}
-	`, providerConfig)
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccConfigPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckClusterResourceDestroy(t),
+		Steps: []resource.TestStep{
+			{
+				Config: `
+				resource "paralus_cluster" "test" {
+					name = "test"
+					project = "blah"
+					cluster_type = "imported"
+					params {
+						provision_type = "IMPORT"
+						provision_environment = "CLOUD"
+						kubernetes_provider = "EKS"
+						state = "PROVISION"
+					}
+				}`,
+				ExpectError: regexp.MustCompile(".*Project .* does not exist.*"),
+			},
+		},
+	})
 }
 
+// Test cluster creation into existing project
 func TestAccParalusResourceCluster_basic(t *testing.T) {
-
+	clusterRsName := "paralus_cluster.test"
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccConfigPreCheck(t) },
 		Providers:    testAccProviders,
 		CheckDestroy: testAccCheckClusterResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccClusterConfig(),
+				Config: `
+				resource "paralus_cluster" "test" {
+					name = "test"
+					project = "default"
+					cluster_type = "imported"
+					params {
+						provision_type = "IMPORT"
+						provision_environment = "CLOUD"
+						kubernetes_provider = "EKS"
+						state = "PROVISION"
+					}
+				}`,
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckClusterExists("paralus_cluster.test"),
-					testAccCheckClusterTypeAttribute("paralus_cluster.test", "imported"),
-					resource.TestCheckResourceAttr("paralus_cluster.test", "project", "default"),
+					testAccCheckResourceClusterExists(clusterRsName),
+					testAccCheckResourceClusterTypeAttribute(clusterRsName, "imported"),
+					resource.TestCheckResourceAttr(clusterRsName, "project", "default"),
 				),
+			},
+			{
+				ResourceName:      clusterRsName,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
-}
-
-func testAccClusterConfig() string {
-
-	conf = paralusProviderConfig()
-
-	providerConfig := providerString(conf, "cluster_test")
-	return fmt.Sprintf(`
-		%s
-
-		resource "paralus_cluster" "test" {
-			provider = "paralusctl.cluster_test"
-			name = "test"
-			description = "test cluster"
-			project = "default"
-			cluster_type = "imported"
-			params {
-				provision_type = "IMPORT"
-				provision_environment = "CLOUD"
-				kubernetes_provider = "EKS"
-				state = "PROVISION"
-			}
-		}
-	`, providerConfig)
 }
 
 // testAccCheckClusterResourceDestroy verifies the cluster has been destroyed
@@ -127,9 +151,9 @@ func testAccCheckClusterResourceDestroy(t *testing.T) func(s *terraform.State) e
 	}
 }
 
-// testAccCheckClusterExists uses the paralus API through PCTL to retrieve cluster info
+// testAccCheckResourceClusterExists uses the paralus API through PCTL to retrieve cluster info
 // and store it as a PCTL Cluster instance
-func testAccCheckClusterExists(resourceName string) func(s *terraform.State) error {
+func testAccCheckResourceClusterExists(resourceName string) func(s *terraform.State) error {
 
 	return func(s *terraform.State) error {
 		// retrieve the resource by name from state
@@ -154,9 +178,9 @@ func testAccCheckClusterExists(resourceName string) func(s *terraform.State) err
 	}
 }
 
-// testAccCheckClusterTypeAttribute verifies project attribute is set correctly by
+// testAccCheckResourceClusterTypeAttribute verifies project attribute is set correctly by
 // Terraform
-func testAccCheckClusterTypeAttribute(resourceName string, cluster_type string) func(s *terraform.State) error {
+func testAccCheckResourceClusterTypeAttribute(resourceName string, cluster_type string) func(s *terraform.State) error {
 
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[resourceName]
