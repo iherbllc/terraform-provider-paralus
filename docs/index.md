@@ -22,13 +22,13 @@ Use the navigation to the left to read about the available resources.
 
 provider "paralus" {
     version = "1.0"
-    profile = "test"
-    rest_endpoint = "https://paralus.example.com:443"
-    ops_endpoint = "https://paralus.example.com:443"
-    api_key = "1111111"
-    api_secret = "222222222"
-    partner = "Howdy"
-    organization = "Doodey"
+    pctl_profile = "test"
+    pctl_rest_endpoint = "https://paralus.example.com:443"
+    pctl_ops_endpoint = "https://paralus.example.com:443"
+    pctl_api_key = "1111111"
+    pctl_api_secret = "222222222"
+    pctl_partner = "Howdy"
+    pctl_organization = "Doodey"
 }
 ```
 
