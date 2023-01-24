@@ -17,6 +17,7 @@ import (
 // / Paralus Resource Project
 func ResourceProject() *schema.Resource {
 	return &schema.Resource{
+		Description:   "Creates a new paralus project. Uses the [pctl|https://github.com/paralus/cli] library",
 		CreateContext: resourceProjectCreate,
 		ReadContext:   resourceProjectRead,
 		UpdateContext: resourceProjectUpdate,
@@ -25,50 +26,66 @@ func ResourceProject() *schema.Resource {
 			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Schema: map[string]*schema.Schema{
+			"id": {
+				Type:        schema.TypeString,
+				Description: "Project ID in the format \"PROJECT_NAME\"",
+				Computed:    true,
+			},
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Description: "Project name",
+				ForceNew:    true,
+				Required:    true,
 			},
 			"description": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:        schema.TypeString,
+				Description: "Project description",
+				Optional:    true,
 			},
 			"project_roles": {
-				Type:     schema.TypeList,
-				Optional: true,
+				Type:        schema.TypeList,
+				Description: "Project roles attached to project, containing group or namespace",
+				Optional:    true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"project": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Description: "Project name",
+							Required:    true,
 						},
 						"role": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Description: "Role name",
+							Required:    true,
 						},
 						"namespace": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Description: "Authorized namespace",
+							Optional:    true,
 						},
 						"group": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Description: "Authorized group",
+							Optional:    true,
 						},
 					},
 				},
 			},
 			"user_roles": {
-				Type:     schema.TypeList,
-				Optional: true,
+				Type:        schema.TypeList,
+				Description: "User roles attached to project",
+				Optional:    true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"user": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Description: "Authorized user",
+							Required:    true,
 						},
 						"role": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Description: "Authorized role",
+							Required:    true,
 						},
 					},
 				},

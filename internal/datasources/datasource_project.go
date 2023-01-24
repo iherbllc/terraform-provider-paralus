@@ -17,19 +17,28 @@ import (
 // / Paralus DataSource Cluster
 func DataSourceProject() *schema.Resource {
 	return &schema.Resource{
+		Description: "Retrieves a paralus project's information. Uses the [pctl|https://github.com/paralus/cli] library",
 		ReadContext: datasourceProjectRead,
 		Schema: map[string]*schema.Schema{
+			"id": {
+				Type:        schema.TypeString,
+				Description: "Project ID in the format \"PROJECT_NAME\"",
+				Computed:    true,
+			},
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Description: "Project name",
+				Required:    true,
 			},
 			"description": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:        schema.TypeString,
+				Description: "Project description",
+				Optional:    true,
 			},
 			"project_roles": {
-				Type:     schema.TypeList,
-				Optional: true,
+				Type:        schema.TypeList,
+				Description: "Project roles attached to project, containing group or namespace",
+				Optional:    true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"project": {
@@ -52,8 +61,9 @@ func DataSourceProject() *schema.Resource {
 				},
 			},
 			"user_roles": {
-				Type:     schema.TypeList,
-				Optional: true,
+				Type:        schema.TypeList,
+				Description: "User roles attached to project",
+				Optional:    true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"user": {
