@@ -1,0 +1,1 @@
+terraform import paralus_cluster.test myproject:mycluster

@@ -1,0 +1,1 @@
+terraform import paralus_project.test myproject
