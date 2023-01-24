@@ -17,13 +17,13 @@ import (
 // / Paralus Resource Project
 func ResourceProject() *schema.Resource {
 	return &schema.Resource{
-		Description:   "Creates a new paralus project. Uses the [pctl|https://github.com/paralus/cli] library",
+		Description:   "Resource containing paralus project information. Uses the [pctl](https://github.com/paralus/cli) library",
 		CreateContext: resourceProjectCreate,
 		ReadContext:   resourceProjectRead,
 		UpdateContext: resourceProjectUpdate,
 		DeleteContext: resourceProjectDelete,
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: resourceProjectImport,
 		},
 		Schema: map[string]*schema.Schema{
 			"id": {
@@ -173,6 +173,29 @@ func resourceProjectRead(ctx context.Context, d *schema.ResourceData, m interfac
 	}
 
 	return diags
+}
+
+// Import project into TF
+func resourceProjectImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+
+	projectID := d.Id()
+
+	tflog.Trace(ctx, "Retrieving project info", map[string]interface{}{
+		"project": projectID,
+	})
+
+	projectStruct, err := project.GetProjectByName(projectID)
+	if err != nil {
+		d.SetId("")
+		return nil, errors.Wrap(err, "Project does not exist")
+	}
+
+	paralusUtils.BuildResourceFromProjectStruct(projectStruct, d)
+
+	schemas := make([]*schema.ResourceData, 0)
+	schemas = append(schemas, d)
+	return schemas, nil
+
 }
 
 // Delete an existing cluster

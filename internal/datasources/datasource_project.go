@@ -17,7 +17,7 @@ import (
 // / Paralus DataSource Cluster
 func DataSourceProject() *schema.Resource {
 	return &schema.Resource{
-		Description: "Retrieves a paralus project's information. Uses the [pctl|https://github.com/paralus/cli] library",
+		Description: "Retrieves a paralus project's information. Uses the [pctl](https://github.com/paralus/cli) library",
 		ReadContext: datasourceProjectRead,
 		Schema: map[string]*schema.Schema{
 			"id": {

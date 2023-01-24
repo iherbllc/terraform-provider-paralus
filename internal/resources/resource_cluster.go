@@ -3,6 +3,7 @@ package resources
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	paralusUtils "github.com/iherbllc/terraform-provider-paralus/internal/utils"
 
@@ -15,16 +16,16 @@ import (
 	"github.com/pkg/errors"
 )
 
-// / Paralus Resource Cluster
+// Paralus Resource Cluster
 func ResourceCluster() *schema.Resource {
 	return &schema.Resource{
-		Description:   "Creates a new paralus cluster. Uses the [pctl|https://github.com/paralus/cli] library",
+		Description:   "Resource containing paralus cluster information. Uses the [pctl](https://github.com/paralus/cli) library",
 		CreateContext: resourceClusterCreate,
 		ReadContext:   resourceClusterRead,
 		UpdateContext: resourceClusterUpdate,
 		DeleteContext: resourceClusterDelete,
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: resourceClusterImport,
 		},
 		Schema: map[string]*schema.Schema{
 			"id": {
@@ -121,7 +122,7 @@ func ResourceCluster() *schema.Resource {
 	}
 }
 
-// Import an existing K8S cluster into a designated project
+// Create a new cluster in Paralus
 func resourceClusterCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 
 	project := d.Get("project").(string)
@@ -134,6 +135,7 @@ func resourceClusterCreate(ctx context.Context, d *schema.ResourceData, m interf
 	return diags
 }
 
+// Updating existing cluster
 func resourceClusterUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	return createOrUpdateCluster(ctx, d, "PUT")
 }
@@ -200,7 +202,7 @@ func createOrUpdateCluster(ctx context.Context, d *schema.ResourceData, requestT
 	return diags
 }
 
-// Retreive cluster JSON info
+// Retreive cluster info
 func resourceClusterRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 
@@ -217,7 +219,42 @@ func resourceClusterRead(ctx context.Context, d *schema.ResourceData, m interfac
 			d.Get("name").(string), d.Get("project").(string))))
 	}
 
+	if d.Id() == "" {
+		d.SetId(d.Get("project").(string) + ":" + d.Get("name").(string))
+	}
+
 	return diags
+
+}
+
+// Import cluster info into TF
+func resourceClusterImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+
+	clusterProjectID := strings.Split(d.Id(), ":")
+
+	if len(clusterProjectID) != 2 {
+		d.SetId("")
+		return nil, errors.Wrap(nil, fmt.Sprintf("Unable to import. ID must be in format PROJECT_NAME:CLUSTER_NAME. Got %s", d.Id()))
+	}
+
+	tflog.Trace(ctx, "Retrieving cluster info", map[string]interface{}{
+		"project": clusterProjectID[0],
+		"cluster": clusterProjectID[1],
+	})
+
+	clusterStruct, err := cluster.GetCluster(clusterProjectID[1], clusterProjectID[0])
+
+	if err != nil {
+		d.SetId("")
+		return nil, errors.Wrap(err, fmt.Sprintf("Cluster %s does not exist in project %s",
+			clusterProjectID[1], clusterProjectID[0]))
+	}
+
+	paralusUtils.BuildResourceFromClusterStruct(clusterStruct, d)
+
+	schemas := make([]*schema.ResourceData, 0)
+	schemas = append(schemas, d)
+	return schemas, nil
 
 }
 
