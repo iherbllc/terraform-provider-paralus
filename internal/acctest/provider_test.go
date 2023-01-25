@@ -30,7 +30,8 @@ func init() {
 // Return test provider config
 func paralusProviderConfig() *config.Config {
 	// utils.LoadEnv()
-	newConfig, err := paralus.NewConfigFromFile(os.Getenv("CONFIG_JSON"))
+	configJson := os.Getenv("CONFIG_JSON")
+	newConfig, err := paralus.NewConfigFromFile(configJson)
 	if err != nil {
 		panic(err)
 	}
@@ -101,7 +102,6 @@ func testAccConfigPreCheck(t *testing.T) {
 
 // Test invaid API provider endpoint
 func TestAccProviderAttr_setInvalidAPISecret(t *testing.T) {
-	t.Parallel()
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccConfigPreCheck(t) },
@@ -117,7 +117,6 @@ func TestAccProviderAttr_setInvalidAPISecret(t *testing.T) {
 
 // Test invaid API provider endpoint
 func TestAccProviderAttr_setInvalidAPIKey(t *testing.T) {
-	t.Parallel()
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccConfigPreCheck(t) },
@@ -133,7 +132,6 @@ func TestAccProviderAttr_setInvalidAPIKey(t *testing.T) {
 
 // Test invaid API provider endpoint
 func TestAccProviderAttr_setInvalidEndpoint(t *testing.T) {
-	t.Parallel()
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccConfigPreCheck(t) },
