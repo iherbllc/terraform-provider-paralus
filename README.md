@@ -1,3 +1,66 @@
 # Paralus terraform provider
 
-Terraform Provided for Paralus. See [docs](/docs) page for a full explanation of the various datasource/resources
+Terraform Provided for Paralus
+
+## Documentation
+
+See [docs](/docs) page for a full explanation of the various datasource/resources
+
+## Acceptance Tests
+
+Acceptance tests (deployed under the /internal/acctest directory) can be run one of two ways
+
+### Single Test
+
+If you wish to run a specific acceptance test, do the following:
+
+(Note: this assumes you are using vscode and TF is deployed as a plugin)
+
+1. Download the config.json from Paralus UI. See [CLI](https://www.paralus.io/docs/usage/cli)
+2. Put the json into the same directory as the make file
+3. Create a launch.json file with the following contents
+
+    ```json
+    {
+        // Use IntelliSense to learn about possible attributes.
+        // Hover to view descriptions of existing attributes.
+        // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+        "version": "0.2.0",
+        "configurations": [
+            {
+                "name": "Launch a test function",
+                "type": "go",
+                "request": "launch",
+                "mode": "auto",
+                "program": "${fileDirname}",
+                "env": {
+                    "PKG_NAME": "${relativeFileDirname}",
+                    "TF_ACC": "1",
+                    "TF_LOG": "INFO",
+                    "GOFLAGS": "-mod=readonly",
+                    "CONFIG_JSON": "${workspaceFolder}/config.json"
+                }, 
+                "args": [
+                    "-test.v",
+                    "-test.run",
+                    "^${selectedText}$"
+                ],
+                "showLog": true
+            }
+        ]
+    }
+    ```
+
+4. Go into the individual test case within your go file and highlight the func name
+5. Go to `Run and Debug` on the left and select `Launch a test function` from the top
+6. Look at the `DEBUG_CONSOLE` window to see the result
+
+### All Tests
+
+To run all acceptance tests, use the make command by doing the following:
+
+1. Download the config.json from Paralus UI. See [CLI](https://www.paralus.io/docs/usage/cli)
+2. Put the json into the same directory as the make file
+3. Run the command `make testacc`
+
+Note: This will run all acceptance tests in the `internal/acctest` directory
