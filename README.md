@@ -1,5 +1,10 @@
 # Paralus terraform provider
 
+[![Action](https://github.com/iherbllc/terraform-provider-paralus/workflows/build/badge.svg)](https://github.com/iherbllc/terraform-provider-paralus/workflows/build/badge.svg)
+[![Go Report Card](https://goreportcard.com/badge/github.com/iherbllc/terraform-provider-paralus)](https://goreportcard.com/badge/github.com/iherbllc/terraform-provider-paralus)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/iherbllc/terraform-provider-paralus)](https://img.shields.io/github/go-mod/go-version/iherbllc/terraform-provider-paralus)
+[![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/github.com/iherbllc/terraform-provider-paralus?tab=overview)
+
 Terraform Provided for Paralus
 
 ## Documentation

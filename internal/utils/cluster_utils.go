@@ -1,3 +1,4 @@
+// Utility methods for PCTL Cluster struct
 package utils
 
 import (

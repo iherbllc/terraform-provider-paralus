@@ -1,3 +1,4 @@
+// Project Terraform DataSource
 package datasources
 
 import (
@@ -14,7 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-// / Paralus DataSource Cluster
+// Paralus DataSource Project
 func DataSourceProject() *schema.Resource {
 	return &schema.Resource{
 		Description: "Retrieves a paralus project's information. Uses the [pctl](https://github.com/paralus/cli) library",

@@ -1,3 +1,4 @@
+// Main method used for terraform provider
 package main
 
 import (
@@ -11,6 +12,7 @@ import (
 // Generate the Terraform provider documentation using `tfplugindocs`:
 //go:generate go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs
 
+// main method
 func main() {
 	var debug bool
 
