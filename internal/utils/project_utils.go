@@ -1,3 +1,4 @@
+// Utility methods for PCTL Project struct
 package utils
 
 import (

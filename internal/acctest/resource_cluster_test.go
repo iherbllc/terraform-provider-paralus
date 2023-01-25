@@ -1,3 +1,4 @@
+// Cluster Resource acceptance test
 package acctest
 
 import (

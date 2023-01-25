@@ -1,3 +1,4 @@
+// Provider acceptance test
 package acctest
 
 import (

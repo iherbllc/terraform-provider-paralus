@@ -1,3 +1,4 @@
+// Client to retrieve new PCTL Config for connecting to paralus
 package paralus
 
 import (

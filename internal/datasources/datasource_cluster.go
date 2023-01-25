@@ -1,3 +1,4 @@
+// Cluster Terraform DataSource
 package datasources
 
 import (
@@ -14,7 +15,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// / Paralus DataSource Cluster
+// Paralus DataSource Cluster
 func DataSourceCluster() *schema.Resource {
 	return &schema.Resource{
 		Description: "Retrieves a paralus cluster's information. Uses the [pctl](https://github.com/paralus/cli) library",

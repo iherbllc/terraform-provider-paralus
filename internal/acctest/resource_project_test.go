@@ -1,3 +1,4 @@
+// Project Resource acceptance test
 package acctest
 
 import (

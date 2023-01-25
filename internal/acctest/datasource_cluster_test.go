@@ -1,3 +1,4 @@
+// Cluster DataSource acceptance test
 package acctest
 
 import (
