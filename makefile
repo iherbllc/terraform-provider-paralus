@@ -8,7 +8,7 @@ BINARY := terraform-provider-${NAME}
 HOSTNAME := hashicorp.com
 NAMESPACE := iherbllc
 
-.PHONY: build test testacc install ship terraform-test terraform-apply tag push
+.PHONY: build test testacc install ship terraform-test terraform-apply
 
 build: version
 	go build ./...
@@ -21,9 +21,3 @@ testacc:
 
 version:
 	echo ${VERSION}
-
-tag:
-	git tag v${VERSION}
-
-push:
-	git push origin v${VERSION}
