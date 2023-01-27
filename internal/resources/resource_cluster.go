@@ -112,10 +112,19 @@ func ResourceCluster() *schema.Resource {
 				ForceNew:    true,
 			},
 			// Will only ever be updated by provider
-			"bootstrap_file": {
+			"bootstrap_files_combined": {
 				Type:        schema.TypeString,
-				Description: "YAML files used to deploy paralus agent to the cluster",
+				Description: "YAML files used to deploy paralus agent to the cluster stored as a single massive file",
 				Computed:    true,
+			},
+			// Will only ever be updated by provider
+			"bootstrap_files": {
+				Type:        schema.TypeList,
+				Description: "YAML files used to deploy paralus agent to the cluster stored as a list of files",
+				Computed:    true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
 			},
 			// Can be passed in or updated by provider
 			// A newly created cluster will have it's labels added to by paralus
@@ -345,6 +354,7 @@ func setBootstrapFile(ctx context.Context, d *schema.ResourceData) diag.Diagnost
 			clusterId, projectId)))
 	}
 
-	d.Set("bootstrap_file", bootstrapFile)
+	d.Set("bootstrap_files_combined", bootstrapFile)
+	d.Set("bootstrap_files", paralusUtils.SplitSingleYAMLIntoList(bootstrapFile))
 	return nil
 }

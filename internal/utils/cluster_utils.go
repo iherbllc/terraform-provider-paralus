@@ -2,6 +2,8 @@
 package utils
 
 import (
+	"strings"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	commonv3 "github.com/paralus/paralus/proto/types/commonpb/v3"
@@ -77,4 +79,21 @@ func BuildResourceFromClusterStruct(cluster *infrav3.Cluster, d *schema.Resource
 	}
 	d.Set("labels", cluster.Metadata.Labels)
 	d.Set("annotations", cluster.Metadata.Annotations)
+}
+
+// Splits a single YAML file containing multiple YAML entries into a list of string
+func SplitSingleYAMLIntoList(singleYAML string) []string {
+	docs := strings.Split(string(singleYAML), "\n---")
+
+	yamls := []string{}
+	// Trim whitespace in both ends of each yaml docs.
+	// - Re-add a single newline last
+	for _, doc := range docs {
+		content := strings.TrimSpace(doc)
+		// Ignore empty docs
+		if content != "" {
+			yamls = append(yamls, content)
+		}
+	}
+	return yamls
 }

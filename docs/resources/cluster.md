@@ -45,7 +45,8 @@ resource "paralus_cluster" "testcluster" {
 
 ### Read-Only
 
-- `bootstrap_file` (String) YAML files used to deploy paralus agent to the cluster
+- `bootstrap_files` (List of String) YAML files used to deploy paralus agent to the cluster stored as a list of files
+- `bootstrap_files_combined` (String) YAML files used to deploy paralus agent to the cluster stored as a single massive file
 - `description` (String) Cluster description. Paralus API sets it the same as cluster name
 - `id` (String) Cluster ID in the format "PROJECT_NAME:CLUSTER_NAME"
 - `uuid` (String) Cluster UUID

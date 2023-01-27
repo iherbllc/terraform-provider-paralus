@@ -4,6 +4,7 @@ package acctest
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -12,13 +13,13 @@ import (
 )
 
 // Test cluster not found
-func TestAccParalusClusterNotFound_basic(t *testing.T) {
+func TestAccParalusBootstrapNotFound_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccConfigPreCheck(t) },
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{
-				Config:      testAccDataSourceClusterConfig("blah"),
+				Config:      testAccDataSourceBootstrapConfig("blah"),
 				ExpectError: regexp.MustCompile(".*cluster not found.*"),
 			},
 		},
@@ -26,37 +27,36 @@ func TestAccParalusClusterNotFound_basic(t *testing.T) {
 }
 
 // Standard acceptance test
-func TestAccParalusDataSourceCluster_basic(t *testing.T) {
+func TestAccParalusDataSourceBootstrap_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccConfigPreCheck(t) },
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDataSourceClusterConfig("ignoreme"),
+				Config: testAccDataSourceBootstrapConfig("ignoreme"),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckDataSourceClusterExists("data.paralus_cluster.test"),
-					testAccCheckDataSourceClusterTypeAttribute("data.paralus_cluster.test", "ignoreme"),
-					resource.TestCheckResourceAttr("data.paralus_cluster.test", "project", "default"),
+					testAccCheckHasBootstrap("data.paralus_bootstrap_file.test"),
+					testAccCheckDataSourceBootstrapAttributeNotNil("data.paralus_bootstrap_file.test"),
+					resource.TestCheckTypeSetElemAttr("data.paralus_bootstrap_file.test", "bootstrap_files.*", "12"),
 				),
 			},
 		},
 	})
 }
 
-func testAccDataSourceClusterConfig(clusterName string) string {
+func testAccDataSourceBootstrapConfig(clusterName string) string {
 
 	return fmt.Sprintf(`
-		data "paralus_cluster" "test" {
+		data "paralus_bootstrap_file" "test" {
 			name = "%s"
 			project = "default"
 		}
 	`, clusterName)
 }
 
-// testAccCheckClusterExists uses the paralus API through PCTL to retrieve cluster info
-// and store it as a PCTL Cluster instance
-func testAccCheckDataSourceClusterExists(resourceName string) func(s *terraform.State) error {
+// tests whether a bootstrap file exists
+func testAccCheckHasBootstrap(resourceName string) func(s *terraform.State) error {
 
 	return func(s *terraform.State) error {
 		// retrieve the resource by name from state
@@ -72,7 +72,7 @@ func testAccCheckDataSourceClusterExists(resourceName string) func(s *terraform.
 		project := rs.Primary.Attributes["project"]
 		clusterName := rs.Primary.Attributes["name"]
 
-		_, err := cluster.GetCluster(clusterName, project)
+		_, err := cluster.GetBootstrapFile(clusterName, project)
 
 		if err == nil {
 			return err
@@ -83,15 +83,19 @@ func testAccCheckDataSourceClusterExists(resourceName string) func(s *terraform.
 
 // testAccCheckClusterTypeAttribute verifies project attribute is set correctly by
 // Terraform
-func testAccCheckDataSourceClusterTypeAttribute(resourceName string, description string) func(s *terraform.State) error {
+func testAccCheckDataSourceBootstrapAttributeNotNil(resourceName string) func(s *terraform.State) error {
 
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[resourceName]
 		if !ok {
 			return fmt.Errorf("Not found: %s", resourceName)
 		}
-		if rs.Primary.Attributes["description"] != description {
-			return fmt.Errorf("Invalid description")
+		if rs.Primary.Attributes["bootstrap_files_combined"] == "" {
+			return fmt.Errorf("No bootstrap provided")
+		}
+		i, err := strconv.Atoi(rs.Primary.Attributes["bootstrap_files.#"])
+		if err != nil || i <= 0 {
+			return fmt.Errorf("No bootstrap files provided")
 		}
 
 		return nil
