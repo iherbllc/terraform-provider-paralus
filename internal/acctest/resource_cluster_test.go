@@ -12,7 +12,7 @@ import (
 )
 
 // Test project and cluster creation
-func TestAccParalusResourceProjectCluster_basic(t *testing.T) {
+func TestAccParalusResourceProjectCluster_full(t *testing.T) {
 
 	projectRsName := "paralus_project.testproject"
 	clusterRsName := "paralus_cluster.testcluster"

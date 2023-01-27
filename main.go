@@ -21,7 +21,7 @@ func main() {
 
 	opts := &plugin.ServeOpts{
 		Debug:        debug,
-		ProviderAddr: "github.com/iherbllc/terraform-provider-paralus",
+		ProviderAddr: "github.com/iherbllc/paralus",
 		ProviderFunc: func() *schema.Provider {
 			return provider.Provider()
 		},

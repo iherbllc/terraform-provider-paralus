@@ -24,14 +24,13 @@ func init() {
 	testAccProviders = map[string]*schema.Provider{
 		"paralus": testAccProvider,
 	}
-	conf = paralusProviderConfig()
+	// conf = paralusProviderConfig()
 
 }
 
 // Return test provider config
 func paralusProviderConfig() *config.Config {
-	// utils.LoadEnv()
-	configJson := os.Getenv("CONFIG_JSON")
+	configJson := os.Getenv("PCTL_CONFIG_JSON")
 	newConfig, err := paralus.NewConfigFromFile(configJson)
 	if err != nil {
 		panic(err)
@@ -105,7 +104,7 @@ func testAccConfigPreCheck(t *testing.T) {
 func TestAccProviderAttr_setInvalidAPISecret(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccConfigPreCheck(t) },
+		// PreCheck:  func() { testAccConfigPreCheck(t) },
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{
