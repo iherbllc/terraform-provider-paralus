@@ -356,5 +356,6 @@ func setBootstrapFile(ctx context.Context, d *schema.ResourceData) diag.Diagnost
 
 	d.Set("bootstrap_files_combined", bootstrapFile)
 	d.Set("bootstrap_files", paralusUtils.SplitSingleYAMLIntoList(bootstrapFile))
+
 	return nil
 }

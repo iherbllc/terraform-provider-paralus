@@ -38,6 +38,7 @@ func TestAccParalusDataSourceCluster_basic(t *testing.T) {
 					testAccCheckDataSourceClusterExists("data.paralus_cluster.test"),
 					testAccCheckDataSourceClusterTypeAttribute("data.paralus_cluster.test", "ignoreme"),
 					resource.TestCheckResourceAttr("data.paralus_cluster.test", "project", "default"),
+					resource.TestCheckTypeSetElemAttr("data.paralus_cluster.test", "bootstrap_files.*", "12"),
 				),
 			},
 		},

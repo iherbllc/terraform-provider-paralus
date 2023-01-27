@@ -48,11 +48,21 @@ func BuildClusterStructFromResource(d *schema.ResourceData) *infrav3.Cluster {
 	}
 
 	if labels, ok := d.GetOk("labels"); ok {
-		clusterStruct.Metadata.Labels = labels.(map[string]string)
+		if clusterStruct.Metadata.Labels == nil {
+			clusterStruct.Metadata.Labels = make(map[string]string)
+		}
+		for k, v := range labels.(map[string]interface{}) {
+			clusterStruct.Metadata.Labels[k] = v.(string)
+		}
 	}
 
 	if annotations, ok := d.GetOk("annotations"); ok {
-		clusterStruct.Metadata.Annotations = annotations.(map[string]string)
+		if clusterStruct.Metadata.Annotations == nil {
+			clusterStruct.Metadata.Annotations = make(map[string]string)
+		}
+		for k, v := range annotations.(map[string]interface{}) {
+			clusterStruct.Metadata.Annotations[k] = v.(string)
+		}
 	}
 
 	return clusterStruct

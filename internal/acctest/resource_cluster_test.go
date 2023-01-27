@@ -50,6 +50,7 @@ func TestAccParalusResourceProjectCluster_full(t *testing.T) {
 					testAccCheckResourceClusterTypeAttribute(clusterRsName, "imported"),
 					resource.TestCheckResourceAttr(projectRsName, "description", "from acct test"),
 					resource.TestCheckResourceAttr(clusterRsName, "project", "projectresource"),
+					resource.TestCheckTypeSetElemAttr(clusterRsName, "bootstrap_files.*", "12"),
 				),
 			},
 			{
