@@ -1,7 +1,6 @@
-## Provider string 
+## Individual provider attribute values 
 
 provider "paralus" {
-    version = "1.0"
     pctl_profile = "test"
     pctl_rest_endpoint = "https://paralus.example.com:443"
     pctl_ops_endpoint = "https://paralus.example.com:443"

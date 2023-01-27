@@ -41,6 +41,11 @@ func DataSourceCluster() *schema.Resource {
 				Description: "Cluster type. For example, \"imported.\" ",
 				Computed:    true,
 			},
+			"uuid": {
+				Type:        schema.TypeString,
+				Description: "Cluster UUID",
+				Computed:    true,
+			},
 			"params": {
 				Type:        schema.TypeSet,
 				Description: "Import parameters",
@@ -85,10 +90,20 @@ func DataSourceCluster() *schema.Resource {
 				Description: "Project containing cluster",
 				Required:    true,
 			},
-			"bootstrap_file": {
+			// Will only ever be updated by provider
+			"bootstrap_files_combined": {
 				Type:        schema.TypeString,
-				Description: "YAML files used to deploy paralus agent to the cluster",
+				Description: "YAML files used to deploy paralus agent to the cluster stored as a single massive file",
 				Computed:    true,
+			},
+			// Will only ever be updated by provider
+			"bootstrap_files": {
+				Type:        schema.TypeList,
+				Description: "YAML files used to deploy paralus agent to the cluster stored as a list",
+				Computed:    true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
 			},
 			"labels": {
 				Type:        schema.TypeMap,
@@ -134,7 +149,8 @@ func datasourceClusterRead(ctx context.Context, d *schema.ResourceData, m interf
 			clusterId, projectId)))
 	}
 
-	d.Set("bootstrap_file", bootstrapFile)
+	d.Set("bootstrap_files_combined", bootstrapFile)
+	d.Set("bootstrap_files", paralusUtils.SplitSingleYAMLIntoList(bootstrapFile))
 
 	d.SetId(clusterId + ":" + projectId)
 

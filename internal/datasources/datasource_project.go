@@ -36,6 +36,11 @@ func DataSourceProject() *schema.Resource {
 				Description: "Project description",
 				Computed:    true,
 			},
+			"uuid": {
+				Type:        schema.TypeString,
+				Description: "Project UUID",
+				Computed:    true,
+			},
 			"project_roles": {
 				Type:        schema.TypeList,
 				Description: "Project roles attached to project, containing group or namespace",

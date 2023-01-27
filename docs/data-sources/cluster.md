@@ -32,12 +32,14 @@ data "paralus_cluster" "test" {
 ### Read-Only
 
 - `annotations` (Map of String) Map of annotations to include for cluster
-- `bootstrap_file` (String) YAML files used to deploy paralus agent to the cluster
+- `bootstrap_files` (List of String) YAML files used to deploy paralus agent to the cluster stored as a list
+- `bootstrap_files_combined` (String) YAML files used to deploy paralus agent to the cluster stored as a single massive file
 - `cluster_type` (String) Cluster type. For example, "imported."
 - `description` (String) Cluster description
 - `id` (String) Cluster ID in the format "PROJECT_NAME:CLUSTER_NAME"
 - `labels` (Map of String) Map of lables to include for cluster
 - `params` (Set of Object) Import parameters (see [below for nested schema](#nestedatt--params))
+- `uuid` (String) Cluster UUID
 
 <a id="nestedatt--params"></a>
 ### Nested Schema for `params`

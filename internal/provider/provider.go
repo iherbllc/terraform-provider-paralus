@@ -3,11 +3,13 @@ package provider
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/iherbllc/terraform-provider-paralus/internal/datasources"
 	"github.com/iherbllc/terraform-provider-paralus/internal/paralus"
 	"github.com/iherbllc/terraform-provider-paralus/internal/resources"
 
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -21,21 +23,18 @@ func Provider() *schema.Provider {
 				Type:        schema.TypeString,
 				Description: "PCTL Profile",
 				Optional:    true,
-				Sensitive:   true,
 				DefaultFunc: schema.EnvDefaultFunc("PCTL_PROFILE", nil),
 			},
 			"pctl_rest_endpoint": {
 				Type:        schema.TypeString,
 				Description: "Rest Endpoint",
 				Optional:    true,
-				Sensitive:   true,
 				DefaultFunc: schema.EnvDefaultFunc("PCTL_REST_ENDPOINT", nil),
 			},
 			"pctl_ops_endpoint": {
 				Type:        schema.TypeString,
 				Description: "OPS Endpoint",
 				Optional:    true,
-				Sensitive:   true,
 				DefaultFunc: schema.EnvDefaultFunc("PCTL_OPS_ENDPOINT", nil),
 			},
 			"pctl_api_key": {
@@ -79,8 +78,9 @@ func Provider() *schema.Provider {
 			"paralus_project": resources.ResourceProject(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
-			"paralus_cluster": datasources.DataSourceCluster(),
-			"paralus_project": datasources.DataSourceProject(),
+			"paralus_bootstrap_file": datasources.DataSourceBootstrapFile(),
+			"paralus_cluster":        datasources.DataSourceCluster(),
+			"paralus_project":        datasources.DataSourceProject(),
 		},
 		ConfigureContextFunc: providerConfigure,
 	}
@@ -89,5 +89,17 @@ func Provider() *schema.Provider {
 // Configure provider
 func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
 
-	return paralus.NewConfig(d)
+	tflog.Debug(ctx, fmt.Sprintf(`Provider info:
+	- pctl_profile: %s
+	- pctl_rest_endpoint: %s
+	- pctl_ops_endpoint: %s
+	- pctl_config_json: %s
+	- pctl_partner: %s
+	- pctl_organization: %s
+	`, d.Get("pctl_profile"),
+		d.Get("pctl_rest_endpoint"), d.Get("pctl_ops_endpoint"),
+		d.Get("pctl_config_json"), d.Get("pctl_partner"),
+		d.Get("pctl_organization")))
+
+	return paralus.NewConfig(ctx, d)
 }

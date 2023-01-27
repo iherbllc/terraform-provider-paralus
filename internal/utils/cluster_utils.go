@@ -2,6 +2,8 @@
 package utils
 
 import (
+	"strings"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	commonv3 "github.com/paralus/paralus/proto/types/commonpb/v3"
@@ -17,6 +19,7 @@ func BuildClusterStructFromResource(d *schema.ResourceData) *infrav3.Cluster {
 			Name:        d.Get("name").(string),
 			Description: d.Get("description").(string),
 			Project:     d.Get("project").(string),
+			Id:          d.Get("uuid").(string),
 		},
 		Spec: &infrav3.ClusterSpec{
 			Metro:       &infrav3.Metro{},
@@ -45,11 +48,21 @@ func BuildClusterStructFromResource(d *schema.ResourceData) *infrav3.Cluster {
 	}
 
 	if labels, ok := d.GetOk("labels"); ok {
-		clusterStruct.Metadata.Labels = labels.(map[string]string)
+		if clusterStruct.Metadata.Labels == nil {
+			clusterStruct.Metadata.Labels = make(map[string]string)
+		}
+		for k, v := range labels.(map[string]interface{}) {
+			clusterStruct.Metadata.Labels[k] = v.(string)
+		}
 	}
 
 	if annotations, ok := d.GetOk("annotations"); ok {
-		clusterStruct.Metadata.Annotations = annotations.(map[string]string)
+		if clusterStruct.Metadata.Annotations == nil {
+			clusterStruct.Metadata.Annotations = make(map[string]string)
+		}
+		for k, v := range annotations.(map[string]interface{}) {
+			clusterStruct.Metadata.Annotations[k] = v.(string)
+		}
 	}
 
 	return clusterStruct
@@ -61,6 +74,7 @@ func BuildResourceFromClusterStruct(cluster *infrav3.Cluster, d *schema.Resource
 	d.Set("description", cluster.Metadata.Description)
 	d.Set("project", cluster.Metadata.Project)
 	d.Set("cluster_type", cluster.Spec.ClusterType)
+	d.Set("uuid", cluster.Metadata.Id)
 	if cluster.Spec.Params != nil {
 		params := d.Get("params").(*schema.Set)
 		params.Add(map[string]interface{}{
@@ -75,4 +89,21 @@ func BuildResourceFromClusterStruct(cluster *infrav3.Cluster, d *schema.Resource
 	}
 	d.Set("labels", cluster.Metadata.Labels)
 	d.Set("annotations", cluster.Metadata.Annotations)
+}
+
+// Splits a single YAML file containing multiple YAML entries into a list of string
+func SplitSingleYAMLIntoList(singleYAML string) []string {
+	docs := strings.Split(string(singleYAML), "\n---")
+
+	yamls := []string{}
+	// Trim whitespace in both ends of each yaml docs.
+	// - Re-add a single newline last
+	for _, doc := range docs {
+		content := strings.TrimSpace(doc)
+		// Ignore empty docs
+		if content != "" {
+			yamls = append(yamls, content)
+		}
+	}
+	return yamls
 }

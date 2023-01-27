@@ -37,6 +37,7 @@ resource "paralus_project" "test" {
 ### Read-Only
 
 - `id` (String) Project ID in the format "PROJECT_NAME"
+- `uuid` (String) Project UUID
 
 <a id="nestedblock--project_roles"></a>
 ### Nested Schema for `project_roles`

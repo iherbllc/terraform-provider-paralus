@@ -30,7 +30,6 @@ func init() {
 
 // Return test provider config
 func paralusProviderConfig() *config.Config {
-	// utils.LoadEnv()
 	configJson := os.Getenv("CONFIG_JSON")
 	newConfig, err := paralus.NewConfigFromFile(configJson)
 	if err != nil {
@@ -101,11 +100,11 @@ func testAccConfigPreCheck(t *testing.T) {
 	}
 }
 
-// Test invaid API provider endpoint
+// Test invalid provider API secret
 func TestAccProviderAttr_setInvalidAPISecret(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccConfigPreCheck(t) },
+		// PreCheck:  func() { testAccConfigPreCheck(t) },
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{
@@ -116,7 +115,7 @@ func TestAccProviderAttr_setInvalidAPISecret(t *testing.T) {
 	})
 }
 
-// Test invaid API provider endpoint
+// Test invalid provider API key
 func TestAccProviderAttr_setInvalidAPIKey(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
@@ -131,7 +130,22 @@ func TestAccProviderAttr_setInvalidAPIKey(t *testing.T) {
 	})
 }
 
-// Test invaid API provider endpoint
+// Test missing provider API key
+func TestAccProviderAttr_setMissingAPIKey(t *testing.T) {
+
+	resource.Test(t, resource.TestCase{
+		// PreCheck:  func() { testAccConfigPreCheck(t) },
+		Providers: testAccProviders,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccProvider_setMissingAPIKey(),
+				ExpectError: regexp.MustCompile(".*invalid credentials.*"),
+			},
+		},
+	})
+}
+
+// Test invalid  provider API endpoint
 func TestAccProviderAttr_setInvalidEndpoint(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
@@ -146,7 +160,31 @@ func TestAccProviderAttr_setInvalidEndpoint(t *testing.T) {
 	})
 }
 
-// set invaid api secret in provider
+// Test overriding config json with a bad path
+func TestAccProviderCreds_BadConfigJsonPath(t *testing.T) {
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccConfigPreCheck(t) },
+		Providers: testAccProviders,
+		Steps: []resource.TestStep{
+			{
+				Config: `provider "paralus" {
+					alias = "bad_config_json"
+					pctl_config_json = "mybad.json"
+				}
+				
+				data "paralus_project" "default" {
+					provider = paralus.bad_config_json
+					name     = "blah2"
+				  }
+				`,
+				ExpectError: regexp.MustCompile(".*Error parsing config_json file.*"),
+			},
+		},
+	})
+}
+
+// set invalid api secret in provider
 func testAccProvider_setInvalidSecret() string {
 
 	conf = paralusProviderConfig()
@@ -155,13 +193,13 @@ func testAccProvider_setInvalidSecret() string {
 	return fmt.Sprintf(`
 %s
 
-data "paralus_project" "default" {
+data "paralus_project" "custom_api_secret" {
 	provider = paralus.custom_api_secret
 	name = "default"
   }`, providerString(conf, "custom_api_secret"))
 }
 
-// set invaid api key in provider
+// set invalid api key in provider
 func testAccProvider_setInvalidAPIKey() string {
 
 	conf = paralusProviderConfig()
@@ -170,10 +208,25 @@ func testAccProvider_setInvalidAPIKey() string {
 	return fmt.Sprintf(`
 %s
 
-data "paralus_project" "default" {
+data "paralus_project" "custom_api_key" {
 	provider = paralus.custom_api_key
 	name = "default"
   }`, providerString(conf, "custom_api_key"))
+}
+
+// set missing api key in provider
+func testAccProvider_setMissingAPIKey() string {
+
+	conf = paralusProviderConfig()
+	conf.APIKey = ""
+
+	return fmt.Sprintf(`
+%s
+
+data "paralus_project" "missing_api_key" {
+	provider = paralus.missing_api_key
+	name = "default"
+  }`, providerString(conf, "missing_api_key"))
 }
 
 // set rest endpoint value in provider
@@ -185,7 +238,7 @@ func testAccProvider_setRestEndpoint(endpoint string) string {
 	return fmt.Sprintf(`
 %s
 
-resource "paralus_cluster" "default" {
+resource "paralus_cluster" "custom_rest_endpoint" {
 	provider = paralus.custom_rest_endpoint
 	name     = "tf-cluster-test"
 	project = "blah1"
@@ -201,7 +254,7 @@ func TestAccProviderEndpoints_setInvalidPartner(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccProviderEndpoints_setPartner("howdy"),
-				ExpectError: regexp.MustCompile(".*no such host.*"),
+				ExpectError: regexp.MustCompile(".*could not complete operation.*"),
 			},
 		},
 	})
@@ -221,4 +274,13 @@ resource "paralus_cluster" "default" {
 	name     = "tf-cluster-test"
 	project = "default"
   }`, providerString(conf, "custom_partner"))
+}
+
+// Set a valid provider
+func testAccProviderValidResource(resources string) string {
+	conf = paralusProviderConfig()
+	return fmt.Sprintf(`
+%s
+
+%s`, providerString(conf, "valid_resource"), resources)
 }

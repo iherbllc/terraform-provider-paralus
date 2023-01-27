@@ -2,8 +2,10 @@
 package paralus
 
 import (
+	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/paralus/cli/pkg/config"
@@ -11,12 +13,13 @@ import (
 )
 
 // Generates a new config either from a json file or via environment variables
-func NewConfig(d *schema.ResourceData) (*config.Config, diag.Diagnostics) {
+func NewConfig(ctx context.Context, d *schema.ResourceData) (*config.Config, diag.Diagnostics) {
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	if configJson, ok := d.GetOk("pctl_config_Json"); ok {
+	if configJson, ok := d.GetOk("pctl_config_json"); ok {
+		tflog.Debug(ctx, fmt.Sprintf("Using PCTL config json %s", configJson))
 		newConfig, err := NewConfigFromFile(configJson.(string))
 		if err != nil {
 			return nil, diag.FromErr(errors.Wrap(err,
