@@ -48,6 +48,7 @@ resource "paralus_cluster" "testcluster" {
 - `bootstrap_file` (String) YAML files used to deploy paralus agent to the cluster
 - `description` (String) Cluster description. Paralus API sets it the same as cluster name
 - `id` (String) Cluster ID in the format "PROJECT_NAME:CLUSTER_NAME"
+- `uuid` (String) Cluster UUID
 
 <a id="nestedblock--params"></a>
 ### Nested Schema for `params`

@@ -38,6 +38,7 @@ data "paralus_cluster" "test" {
 - `id` (String) Cluster ID in the format "PROJECT_NAME:CLUSTER_NAME"
 - `labels` (Map of String) Map of lables to include for cluster
 - `params` (Set of Object) Import parameters (see [below for nested schema](#nestedatt--params))
+- `uuid` (String) Cluster UUID
 
 <a id="nestedatt--params"></a>
 ### Nested Schema for `params`

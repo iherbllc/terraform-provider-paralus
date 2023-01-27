@@ -41,6 +41,11 @@ func DataSourceCluster() *schema.Resource {
 				Description: "Cluster type. For example, \"imported.\" ",
 				Computed:    true,
 			},
+			"uuid": {
+				Type:        schema.TypeString,
+				Description: "Cluster UUID",
+				Computed:    true,
+			},
 			"params": {
 				Type:        schema.TypeSet,
 				Description: "Import parameters",

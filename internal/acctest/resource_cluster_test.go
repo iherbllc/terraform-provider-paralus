@@ -23,13 +23,15 @@ func TestAccParalusResourceProjectCluster_full(t *testing.T) {
 		CheckDestroy: testAccCheckClusterResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: testAccProviderValidResource(`
 				resource "paralus_project" "testproject" {
+					provider = paralus.valid_resource
 					name = "projectresource"
 					description = "from acct test"
 				}
 		
 				resource "paralus_cluster" "testcluster" {
+					provider = paralus.valid_resource
 					name = "clusterresource"
 					project = paralus_project.testproject.name
 					cluster_type = "imported"
@@ -40,7 +42,7 @@ func TestAccParalusResourceProjectCluster_full(t *testing.T) {
 						state = "PROVISION"
 					}
 				}
-				`,
+				`),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckResourceProjectExists(projectRsName),
 					testAccCheckResourceClusterExists(clusterRsName),
@@ -73,8 +75,9 @@ func TestAccParalusResourceClusterUnknownProject_basic(t *testing.T) {
 		CheckDestroy: testAccCheckClusterResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: testAccProviderValidResource(`
 				resource "paralus_cluster" "test" {
+					provider = paralus.valid_resource
 					name = "test"
 					project = "blah"
 					cluster_type = "imported"
@@ -84,7 +87,7 @@ func TestAccParalusResourceClusterUnknownProject_basic(t *testing.T) {
 						kubernetes_provider = "EKS"
 						state = "PROVISION"
 					}
-				}`,
+				}`),
 				ExpectError: regexp.MustCompile(".*Project .* does not exist.*"),
 			},
 		},
@@ -100,8 +103,9 @@ func TestAccParalusResourceCluster_basic(t *testing.T) {
 		CheckDestroy: testAccCheckClusterResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: testAccProviderValidResource(`
 				resource "paralus_cluster" "test" {
+					provider = paralus.valid_resource
 					name = "test"
 					project = "default"
 					cluster_type = "imported"
@@ -111,7 +115,7 @@ func TestAccParalusResourceCluster_basic(t *testing.T) {
 						kubernetes_provider = "EKS"
 						state = "PROVISION"
 					}
-				}`,
+				}`),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckResourceClusterExists(clusterRsName),
 					testAccCheckResourceClusterTypeAttribute(clusterRsName, "imported"),

@@ -9,6 +9,7 @@ import (
 	paralusUtils "github.com/iherbllc/terraform-provider-paralus/internal/utils"
 
 	"github.com/paralus/cli/pkg/cluster"
+	"github.com/paralus/cli/pkg/config"
 	"github.com/paralus/cli/pkg/project"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -51,6 +52,11 @@ func ResourceCluster() *schema.Resource {
 				Description: "Cluster type. For example, \"imported.\" ",
 				Optional:    true,
 				ForceNew:    true,
+			},
+			"uuid": {
+				Type:        schema.TypeString,
+				Description: "Cluster UUID",
+				Computed:    true,
 			},
 			"params": {
 				Type:        schema.TypeSet,
@@ -137,6 +143,8 @@ func resourceClusterCreate(ctx context.Context, d *schema.ResourceData, m interf
 	projectId := d.Get("project").(string)
 	clusterId := d.Get("name").(string)
 
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(m.(*config.Config))))
+
 	diags := append(createOrUpdateCluster(ctx, d, "POST"), setBootstrapFile(ctx, d)...)
 
 	d.SetId(projectId + ":" + clusterId)
@@ -146,6 +154,7 @@ func resourceClusterCreate(ctx context.Context, d *schema.ResourceData, m interf
 
 // Updating existing cluster
 func resourceClusterUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(m.(*config.Config))))
 	return createOrUpdateCluster(ctx, d, "PUT")
 }
 
@@ -218,6 +227,8 @@ func createOrUpdateCluster(ctx context.Context, d *schema.ResourceData, requestT
 func resourceClusterRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(m.(*config.Config))))
+
 	projectId := d.Get("project").(string)
 	clusterId := d.Get("name").(string)
 
@@ -244,6 +255,7 @@ func resourceClusterRead(ctx context.Context, d *schema.ResourceData, m interfac
 
 // Import cluster info into TF
 func resourceClusterImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(m.(*config.Config))))
 
 	clusterProjectId := strings.Split(d.Id(), ":")
 
@@ -278,6 +290,8 @@ func resourceClusterImport(ctx context.Context, d *schema.ResourceData, m interf
 func resourceClusterDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(m.(*config.Config))))
+
 	projectId := d.Get("project").(string)
 	clusterId := d.Get("name").(string)
 
@@ -286,11 +300,11 @@ func resourceClusterDelete(ctx context.Context, d *schema.ResourceData, m interf
 		"project": projectId,
 	})
 
-	// Make sure the cluster exists before we attempt to delete it
-	clusterStruct, _ := cluster.GetCluster(clusterId, projectId)
-	if clusterStruct == nil {
-		tflog.Warn(ctx, fmt.Sprintf("Cluster %s does not exist in project %s",
-			clusterId, projectId))
+	// Assume if uuid is not set, then the cluster was not created
+	// So skip the delete
+	// This is to avoid the situation where the failure is due to an invalid endpoint, which would
+	// fail the acct test as well
+	if d.Get("uuid") == "" {
 		d.SetId("")
 		return diags
 	}

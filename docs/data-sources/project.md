@@ -33,6 +33,7 @@ data "paralus_project" "default" {
 - `id` (String) Project ID in the format "PROJECT_NAME"
 - `project_roles` (List of Object) Project roles attached to project, containing group or namespace (see [below for nested schema](#nestedatt--project_roles))
 - `user_roles` (List of Object) User roles attached to project (see [below for nested schema](#nestedatt--user_roles))
+- `uuid` (String) Project UUID
 
 <a id="nestedatt--project_roles"></a>
 ### Nested Schema for `project_roles`

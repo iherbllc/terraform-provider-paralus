@@ -17,6 +17,7 @@ func BuildClusterStructFromResource(d *schema.ResourceData) *infrav3.Cluster {
 			Name:        d.Get("name").(string),
 			Description: d.Get("description").(string),
 			Project:     d.Get("project").(string),
+			Id:          d.Get("uuid").(string),
 		},
 		Spec: &infrav3.ClusterSpec{
 			Metro:       &infrav3.Metro{},
@@ -61,6 +62,7 @@ func BuildResourceFromClusterStruct(cluster *infrav3.Cluster, d *schema.Resource
 	d.Set("description", cluster.Metadata.Description)
 	d.Set("project", cluster.Metadata.Project)
 	d.Set("cluster_type", cluster.Spec.ClusterType)
+	d.Set("uuid", cluster.Metadata.Id)
 	if cluster.Spec.Params != nil {
 		params := d.Get("params").(*schema.Set)
 		params.Add(map[string]interface{}{

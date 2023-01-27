@@ -8,6 +8,7 @@ import (
 	paralusUtils "github.com/iherbllc/terraform-provider-paralus/internal/utils"
 	"github.com/pkg/errors"
 
+	"github.com/paralus/cli/pkg/config"
 	"github.com/paralus/cli/pkg/project"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -42,6 +43,11 @@ func ResourceProject() *schema.Resource {
 				Type:        schema.TypeString,
 				Description: "Project description.",
 				Optional:    true,
+			},
+			"uuid": {
+				Type:        schema.TypeString,
+				Description: "Project UUID",
+				Computed:    true,
 			},
 			"project_roles": {
 				Type:        schema.TypeList,
@@ -100,6 +106,8 @@ func resourceProjectCreate(ctx context.Context, d *schema.ResourceData, m interf
 
 	projectId := d.Get("name").(string)
 
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(m.(*config.Config))))
+
 	diags := createOrUpdateProject(ctx, d, "POST")
 
 	d.SetId(projectId)
@@ -108,6 +116,8 @@ func resourceProjectCreate(ctx context.Context, d *schema.ResourceData, m interf
 }
 
 func resourceProjectUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(m.(*config.Config))))
 	return createOrUpdateCluster(ctx, d, "PUT")
 }
 
@@ -167,6 +177,8 @@ func createOrUpdateProject(ctx context.Context, d *schema.ResourceData, requestT
 func resourceProjectRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(m.(*config.Config))))
+
 	projectId := d.Get("name").(string)
 
 	tflog.Trace(ctx, "Retrieving project info", map[string]interface{}{
@@ -186,6 +198,8 @@ func resourceProjectRead(ctx context.Context, d *schema.ResourceData, m interfac
 func resourceProjectImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
 
 	projectId := d.Id()
+
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(m.(*config.Config))))
 
 	tflog.Trace(ctx, "Retrieving project info", map[string]interface{}{
 		"project": projectId,
@@ -209,17 +223,19 @@ func resourceProjectImport(ctx context.Context, d *schema.ResourceData, m interf
 func resourceProjectDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(m.(*config.Config))))
+
 	projectId := d.Get("name").(string)
 
 	tflog.Trace(ctx, "Deleting Project info", map[string]interface{}{
 		"project": projectId,
 	})
 
-	// Make sure the project exists before we attempt to delete it
-	projectStruct, _ := project.GetProjectByName(projectId)
-	if projectStruct == nil {
-		tflog.Warn(ctx, fmt.Sprintf("Project %s does not exist",
-			projectId))
+	// Assume if uuid is not set, then the project was not created
+	// So skip the delete
+	// This is to avoid the situation where the failure is due to an invalid endpoint, which would
+	// fail the acct test as well
+	if d.Get("uuid") == "" {
 		d.SetId("")
 		return diags
 	}

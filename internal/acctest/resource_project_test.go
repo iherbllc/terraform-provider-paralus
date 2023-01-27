@@ -54,11 +54,12 @@ func TestAccParalusResourceProject_basic(t *testing.T) {
 		CheckDestroy: testAccCheckProjectResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
-				Config: `
+				Config: testAccProviderValidResource(`
 				resource "paralus_project" "test" {
+					provider = paralus.valid_resource
 					name = "test"
 					description = "test project"
-				}`,
+				}`),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckResourceProjectExists(projectRsName),
 					testAccCheckResourceProjectTypeAttribute(projectRsName, "test project"),
