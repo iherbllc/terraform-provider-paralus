@@ -28,7 +28,7 @@ func TestAccParalusBootstrapNotFound_basic(t *testing.T) {
 
 // Standard acceptance test
 func TestAccParalusDataSourceBootstrap_basic(t *testing.T) {
-
+	dsResourceName := "data.paralus_bootstrap_file.test"
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccConfigPreCheck(t) },
 		Providers: testAccProviders,
@@ -36,9 +36,11 @@ func TestAccParalusDataSourceBootstrap_basic(t *testing.T) {
 			{
 				Config: testAccDataSourceBootstrapConfig("ignoreme"),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckHasBootstrap("data.paralus_bootstrap_file.test"),
-					testAccCheckDataSourceBootstrapAttributeNotNil("data.paralus_bootstrap_file.test"),
-					resource.TestCheckTypeSetElemAttr("data.paralus_bootstrap_file.test", "bootstrap_files.*", "12"),
+					testAccCheckHasBootstrap(dsResourceName),
+					testAccCheckResourceAttributeSet(dsResourceName, "relays"),
+					testAccCheckResourceAttributeSet(dsResourceName, "uuid"),
+					testAccCheckDataSourceBootstrapAttributeNotNil(dsResourceName),
+					resource.TestCheckTypeSetElemAttr(dsResourceName, "bootstrap_files.*", "12"),
 				),
 			},
 		},

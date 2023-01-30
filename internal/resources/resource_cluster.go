@@ -142,6 +142,11 @@ func ResourceCluster() *schema.Resource {
 				Optional:    true,
 				Computed:    true,
 			},
+			"relays": {
+				Type:        schema.TypeString,
+				Description: "Relays information",
+				Computed:    true,
+			},
 		},
 	}
 }
@@ -355,7 +360,15 @@ func setBootstrapFile(ctx context.Context, d *schema.ResourceData) diag.Diagnost
 	}
 
 	d.Set("bootstrap_files_combined", bootstrapFile)
-	d.Set("bootstrap_files", paralusUtils.SplitSingleYAMLIntoList(bootstrapFile))
+	bootstrapFiles := paralusUtils.SplitSingleYAMLIntoList(bootstrapFile)
+	d.Set("bootstrap_files", bootstrapFiles)
+
+	resp, err := paralusUtils.GetBootstrapRelays(bootstrapFiles)
+	if err != nil {
+		return diag.FromErr(errors.Wrap(err, fmt.Sprintf("Error while decoding YAML object %s", resp)))
+	}
+
+	d.Set("relays", resp)
 
 	return nil
 }

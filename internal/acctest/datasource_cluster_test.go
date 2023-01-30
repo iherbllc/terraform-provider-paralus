@@ -27,7 +27,7 @@ func TestAccParalusClusterNotFound_basic(t *testing.T) {
 
 // Standard acceptance test
 func TestAccParalusDataSourceCluster_basic(t *testing.T) {
-
+	dsResourceName := "data.paralus_cluster.test"
 	resource.Test(t, resource.TestCase{
 		PreCheck:  func() { testAccConfigPreCheck(t) },
 		Providers: testAccProviders,
@@ -35,10 +35,12 @@ func TestAccParalusDataSourceCluster_basic(t *testing.T) {
 			{
 				Config: testAccDataSourceClusterConfig("ignoreme"),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckDataSourceClusterExists("data.paralus_cluster.test"),
-					testAccCheckDataSourceClusterTypeAttribute("data.paralus_cluster.test", "ignoreme"),
-					resource.TestCheckResourceAttr("data.paralus_cluster.test", "project", "default"),
-					resource.TestCheckTypeSetElemAttr("data.paralus_cluster.test", "bootstrap_files.*", "12"),
+					testAccCheckDataSourceClusterExists(dsResourceName),
+					testAccCheckDataSourceClusterTypeAttribute(dsResourceName, "ignoreme"),
+					testAccCheckResourceAttributeSet(dsResourceName, "relays"),
+					testAccCheckResourceAttributeSet(dsResourceName, "uuid"),
+					resource.TestCheckResourceAttr(dsResourceName, "project", "default"),
+					resource.TestCheckTypeSetElemAttr(dsResourceName, "bootstrap_files.*", "12"),
 				),
 			},
 		},
@@ -93,6 +95,21 @@ func testAccCheckDataSourceClusterTypeAttribute(resourceName string, description
 		}
 		if rs.Primary.Attributes["description"] != description {
 			return fmt.Errorf("Invalid description")
+		}
+
+		return nil
+	}
+}
+
+// Tests that a resource attribute has a value
+func testAccCheckDataSourceAttributeSet(resourceName string, attrName string) func(s *terraform.State) error {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return fmt.Errorf("Not found: %s", resourceName)
+		}
+		if rs.Primary.Attributes[attrName] == "" {
+			return fmt.Errorf(fmt.Sprintf("Attribute %s is empty", attrName))
 		}
 
 		return nil

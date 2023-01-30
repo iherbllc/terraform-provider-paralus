@@ -34,5 +34,7 @@ data "paralus_bootstrap_file" "test" {
 - `bootstrap_files` (List of String) YAML files used to deploy paralus agent to the cluster stored as a list
 - `bootstrap_files_combined` (String) YAML files used to deploy paralus agent to the cluster stored as a single massive file
 - `id` (String) Cluster ID in the format "PROJECT_NAME:CLUSTER_NAME"
+- `relays` (String) Relays information
+- `uuid` (String) Cluster UUID
 
 

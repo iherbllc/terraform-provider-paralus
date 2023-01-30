@@ -48,6 +48,7 @@ func TestAccParalusResourceProjectCluster_full(t *testing.T) {
 					testAccCheckResourceClusterExists(clusterRsName),
 					testAccCheckResourceProjectTypeAttribute(projectRsName, "from acct test"),
 					testAccCheckResourceClusterTypeAttribute(clusterRsName, "imported"),
+					testAccCheckResourceAttributeSet(clusterRsName, "relays"),
 					resource.TestCheckResourceAttr(projectRsName, "description", "from acct test"),
 					resource.TestCheckResourceAttr(clusterRsName, "project", "projectresource"),
 					resource.TestCheckTypeSetElemAttr(clusterRsName, "bootstrap_files.*", "12"),
@@ -120,6 +121,7 @@ func TestAccParalusResourceCluster_basic(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckResourceClusterExists(clusterRsName),
 					testAccCheckResourceClusterTypeAttribute(clusterRsName, "imported"),
+					testAccCheckResourceAttributeSet(clusterRsName, "relays"),
 					resource.TestCheckResourceAttr(clusterRsName, "project", "default"),
 				),
 			},
@@ -195,6 +197,21 @@ func testAccCheckResourceClusterTypeAttribute(resourceName string, cluster_type 
 		}
 		if rs.Primary.Attributes["cluster_type"] != cluster_type {
 			return fmt.Errorf("Invalid cluster type")
+		}
+
+		return nil
+	}
+}
+
+// Tests that a resource attribute has a value
+func testAccCheckResourceAttributeSet(resourceName string, attrName string) func(s *terraform.State) error {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return fmt.Errorf("Not found: %s", resourceName)
+		}
+		if rs.Primary.Attributes[attrName] == "" {
+			return fmt.Errorf(fmt.Sprintf("Attribute %s is empty", attrName))
 		}
 
 		return nil
