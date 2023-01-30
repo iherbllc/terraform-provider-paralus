@@ -5,6 +5,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	v1 "k8s.io/api/core/v1"
+	k8Scheme "k8s.io/client-go/kubernetes/scheme"
 
 	commonv3 "github.com/paralus/paralus/proto/types/commonpb/v3"
 	infrav3 "github.com/paralus/paralus/proto/types/infrapb/v3"
@@ -106,4 +108,40 @@ func SplitSingleYAMLIntoList(singleYAML string) []string {
 		}
 	}
 	return yamls
+}
+
+// Retrieve the relays info from the bootstrap files
+// Which are found within the relay-agent-config configmap
+func GetBootstrapRelays(bootstrapFiles []string) (string, error) {
+	// yamlFiles is an []string
+	for _, boostrapFile := range bootstrapFiles {
+
+		decode := k8Scheme.Codecs.UniversalDeserializer().Decode
+		obj, _, err := decode([]byte(boostrapFile), nil, nil)
+
+		if err != nil {
+			return boostrapFile, err
+		}
+
+		// now use switch over the type of the object
+		// and match each type-case
+		switch o := obj.(type) {
+		// case *v1.Pod:
+		// 	// o is a pod
+		// case *v1beta1.Role:
+		// 	// o is the actual role Object with all fields etc
+		// case *v1beta1.RoleBinding:
+		// case *v1beta1.ClusterRole:
+		// case *v1beta1.ClusterRoleBinding:
+		// case *v1.ServiceAccount:
+		case *v1.ConfigMap:
+			targetConfigMap := o.Data
+			if relays, ok := targetConfigMap["relays"]; ok {
+				return relays, nil
+			}
+		default:
+			//o is unknown for us
+		}
+	}
+	return "", nil
 }

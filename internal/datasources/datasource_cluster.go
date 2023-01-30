@@ -115,6 +115,11 @@ func DataSourceCluster() *schema.Resource {
 				Description: "Map of annotations to include for cluster",
 				Computed:    true,
 			},
+			"relays": {
+				Type:        schema.TypeString,
+				Description: "Relays information",
+				Computed:    true,
+			},
 		},
 	}
 }
@@ -150,7 +155,15 @@ func datasourceClusterRead(ctx context.Context, d *schema.ResourceData, m interf
 	}
 
 	d.Set("bootstrap_files_combined", bootstrapFile)
-	d.Set("bootstrap_files", paralusUtils.SplitSingleYAMLIntoList(bootstrapFile))
+	bootstrapFiles := paralusUtils.SplitSingleYAMLIntoList(bootstrapFile)
+	d.Set("bootstrap_files", bootstrapFiles)
+
+	resp, err := paralusUtils.GetBootstrapRelays(bootstrapFiles)
+	if err != nil {
+		return diag.FromErr(errors.Wrap(err, fmt.Sprintf("Error while decoding YAML object %s", resp)))
+	}
+
+	d.Set("relays", resp)
 
 	d.SetId(clusterId + ":" + projectId)
 

@@ -31,6 +31,11 @@ func DataSourceBootstrapFile() *schema.Resource {
 				Description: "Cluster name",
 				Required:    true,
 			},
+			"uuid": {
+				Type:        schema.TypeString,
+				Description: "Cluster UUID",
+				Computed:    true,
+			},
 			"project": {
 				Type:        schema.TypeString,
 				Description: "Project containing cluster",
@@ -51,6 +56,11 @@ func DataSourceBootstrapFile() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
+			"relays": {
+				Type:        schema.TypeString,
+				Description: "Relays information",
+				Computed:    true,
+			},
 		},
 	}
 }
@@ -67,7 +77,7 @@ func datasourceBootstrapFileRead(ctx context.Context, d *schema.ResourceData, m 
 		"project": projectId,
 	})
 
-	_, err := cluster.GetCluster(clusterId, projectId)
+	clusterStruct, err := cluster.GetCluster(clusterId, projectId)
 
 	if err != nil {
 		d.SetId("")
@@ -83,8 +93,18 @@ func datasourceBootstrapFileRead(ctx context.Context, d *schema.ResourceData, m 
 			clusterId, projectId)))
 	}
 
+	d.Set("uuid", clusterStruct.Metadata.Id)
+
 	d.Set("bootstrap_files_combined", bootstrapFile)
-	d.Set("bootstrap_files", paralusUtils.SplitSingleYAMLIntoList(bootstrapFile))
+	bootstrapFiles := paralusUtils.SplitSingleYAMLIntoList(bootstrapFile)
+	d.Set("bootstrap_files", bootstrapFiles)
+
+	resp, err := paralusUtils.GetBootstrapRelays(bootstrapFiles)
+	if err != nil {
+		return diag.FromErr(errors.Wrap(err, fmt.Sprintf("Error while decoding YAML object %s", resp)))
+	}
+
+	d.Set("relays", resp)
 
 	d.SetId(clusterId + ":" + projectId)
 
