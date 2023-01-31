@@ -106,7 +106,7 @@ func resourceProjectCreate(ctx context.Context, d *schema.ResourceData, m interf
 
 	projectId := d.Get("name").(string)
 
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(m.(*config.Config))))
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(config.GetConfig())))
 
 	diags := createOrUpdateProject(ctx, d, "POST")
 
@@ -117,7 +117,7 @@ func resourceProjectCreate(ctx context.Context, d *schema.ResourceData, m interf
 
 func resourceProjectUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(m.(*config.Config))))
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(config.GetConfig())))
 	return createOrUpdateCluster(ctx, d, "PUT")
 }
 
@@ -177,7 +177,7 @@ func createOrUpdateProject(ctx context.Context, d *schema.ResourceData, requestT
 func resourceProjectRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(m.(*config.Config))))
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(config.GetConfig())))
 
 	projectId := d.Get("name").(string)
 
@@ -199,7 +199,7 @@ func resourceProjectImport(ctx context.Context, d *schema.ResourceData, m interf
 
 	projectId := d.Id()
 
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(m.(*config.Config))))
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(config.GetConfig())))
 
 	tflog.Trace(ctx, "Retrieving project info", map[string]interface{}{
 		"project": projectId,
@@ -223,7 +223,7 @@ func resourceProjectImport(ctx context.Context, d *schema.ResourceData, m interf
 func resourceProjectDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(m.(*config.Config))))
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(config.GetConfig())))
 
 	projectId := d.Get("name").(string)
 
