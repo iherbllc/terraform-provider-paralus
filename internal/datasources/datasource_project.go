@@ -8,6 +8,7 @@ import (
 	paralusUtils "github.com/iherbllc/terraform-provider-paralus/internal/utils"
 	"github.com/pkg/errors"
 
+	"github.com/paralus/cli/pkg/config"
 	"github.com/paralus/cli/pkg/project"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -97,6 +98,7 @@ func datasourceProjectRead(ctx context.Context, d *schema.ResourceData, m interf
 		"project": projectId,
 	})
 
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(config.GetConfig())))
 	project, err := project.GetProjectByName(projectId)
 	if err != nil {
 		return diag.FromErr(errors.Wrap(err, fmt.Sprintf("Error locating project %s",

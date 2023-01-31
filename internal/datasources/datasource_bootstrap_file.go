@@ -8,6 +8,7 @@ import (
 	paralusUtils "github.com/iherbllc/terraform-provider-paralus/internal/utils"
 
 	"github.com/paralus/cli/pkg/cluster"
+	"github.com/paralus/cli/pkg/config"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -76,6 +77,8 @@ func datasourceBootstrapFileRead(ctx context.Context, d *schema.ResourceData, m 
 		"cluster": clusterId,
 		"project": projectId,
 	})
+
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(config.GetConfig())))
 
 	clusterStruct, err := cluster.GetCluster(clusterId, projectId)
 

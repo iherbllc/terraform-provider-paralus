@@ -26,8 +26,9 @@ func NewConfig(ctx context.Context, d *schema.ResourceData) (*config.Config, dia
 				fmt.Sprintf("Error parsing config_json file %s", configJson)))
 		}
 
-		if newConfig.Organization == "" {
-			return nil, diag.FromErr(errors.Wrap(nil, "organization missing from config_json file"))
+		err = config.GetConfig().MiniCheck()
+		if err != nil {
+			return nil, diag.FromErr(errors.Wrap(err, "Invalid loaded config"))
 		}
 
 		return newConfig, diags
@@ -43,16 +44,22 @@ func NewConfig(ctx context.Context, d *schema.ResourceData) (*config.Config, dia
 		return nil, diag.FromErr(errors.Wrap(nil, "pctl_api_secret must be set if config_json is not"))
 	}
 
-	return &config.Config{
-		Profile:             d.Get("pctl_profile").(string),
-		RESTEndpoint:        d.Get("pctl_rest_endpoint").(string),
-		OPSEndpoint:         d.Get("pctl_ops_endpoint").(string),
-		APIKey:              apiKey.(string),
-		APISecret:           apiSecret.(string),
-		SkipServerCertValid: d.Get("pctl_skip_server_cert_valid").(string),
-		Partner:             d.Get("pctl_partner").(string),
-		Organization:        d.Get("pctl_organization").(string),
-	}, diags
+	newConfig := config.GetConfig()
+	newConfig.Profile = d.Get("pctl_profile").(string)
+	newConfig.RESTEndpoint = d.Get("pctl_rest_endpoint").(string)
+	newConfig.OPSEndpoint = d.Get("pctl_ops_endpoint").(string)
+	newConfig.APIKey = apiKey.(string)
+	newConfig.APISecret = apiSecret.(string)
+	newConfig.SkipServerCertValid = d.Get("pctl_skip_server_cert_valid").(string)
+	newConfig.Partner = d.Get("pctl_partner").(string)
+	newConfig.Organization = d.Get("pctl_organization").(string)
+
+	err := config.GetConfig().MiniCheck()
+	if err != nil {
+		return nil, diag.FromErr(errors.Wrap(err, "Error assigning config values"))
+	}
+
+	return config.GetConfig(), diags
 }
 
 // Generate a new PCTL Config from a json path

@@ -157,7 +157,10 @@ func resourceClusterCreate(ctx context.Context, d *schema.ResourceData, m interf
 	projectId := d.Get("project").(string)
 	clusterId := d.Get("name").(string)
 
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(m.(*config.Config))))
+	conf := m.(*config.Config)
+	config.GetConfigTracker().Merge(conf, "From Provider", true)
+
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(config.GetConfig())))
 
 	diags := append(createOrUpdateCluster(ctx, d, "POST"), setBootstrapFile(ctx, d)...)
 
@@ -168,7 +171,10 @@ func resourceClusterCreate(ctx context.Context, d *schema.ResourceData, m interf
 
 // Updating existing cluster
 func resourceClusterUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(m.(*config.Config))))
+	conf := m.(*config.Config)
+	config.GetConfigTracker().Merge(conf, "From Provider", true)
+
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(config.GetConfig())))
 	return createOrUpdateCluster(ctx, d, "PUT")
 }
 
@@ -241,7 +247,10 @@ func createOrUpdateCluster(ctx context.Context, d *schema.ResourceData, requestT
 func resourceClusterRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(m.(*config.Config))))
+	conf := m.(*config.Config)
+	config.GetConfigTracker().Merge(conf, "From Provider", true)
+
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(config.GetConfig())))
 
 	projectId := d.Get("project").(string)
 	clusterId := d.Get("name").(string)
@@ -269,7 +278,9 @@ func resourceClusterRead(ctx context.Context, d *schema.ResourceData, m interfac
 
 // Import cluster info into TF
 func resourceClusterImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(m.(*config.Config))))
+	conf := m.(*config.Config)
+	config.GetConfigTracker().Merge(conf, "From Provider", true)
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(config.GetConfig())))
 
 	clusterProjectId := strings.Split(d.Id(), ":")
 
@@ -304,7 +315,10 @@ func resourceClusterImport(ctx context.Context, d *schema.ResourceData, m interf
 func resourceClusterDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(m.(*config.Config))))
+	conf := m.(*config.Config)
+	config.GetConfigTracker().Merge(conf, "From Provider", true)
+
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(config.GetConfig())))
 
 	projectId := d.Get("project").(string)
 	clusterId := d.Get("name").(string)
