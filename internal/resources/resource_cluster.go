@@ -154,33 +154,27 @@ func ResourceCluster() *schema.Resource {
 // Create a new cluster in Paralus
 func resourceClusterCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 
-	projectId := d.Get("project").(string)
-	clusterId := d.Get("name").(string)
-
-	conf := m.(*config.Config)
-	config.GetConfigTracker().Merge(conf, "From Provider", true)
-
 	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(config.GetConfig())))
 
-	diags := append(createOrUpdateCluster(ctx, d, "POST"), setBootstrapFile(ctx, d)...)
+	diags := createOrUpdateCluster(ctx, d, "POST")
+	if diags.HasError() {
+		return diags
+	}
 
-	d.SetId(projectId + ":" + clusterId)
+	d.SetId(d.Get("project").(string) + ":" + d.Get("name").(string))
 
-	return diags
+	return nil
 }
 
 // Updating existing cluster
 func resourceClusterUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	conf := m.(*config.Config)
-	config.GetConfigTracker().Merge(conf, "From Provider", true)
-
 	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(config.GetConfig())))
+
 	return createOrUpdateCluster(ctx, d, "PUT")
 }
 
 // Creates a new cluster or updates an existing one
 func createOrUpdateCluster(ctx context.Context, d *schema.ResourceData, requestType string) diag.Diagnostics {
-	var diags diag.Diagnostics
 
 	projectId := d.Get("project").(string)
 	clusterId := d.Get("name").(string)
@@ -224,31 +218,12 @@ func createOrUpdateCluster(ctx context.Context, d *schema.ResourceData, requestT
 			fmt.Sprintf("Unknown request type %s", requestType)))
 	}
 
-	tflog.Trace(ctx, "Retrieving cluster info", map[string]interface{}{
-		"cluster": clusterId,
-		"project": projectId,
-	})
-
-	importedStruct, err := cluster.GetCluster(clusterId, projectId)
-
-	if err != nil {
-		return diag.FromErr(errors.Wrap(err,
-			fmt.Sprintf("Failed to %s cluster %s in project %s", howFail,
-				clusterId, projectId)))
-	}
-
-	// Update resource information from created/updated cluster
-	paralusUtils.BuildResourceFromClusterStruct(importedStruct, d)
-
-	return diags
+	return resourceClusterRead(ctx, d, nil)
 }
 
 // Retreive cluster info
 func resourceClusterRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
-
-	conf := m.(*config.Config)
-	config.GetConfigTracker().Merge(conf, "From Provider", true)
 
 	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(config.GetConfig())))
 
@@ -260,26 +235,29 @@ func resourceClusterRead(ctx context.Context, d *schema.ResourceData, m interfac
 		"project": projectId,
 	})
 
-	_, err := cluster.GetCluster(clusterId, projectId)
+	clusterStruct, err := cluster.GetCluster(clusterId, projectId)
 
-	if err != nil {
+	if clusterStruct == nil {
+		// error should be "no rows in result set" but add it to TRACE in case it isn't.
+		tflog.Trace(ctx, fmt.Sprintf("Error retrieving cluster info: %s", err))
 		d.SetId("")
-		return diag.FromErr(errors.Wrap(err, fmt.Sprintf("Cluster %s does not exist in project %s",
-			clusterId, projectId)))
+		return diags
 	}
 
-	if d.Id() == "" {
-		d.SetId(projectId + ":" + clusterId)
+	// Update resource information from created/updated cluster
+	paralusUtils.BuildResourceFromClusterStruct(clusterStruct, d)
+
+	err = paralusUtils.SetBootstrapFileAndRelays(ctx, d)
+	if err != nil {
+		return diag.FromErr(err)
 	}
 
 	return diags
-
 }
 
 // Import cluster info into TF
 func resourceClusterImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
-	conf := m.(*config.Config)
-	config.GetConfigTracker().Merge(conf, "From Provider", true)
+
 	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(config.GetConfig())))
 
 	clusterProjectId := strings.Split(d.Id(), ":")
@@ -298,12 +276,17 @@ func resourceClusterImport(ctx context.Context, d *schema.ResourceData, m interf
 
 	if err != nil {
 		d.SetId("")
+		// unlike others, we want to throw an error if the cluster does not exist so we can fail the import
 		return nil, errors.Wrap(err, fmt.Sprintf("Cluster %s does not exist in project %s",
 			clusterProjectId[1], clusterProjectId[0]))
 	}
 
 	paralusUtils.BuildResourceFromClusterStruct(clusterStruct, d)
-	setBootstrapFile(ctx, d)
+	err = paralusUtils.SetBootstrapFileAndRelays(ctx, d)
+	if err != nil {
+		d.SetId("")
+		return nil, err
+	}
 
 	schemas := make([]*schema.ResourceData, 0)
 	schemas = append(schemas, d)
@@ -315,9 +298,6 @@ func resourceClusterImport(ctx context.Context, d *schema.ResourceData, m interf
 func resourceClusterDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	conf := m.(*config.Config)
-	config.GetConfigTracker().Merge(conf, "From Provider", true)
-
 	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(config.GetConfig())))
 
 	projectId := d.Get("project").(string)
@@ -328,61 +308,18 @@ func resourceClusterDelete(ctx context.Context, d *schema.ResourceData, m interf
 		"project": projectId,
 	})
 
-	// Assume if uuid is not set, then the cluster was not created
-	// So skip the delete
-	// This is to avoid the situation where the failure is due to an invalid endpoint, which would
-	// fail the acct test as well
-	if d.Get("uuid") == "" {
-		d.SetId("")
-		return diags
-	}
-
 	err := cluster.DeleteCluster(clusterId, projectId)
 
 	if err != nil {
+		// assume a no rows found error means the project does not exist
+		if strings.Contains(fmt.Sprint(err), "no rows in result set") {
+			d.SetId("")
+			return diags
+		}
 		return diag.FromErr(errors.Wrap(err, fmt.Sprintf("Failed to delete cluster %s in project %s",
 			clusterId, projectId)))
 	}
 
 	d.SetId("")
 	return diags
-}
-
-// Retrieve the YAML files that will be used to setup paralus agents in cluster and assign it to the schema
-func setBootstrapFile(ctx context.Context, d *schema.ResourceData) diag.Diagnostics {
-
-	projectId := d.Get("project").(string)
-	clusterId := d.Get("name").(string)
-
-	tflog.Trace(ctx, "Retrieving Bootstrap File", map[string]interface{}{
-		"cluster": clusterId,
-		"project": projectId,
-	})
-
-	// Make sure cluster exists before we attempt to get the bootstrap file
-	clusterStruct, _ := cluster.GetCluster(clusterId, projectId)
-	if clusterStruct == nil {
-		d.SetId("")
-		return nil
-	}
-
-	bootstrapFile, err := cluster.GetBootstrapFile(clusterId, projectId)
-
-	if err != nil {
-		return diag.FromErr(errors.Wrap(err, fmt.Sprintf("Error retrieving bootstrap file for cluster %s in project %s",
-			clusterId, projectId)))
-	}
-
-	d.Set("bootstrap_files_combined", bootstrapFile)
-	bootstrapFiles := paralusUtils.SplitSingleYAMLIntoList(bootstrapFile)
-	d.Set("bootstrap_files", bootstrapFiles)
-
-	resp, err := paralusUtils.GetBootstrapRelays(bootstrapFiles)
-	if err != nil {
-		return diag.FromErr(errors.Wrap(err, fmt.Sprintf("Error while decoding YAML object %s", resp)))
-	}
-
-	d.Set("relays", resp)
-
-	return nil
 }

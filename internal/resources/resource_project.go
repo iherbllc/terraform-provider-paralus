@@ -4,6 +4,7 @@ package resources
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	paralusUtils "github.com/iherbllc/terraform-provider-paralus/internal/utils"
 	"github.com/pkg/errors"
@@ -110,6 +111,10 @@ func resourceProjectCreate(ctx context.Context, d *schema.ResourceData, m interf
 
 	diags := createOrUpdateProject(ctx, d, "POST")
 
+	if diags.HasError() {
+		return diags
+	}
+
 	d.SetId(projectId)
 
 	return diags
@@ -121,9 +126,8 @@ func resourceProjectUpdate(ctx context.Context, d *schema.ResourceData, m interf
 	return createOrUpdateCluster(ctx, d, "PUT")
 }
 
-// Creates a new cluster or updates an existing one
+// Creates a new project or updates an existing one
 func createOrUpdateProject(ctx context.Context, d *schema.ResourceData, requestType string) diag.Diagnostics {
-	var diags diag.Diagnostics
 
 	projectId := d.Get("name").(string)
 
@@ -155,25 +159,10 @@ func createOrUpdateProject(ctx context.Context, d *schema.ResourceData, requestT
 			fmt.Sprintf("Unknown request type %s", requestType)))
 	}
 
-	tflog.Trace(ctx, "Retrieving project info", map[string]interface{}{
-		"project": projectId,
-	})
-
-	projectStruct, err := project.GetProjectByName(projectId)
-
-	if err != nil {
-		return diag.FromErr(errors.Wrap(err,
-			fmt.Sprintf("Failed to %s project %s", howFail,
-				projectId)))
-	}
-
-	// Update resource information from updated cluster
-	paralusUtils.BuildResourceFromProjectStruct(projectStruct, d)
-
-	return diags
+	return resourceProjectRead(ctx, d, nil)
 }
 
-// Retreive project JSON info
+// Retreive project info
 func resourceProjectRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 
@@ -185,11 +174,16 @@ func resourceProjectRead(ctx context.Context, d *schema.ResourceData, m interfac
 		"project": projectId,
 	})
 
-	_, err := project.GetProjectByName(projectId)
-	if err != nil {
+	projectStruct, err := project.GetProjectByName(projectId)
+	if projectStruct == nil {
+		// error should be "no rows in result set" but add it to TRACE in case it isn't.
+		tflog.Trace(ctx, fmt.Sprintf("Error retrieving project info: %s", err))
 		d.SetId("")
-		return diag.FromErr(errors.Wrap(err, "Project does not exist"))
+		return diags
 	}
+
+	// Update resource information from updated cluster
+	paralusUtils.BuildResourceFromProjectStruct(projectStruct, d)
 
 	return diags
 }
@@ -206,9 +200,9 @@ func resourceProjectImport(ctx context.Context, d *schema.ResourceData, m interf
 	})
 
 	projectStruct, err := project.GetProjectByName(projectId)
+	// unlike others, fail and stop the import if we fail to get project info
 	if err != nil {
-		d.SetId("")
-		return nil, errors.Wrap(err, "Project does not exist")
+		return nil, errors.Wrap(err, fmt.Sprintf("Project %s does not exist", projectId))
 	}
 
 	paralusUtils.BuildResourceFromProjectStruct(projectStruct, d)
@@ -231,21 +225,19 @@ func resourceProjectDelete(ctx context.Context, d *schema.ResourceData, m interf
 		"project": projectId,
 	})
 
-	// Assume if uuid is not set, then the project was not created
-	// So skip the delete
-	// This is to avoid the situation where the failure is due to an invalid endpoint, which would
-	// fail the acct test as well
-	if d.Get("uuid") == "" {
-		d.SetId("")
-		return diags
-	}
-
 	err := project.DeleteProject(projectId)
 
+	// The project doesn't exist
 	if err != nil {
+		// assume a no rows found error means the project does not exist
+		if strings.Contains(fmt.Sprint(err), "no rows in result set") {
+			d.SetId("")
+			return diags
+		}
 		return diag.FromErr(errors.Wrap(err, fmt.Sprintf("Failed to delete project %s",
 			projectId)))
 	}
+
 	d.SetId("")
 	return diags
 }

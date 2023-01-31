@@ -1,13 +1,17 @@
-// Utility methods for PCTL Cluster struct
+// Utility methods for PCTL Cluster manipulation
 package utils
 
 import (
+	"context"
+	"fmt"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 	k8Scheme "k8s.io/client-go/kubernetes/scheme"
 
+	"github.com/paralus/cli/pkg/cluster"
 	commonv3 "github.com/paralus/paralus/proto/types/commonpb/v3"
 	infrav3 "github.com/paralus/paralus/proto/types/infrapb/v3"
 )
@@ -94,7 +98,7 @@ func BuildResourceFromClusterStruct(cluster *infrav3.Cluster, d *schema.Resource
 }
 
 // Splits a single YAML file containing multiple YAML entries into a list of string
-func SplitSingleYAMLIntoList(singleYAML string) []string {
+func splitSingleYAMLIntoList(singleYAML string) []string {
 	docs := strings.Split(string(singleYAML), "\n---")
 
 	yamls := []string{}
@@ -112,7 +116,7 @@ func SplitSingleYAMLIntoList(singleYAML string) []string {
 
 // Retrieve the relays info from the bootstrap files
 // Which are found within the relay-agent-config configmap
-func GetBootstrapRelays(bootstrapFiles []string) (string, error) {
+func getBootstrapRelays(bootstrapFiles []string) (string, error) {
 	// yamlFiles is an []string
 	for _, boostrapFile := range bootstrapFiles {
 
@@ -144,4 +148,33 @@ func GetBootstrapRelays(bootstrapFiles []string) (string, error) {
 		}
 	}
 	return "", nil
+}
+
+// Retrieve the YAML files that will be used to setup paralus agents in cluster and assign it to the schema
+// Also retrieve the relays from  the data of the relay-agent configMap YAML file
+func SetBootstrapFileAndRelays(ctx context.Context, d *schema.ResourceData) error {
+
+	projectId := d.Get("project").(string)
+	clusterId := d.Get("name").(string)
+
+	// already checked earlier for cluster to exist, so don't have to check again.
+	bootstrapFile, err := cluster.GetBootstrapFile(clusterId, projectId)
+
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("Error retrieving bootstrap file for cluster %s in project %s",
+			clusterId, projectId))
+	}
+
+	d.Set("bootstrap_files_combined", bootstrapFile)
+	bootstrapFiles := splitSingleYAMLIntoList(bootstrapFile)
+	d.Set("bootstrap_files", bootstrapFiles)
+
+	resp, err := getBootstrapRelays(bootstrapFiles)
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("Error while decoding YAML object %s", resp))
+	}
+
+	d.Set("relays", resp)
+
+	return nil
 }
