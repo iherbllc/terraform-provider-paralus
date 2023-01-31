@@ -72,6 +72,7 @@ func datasourceBootstrapFileRead(ctx context.Context, d *schema.ResourceData, m 
 
 	clusterId := d.Get("name").(string)
 	projectId := d.Get("project").(string)
+	d.SetId(clusterId + ":" + projectId)
 
 	tflog.Trace(ctx, "Retrieving bootstrap info", map[string]interface{}{
 		"cluster": clusterId,
@@ -88,28 +89,12 @@ func datasourceBootstrapFileRead(ctx context.Context, d *schema.ResourceData, m 
 			clusterId, projectId)))
 	}
 
-	bootstrapFile, err := cluster.GetBootstrapFile(clusterId, projectId)
-
+	err = paralusUtils.SetBootstrapFileAndRelays(ctx, d)
 	if err != nil {
-		d.SetId("")
-		return diag.FromErr(errors.Wrap(err, fmt.Sprintf("Error retrieving bootstrap file for cluster %s in project %s",
-			clusterId, projectId)))
+		return diag.FromErr(err)
 	}
 
 	d.Set("uuid", clusterStruct.Metadata.Id)
-
-	d.Set("bootstrap_files_combined", bootstrapFile)
-	bootstrapFiles := paralusUtils.SplitSingleYAMLIntoList(bootstrapFile)
-	d.Set("bootstrap_files", bootstrapFiles)
-
-	resp, err := paralusUtils.GetBootstrapRelays(bootstrapFiles)
-	if err != nil {
-		return diag.FromErr(errors.Wrap(err, fmt.Sprintf("Error while decoding YAML object %s", resp)))
-	}
-
-	d.Set("relays", resp)
-
-	d.SetId(clusterId + ":" + projectId)
 
 	return diags
 

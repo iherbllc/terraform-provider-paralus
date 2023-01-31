@@ -11,6 +11,36 @@ import (
 	"github.com/paralus/cli/pkg/project"
 )
 
+// Test empty project name
+func TestAccParalusResourceEmptyProject_basic(t *testing.T) {
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccConfigPreCheck(t) },
+		Providers: testAccProviders,
+		// CheckDestroy: testAccCheckProjectResourceDestroy(t),
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccProjectResourceConfigEmptyProject(),
+				ExpectError: regexp.MustCompile(".*name cannot be empty.*"),
+			},
+		},
+	})
+}
+
+func testAccProjectResourceConfigEmptyProject() string {
+
+	conf = paralusProviderConfig()
+	providerConfig := providerString(conf, "project_empty_name")
+	return fmt.Sprintf(`
+		%s
+
+		resource "paralus_project" "emptyname_test" {
+			provider = paralus.project_empty_name
+			name = ""
+		}
+	`, providerConfig)
+}
+
 // Test fail create project if organization name not same as UI configuration
 func TestAccParalusResourceProjectBadOrg_basic(t *testing.T) {
 
