@@ -11,6 +11,35 @@ import (
 	"github.com/paralus/cli/pkg/project"
 )
 
+// Test missing project name
+func TestAccParalusResourceMissingProject_basic(t *testing.T) {
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccConfigPreCheck(t) },
+		Providers: testAccProviders,
+		// CheckDestroy: testAccCheckProjectResourceDestroy(t),
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccProjectResourceConfigMissingProject(),
+				ExpectError: regexp.MustCompile(".*argument \"name\" is required.*"),
+			},
+		},
+	})
+}
+
+func testAccProjectResourceConfigMissingProject() string {
+
+	conf = paralusProviderConfig()
+	providerConfig := providerString(conf, "project_missing_name")
+	return fmt.Sprintf(`
+		%s
+
+		resource "paralus_project" "missingname_test" {
+			provider = paralus.project_missing_name
+		}
+	`, providerConfig)
+}
+
 // Test empty project name
 func TestAccParalusResourceEmptyProject_basic(t *testing.T) {
 
@@ -51,7 +80,7 @@ func TestAccParalusResourceProjectBadOrg_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccProjectResourceConfigBadOrg(),
-				ExpectError: regexp.MustCompile(".*not authorized to perform action.*"),
+				ExpectError: regexp.MustCompile(".*Failed to create project.*"),
 			},
 		},
 	})
@@ -164,10 +193,51 @@ func testAccCheckResourceProjectTypeAttribute(resourceName string, description s
 		if !ok {
 			return fmt.Errorf("Not found: %s", resourceName)
 		}
+
 		if rs.Primary.Attributes["description"] != description {
 			return fmt.Errorf("Invalid description")
 		}
 
 		return nil
 	}
+}
+
+// Test creating project and adding in group
+func TestAccParalusResourceProject_AddToGroup(t *testing.T) {
+
+	projectRsName := "paralus_project.add_to_group"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccConfigPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckProjectResourceDestroy(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderValidResource(`
+				resource "paralus_project" "add_to_group" {
+					provider = paralus.valid_resource
+					name = "test"
+					description = "test project"
+					project_roles {
+						project = "test"
+						role = "PROJECT_READ_ONLY"
+						group = "AccTest"
+					}
+				}`),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckResourceProjectExists(projectRsName),
+					testAccCheckResourceProjectTypeAttribute(projectRsName, "test project"),
+					resource.TestCheckResourceAttr(projectRsName, "description", "test project"),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"role": "PROJECT_READ_ONLY"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"group": "AccTest"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"project": "test"}),
+				),
+			},
+			{
+				ResourceName:      projectRsName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
 }

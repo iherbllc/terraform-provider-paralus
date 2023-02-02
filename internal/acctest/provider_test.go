@@ -195,7 +195,7 @@ func testAccProvider_setInvalidSecret() string {
 
 data "paralus_project" "custom_api_secret" {
 	provider = paralus.custom_api_secret
-	name = "default"
+	name = "acctest-donotdelete"
   }`, providerString(conf, "custom_api_secret"))
 }
 
@@ -210,7 +210,7 @@ func testAccProvider_setInvalidAPIKey() string {
 
 data "paralus_project" "custom_api_key" {
 	provider = paralus.custom_api_key
-	name = "default"
+	name = "acctest-donotdelete"
   }`, providerString(conf, "custom_api_key"))
 }
 
@@ -225,7 +225,7 @@ func testAccProvider_setMissingAPIKey() string {
 
 data "paralus_project" "missing_api_key" {
 	provider = paralus.missing_api_key
-	name = "default"
+	name = "acctest-donotdelete"
   }`, providerString(conf, "missing_api_key"))
 }
 
@@ -272,7 +272,7 @@ func testAccProviderEndpoints_setPartner(partner string) string {
 resource "paralus_cluster" "default" {
 	provider = paralus.custom_partner
 	name     = "tf-cluster-test"
-	project = "default"
+	project = "acctest-donotdelete"
   }`, providerString(conf, "custom_partner"))
 }
 

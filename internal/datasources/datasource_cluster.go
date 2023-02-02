@@ -5,7 +5,7 @@ import (
 	"context"
 	"fmt"
 
-	paralusUtils "github.com/iherbllc/terraform-provider-paralus/internal/utils"
+	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
 
 	"github.com/paralus/cli/pkg/cluster"
 	"github.com/paralus/cli/pkg/config"
@@ -131,6 +131,17 @@ func datasourceClusterRead(ctx context.Context, d *schema.ResourceData, m interf
 
 	clusterId := d.Get("name").(string)
 	projectId := d.Get("project").(string)
+
+	diags = utils.AssertStringNotEmpty("Cluster project cannot be empty", projectId)
+	if diags.HasError() {
+		return diags
+	}
+
+	diags = utils.AssertStringNotEmpty("Cluster name cannot be empty", clusterId)
+	if diags.HasError() {
+		return diags
+	}
+
 	d.SetId(clusterId + ":" + projectId)
 
 	tflog.Trace(ctx, "Retrieving cluster info", map[string]interface{}{
@@ -138,7 +149,7 @@ func datasourceClusterRead(ctx context.Context, d *schema.ResourceData, m interf
 		"project": projectId,
 	})
 
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(config.GetConfig())))
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(config.GetConfig())))
 
 	clusterStruct, err := cluster.GetCluster(clusterId, projectId)
 
@@ -148,9 +159,9 @@ func datasourceClusterRead(ctx context.Context, d *schema.ResourceData, m interf
 			clusterId, projectId)))
 	}
 
-	paralusUtils.BuildResourceFromClusterStruct(clusterStruct, d)
+	utils.BuildResourceFromClusterStruct(clusterStruct, d)
 
-	err = paralusUtils.SetBootstrapFileAndRelays(ctx, d)
+	err = utils.SetBootstrapFileAndRelays(ctx, d)
 	if err != nil {
 		return diag.FromErr(err)
 	}

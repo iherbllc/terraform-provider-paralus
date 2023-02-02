@@ -1,4 +1,4 @@
-// Cluster DataSource acceptance test
+// Cluster DataSource bootstrap file acceptance test
 package acctest
 
 import (
@@ -20,7 +20,7 @@ func TestAccParalusBootstrapNotFound_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccDataSourceBootstrapConfig("blah"),
-				ExpectError: regexp.MustCompile(".*cluster not found.*"),
+				ExpectError: regexp.MustCompile(".*Error locating cluster.*"),
 			},
 		},
 	})
@@ -34,7 +34,7 @@ func TestAccParalusDataSourceBootstrap_basic(t *testing.T) {
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDataSourceBootstrapConfig("ignoreme"),
+				Config: testAccDataSourceBootstrapConfig("man-acctest"),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckHasBootstrap(dsResourceName),
 					testAccCheckResourceAttributeSet(dsResourceName, "relays"),
@@ -52,7 +52,7 @@ func testAccDataSourceBootstrapConfig(clusterName string) string {
 	return fmt.Sprintf(`
 		data "paralus_bootstrap_file" "test" {
 			name = "%s"
-			project = "default"
+			project = "acctest-donotdelete"
 		}
 	`, clusterName)
 }

@@ -5,7 +5,7 @@ import (
 	"context"
 	"fmt"
 
-	paralusUtils "github.com/iherbllc/terraform-provider-paralus/internal/utils"
+	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
 
 	"github.com/paralus/cli/pkg/cluster"
 	"github.com/paralus/cli/pkg/config"
@@ -72,6 +72,17 @@ func datasourceBootstrapFileRead(ctx context.Context, d *schema.ResourceData, m 
 
 	clusterId := d.Get("name").(string)
 	projectId := d.Get("project").(string)
+
+	diags = utils.AssertStringNotEmpty("Cluster project cannot be empty", projectId)
+	if diags.HasError() {
+		return diags
+	}
+
+	diags = utils.AssertStringNotEmpty("Cluster name cannot be empty", clusterId)
+	if diags.HasError() {
+		return diags
+	}
+
 	d.SetId(clusterId + ":" + projectId)
 
 	tflog.Trace(ctx, "Retrieving bootstrap info", map[string]interface{}{
@@ -79,7 +90,7 @@ func datasourceBootstrapFileRead(ctx context.Context, d *schema.ResourceData, m 
 		"project": projectId,
 	})
 
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(config.GetConfig())))
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(config.GetConfig())))
 
 	clusterStruct, err := cluster.GetCluster(clusterId, projectId)
 
@@ -89,7 +100,7 @@ func datasourceBootstrapFileRead(ctx context.Context, d *schema.ResourceData, m 
 			clusterId, projectId)))
 	}
 
-	err = paralusUtils.SetBootstrapFileAndRelays(ctx, d)
+	err = utils.SetBootstrapFileAndRelays(ctx, d)
 	if err != nil {
 		return diag.FromErr(err)
 	}

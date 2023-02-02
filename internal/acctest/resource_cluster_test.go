@@ -11,6 +11,127 @@ import (
 	"github.com/paralus/cli/pkg/cluster"
 )
 
+// Test missing cluster name
+func TestAccParalusResourceMissingCluster_basic(t *testing.T) {
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccConfigPreCheck(t) },
+		Providers: testAccProviders,
+		// CheckDestroy: testAccCheckClusterResourceDestroy(t),
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccClusterResourceConfigMissingCluster(),
+				ExpectError: regexp.MustCompile(".*argument \"name\" is required.*"),
+			},
+		},
+	})
+}
+
+func testAccClusterResourceConfigMissingCluster() string {
+
+	conf = paralusProviderConfig()
+	providerConfig := providerString(conf, "cluster_missing_name")
+	return fmt.Sprintf(`
+		%s
+
+		resource "paralus_cluster" "missingname_test" {
+			provider = paralus.cluster_missing_name
+		}
+	`, providerConfig)
+}
+
+// Test missing project name
+func TestAccParalusResourceClusterMissingProject_basic(t *testing.T) {
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccConfigPreCheck(t) },
+		Providers: testAccProviders,
+		// CheckDestroy: testAccCheckClusterResourceDestroy(t),
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccClusterResourceConfigMissingProject(),
+				ExpectError: regexp.MustCompile(".*argument \"project\" is required.*"),
+			},
+		},
+	})
+}
+
+func testAccClusterResourceConfigMissingProject() string {
+
+	conf = paralusProviderConfig()
+	providerConfig := providerString(conf, "project_missing_name")
+	return fmt.Sprintf(`
+		%s
+
+		resource "paralus_cluster" "missingname_test" {
+			provider = paralus.project_missing_name
+			name = "test"
+		}
+	`, providerConfig)
+}
+
+// Test empty project name
+func TestAccParalusResourceClusterEmptyProject_basic(t *testing.T) {
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccConfigPreCheck(t) },
+		Providers: testAccProviders,
+		// CheckDestroy: testAccCheckClusterResourceDestroy(t),
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccClusterResourceConfiEmptyProject(),
+				ExpectError: regexp.MustCompile(".*project cannot be empty.*"),
+			},
+		},
+	})
+}
+
+func testAccClusterResourceConfiEmptyProject() string {
+
+	conf = paralusProviderConfig()
+	providerConfig := providerString(conf, "project_empty_name")
+	return fmt.Sprintf(`
+		%s
+
+		resource "paralus_cluster" "missingname_test" {
+			provider = paralus.project_empty_name
+			name = "test"
+			project = ""
+		}
+	`, providerConfig)
+}
+
+// Test empty cluster name
+func TestAccParalusResourceEmptyCluster_basic(t *testing.T) {
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccConfigPreCheck(t) },
+		Providers: testAccProviders,
+		// CheckDestroy: testAccCheckClusterResourceDestroy(t),
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccClusterResourceConfigEmptyCluster(),
+				ExpectError: regexp.MustCompile(".*name cannot be empty.*"),
+			},
+		},
+	})
+}
+
+func testAccClusterResourceConfigEmptyCluster() string {
+
+	conf = paralusProviderConfig()
+	providerConfig := providerString(conf, "cluster_empty_name")
+	return fmt.Sprintf(`
+		%s
+
+		resource "paralus_cluster" "emptyname_test" {
+			provider = paralus.cluster_empty_name
+			name = ""
+			project = "test"
+		}
+	`, providerConfig)
+}
+
 // Test project and cluster creation
 func TestAccParalusResourceProjectCluster_full(t *testing.T) {
 
@@ -96,6 +217,93 @@ func TestAccParalusResourceClusterUnknownProject_basic(t *testing.T) {
 	})
 }
 
+// Test cluster creation into existing project, looking up project using datasource
+func TestAccParalusResourceCluster_WithProjectDatasource(t *testing.T) {
+	clusterRsName := "paralus_cluster.test"
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccConfigPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckClusterResourceDestroy(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderValidResource(`
+				data "paralus_project" "test" {
+					name = "acctest-donotdelete"
+				}
+				resource "paralus_cluster" "test" {
+					provider = paralus.valid_resource
+					name = "test"
+					project = data.paralus_project.test.name
+					cluster_type = "imported"
+					params {
+						provision_type = "IMPORT"
+						provision_environment = "CLOUD"
+						kubernetes_provider = "EKS"
+						state = "PROVISION"
+					}
+				}`),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckResourceClusterExists(clusterRsName),
+					testAccCheckResourceClusterTypeAttribute(clusterRsName, "imported"),
+					testAccCheckResourceAttributeSet(clusterRsName, "relays"),
+					resource.TestCheckResourceAttr(clusterRsName, "project", "acctest-donotdelete"),
+				),
+			},
+			{
+				ResourceName:      clusterRsName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+// Test cluster creation into new project
+func TestAccParalusResourceCluster_Full(t *testing.T) {
+	clusterRsName := "paralus_cluster.test"
+	projectRsName := "paralus_project.test"
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccConfigPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckClusterResourceDestroy(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderValidResource(`
+				resource "paralus_project" "test" {
+					name = "dynamic-acctest"
+					description = "dynamic test project"
+				}
+				resource "paralus_cluster" "test" {
+					provider = paralus.valid_resource
+					name = "test"
+					project = paralus_project.test.name
+					cluster_type = "imported"
+					params {
+						provision_type = "IMPORT"
+						provision_environment = "CLOUD"
+						kubernetes_provider = "EKS"
+						state = "PROVISION"
+					}
+				}`),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckResourceClusterExists(clusterRsName),
+					testAccCheckResourceClusterTypeAttribute(clusterRsName, "imported"),
+					testAccCheckResourceAttributeSet(clusterRsName, "relays"),
+					resource.TestCheckResourceAttr(clusterRsName, "project", "dynamic-acctest"),
+					testAccCheckResourceProjectExists(projectRsName),
+					testAccCheckResourceProjectTypeAttribute(projectRsName, "dynamic test project"),
+					resource.TestCheckResourceAttr(projectRsName, "description", "dynamic test project"),
+				),
+			},
+			{
+				ResourceName:      clusterRsName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
 // Test cluster creation into existing project
 func TestAccParalusResourceCluster_basic(t *testing.T) {
 	clusterRsName := "paralus_cluster.test"
@@ -109,7 +317,7 @@ func TestAccParalusResourceCluster_basic(t *testing.T) {
 				resource "paralus_cluster" "test" {
 					provider = paralus.valid_resource
 					name = "test"
-					project = "default"
+					project = "acctest-donotdelete"
 					cluster_type = "imported"
 					params {
 						provision_type = "IMPORT"
@@ -122,7 +330,7 @@ func TestAccParalusResourceCluster_basic(t *testing.T) {
 					testAccCheckResourceClusterExists(clusterRsName),
 					testAccCheckResourceClusterTypeAttribute(clusterRsName, "imported"),
 					testAccCheckResourceAttributeSet(clusterRsName, "relays"),
-					resource.TestCheckResourceAttr(clusterRsName, "project", "default"),
+					resource.TestCheckResourceAttr(clusterRsName, "project", "acctest-donotdelete"),
 				),
 			},
 			{

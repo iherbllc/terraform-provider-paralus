@@ -1,4 +1,4 @@
-// Cluster DataSource acceptance test
+// Cluster DataSource cluster acceptance test
 package acctest
 
 import (
@@ -19,7 +19,7 @@ func TestAccParalusClusterNotFound_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccDataSourceClusterConfig("blah"),
-				ExpectError: regexp.MustCompile(".*cluster not found.*"),
+				ExpectError: regexp.MustCompile(".*Error locating cluster.*"),
 			},
 		},
 	})
@@ -33,13 +33,13 @@ func TestAccParalusDataSourceCluster_basic(t *testing.T) {
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDataSourceClusterConfig("ignoreme"),
+				Config: testAccDataSourceClusterConfig("man-acctest"),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckDataSourceClusterExists(dsResourceName),
-					testAccCheckDataSourceClusterTypeAttribute(dsResourceName, "ignoreme"),
+					testAccCheckDataSourceClusterTypeAttribute(dsResourceName, "man-acctest"),
 					testAccCheckResourceAttributeSet(dsResourceName, "relays"),
 					testAccCheckResourceAttributeSet(dsResourceName, "uuid"),
-					resource.TestCheckResourceAttr(dsResourceName, "project", "default"),
+					resource.TestCheckResourceAttr(dsResourceName, "project", "acctest-donotdelete"),
 					resource.TestCheckTypeSetElemAttr(dsResourceName, "bootstrap_files.*", "12"),
 				),
 			},
@@ -52,7 +52,7 @@ func testAccDataSourceClusterConfig(clusterName string) string {
 	return fmt.Sprintf(`
 		data "paralus_cluster" "test" {
 			name = "%s"
-			project = "default"
+			project = "acctest-donotdelete"
 		}
 	`, clusterName)
 }
@@ -101,17 +101,41 @@ func testAccCheckDataSourceClusterTypeAttribute(resourceName string, description
 	}
 }
 
-// Tests that a resource attribute has a value
-func testAccCheckDataSourceAttributeSet(resourceName string, attrName string) func(s *terraform.State) error {
-	return func(s *terraform.State) error {
-		rs, ok := s.RootModule().Resources[resourceName]
-		if !ok {
-			return fmt.Errorf("Not found: %s", resourceName)
-		}
-		if rs.Primary.Attributes[attrName] == "" {
-			return fmt.Errorf(fmt.Sprintf("Attribute %s is empty", attrName))
-		}
+// Full acceptance test with datasource for both cluster and project
+func TestAccParalusDataSourceCluster_Full(t *testing.T) {
+	dsResourceClusterName := "data.paralus_cluster.test"
+	dsResourceProjectName := "data.paralus_project.test"
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccConfigPreCheck(t) },
+		Providers: testAccProviders,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDataSourceClusterFullConfig("man-acctest"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckDataSourceClusterExists(dsResourceClusterName),
+					testAccCheckDataSourceClusterTypeAttribute(dsResourceClusterName, "man-acctest"),
+					testAccCheckResourceAttributeSet(dsResourceClusterName, "relays"),
+					testAccCheckResourceAttributeSet(dsResourceClusterName, "uuid"),
+					resource.TestCheckResourceAttr(dsResourceClusterName, "project", "acctest-donotdelete"),
+					resource.TestCheckTypeSetElemAttr(dsResourceClusterName, "bootstrap_files.*", "12"),
+					testAccCheckDataSourceProjectExists(dsResourceProjectName),
+					testAccCheckDataSourceProjectTypeAttribute(dsResourceProjectName, "Project used for acceptance testing"),
+					resource.TestCheckResourceAttr(dsResourceProjectName, "description", "Project used for acceptance testing"),
+				),
+			},
+		},
+	})
+}
 
-		return nil
-	}
+func testAccDataSourceClusterFullConfig(clusterName string) string {
+
+	return fmt.Sprintf(`
+		data "paralus_project" "test" {
+			name = "acctest-donotdelete"
+		}
+		data "paralus_cluster" "test" {
+			name = "%s"
+			project = data.paralus_project.test.name
+		}
+	`, clusterName)
 }

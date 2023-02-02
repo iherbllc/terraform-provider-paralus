@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	paralusUtils "github.com/iherbllc/terraform-provider-paralus/internal/utils"
+	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
 
 	"github.com/paralus/cli/pkg/cluster"
 	"github.com/paralus/cli/pkg/config"
@@ -154,7 +154,7 @@ func ResourceCluster() *schema.Resource {
 // Create a new cluster in Paralus
 func resourceClusterCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(config.GetConfig())))
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(config.GetConfig())))
 
 	diags := createOrUpdateCluster(ctx, d, "POST")
 	if diags.HasError() {
@@ -168,7 +168,7 @@ func resourceClusterCreate(ctx context.Context, d *schema.ResourceData, m interf
 
 // Updating existing cluster
 func resourceClusterUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(config.GetConfig())))
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(config.GetConfig())))
 
 	return createOrUpdateCluster(ctx, d, "PUT")
 }
@@ -178,6 +178,16 @@ func createOrUpdateCluster(ctx context.Context, d *schema.ResourceData, requestT
 
 	projectId := d.Get("project").(string)
 	clusterId := d.Get("name").(string)
+
+	diags := utils.AssertStringNotEmpty("Cluster project cannot be empty", projectId)
+	if diags.HasError() {
+		return diags
+	}
+
+	diags = utils.AssertStringNotEmpty("Cluster name cannot be empty", clusterId)
+	if diags.HasError() {
+		return diags
+	}
 
 	tflog.Trace(ctx, fmt.Sprintf("Checking for project %s existance", projectId))
 
@@ -192,7 +202,7 @@ func createOrUpdateCluster(ctx context.Context, d *schema.ResourceData, requestT
 		howFail = "update"
 	}
 
-	clusterStruct := paralusUtils.BuildClusterStructFromResource(d)
+	clusterStruct := utils.BuildClusterStructFromResource(d)
 
 	tflog.Trace(ctx, fmt.Sprintf("Cluster %s request", requestType), map[string]interface{}{
 		"cluster": clusterId,
@@ -225,10 +235,20 @@ func createOrUpdateCluster(ctx context.Context, d *schema.ResourceData, requestT
 func resourceClusterRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(config.GetConfig())))
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(config.GetConfig())))
 
 	projectId := d.Get("project").(string)
 	clusterId := d.Get("name").(string)
+
+	diags = utils.AssertStringNotEmpty("Cluster project cannot be empty", projectId)
+	if diags.HasError() {
+		return diags
+	}
+
+	diags = utils.AssertStringNotEmpty("Cluster name cannot be empty", clusterId)
+	if diags.HasError() {
+		return diags
+	}
 
 	tflog.Trace(ctx, "Retrieving cluster info", map[string]interface{}{
 		"cluster": clusterId,
@@ -245,9 +265,9 @@ func resourceClusterRead(ctx context.Context, d *schema.ResourceData, m interfac
 	}
 
 	// Update resource information from created/updated cluster
-	paralusUtils.BuildResourceFromClusterStruct(clusterStruct, d)
+	utils.BuildResourceFromClusterStruct(clusterStruct, d)
 
-	err = paralusUtils.SetBootstrapFileAndRelays(ctx, d)
+	err = utils.SetBootstrapFileAndRelays(ctx, d)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -258,7 +278,7 @@ func resourceClusterRead(ctx context.Context, d *schema.ResourceData, m interfac
 // Import cluster info into TF
 func resourceClusterImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
 
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(config.GetConfig())))
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(config.GetConfig())))
 
 	clusterProjectId := strings.Split(d.Id(), ":")
 
@@ -281,8 +301,8 @@ func resourceClusterImport(ctx context.Context, d *schema.ResourceData, m interf
 			clusterProjectId[1], clusterProjectId[0]))
 	}
 
-	paralusUtils.BuildResourceFromClusterStruct(clusterStruct, d)
-	err = paralusUtils.SetBootstrapFileAndRelays(ctx, d)
+	utils.BuildResourceFromClusterStruct(clusterStruct, d)
+	err = utils.SetBootstrapFileAndRelays(ctx, d)
 	if err != nil {
 		d.SetId("")
 		return nil, err
@@ -298,10 +318,20 @@ func resourceClusterImport(ctx context.Context, d *schema.ResourceData, m interf
 func resourceClusterDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(config.GetConfig())))
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(config.GetConfig())))
 
 	projectId := d.Get("project").(string)
 	clusterId := d.Get("name").(string)
+
+	diags = utils.AssertStringNotEmpty("Cluster project cannot be empty", projectId)
+	if diags.HasError() {
+		return diags
+	}
+
+	diags = utils.AssertStringNotEmpty("Cluster name cannot be empty", clusterId)
+	if diags.HasError() {
+		return diags
+	}
 
 	tflog.Trace(ctx, "Deleting cluster info", map[string]interface{}{
 		"cluster": clusterId,

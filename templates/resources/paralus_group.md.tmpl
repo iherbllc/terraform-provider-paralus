@@ -1,0 +1,18 @@
+---
+page_title: "{{.Type}} - {{.Name}}"
+description: |-
+  {{.Description}}
+---
+
+
+## Example Usage
+
+### Roles
+
+{{ tffile "examples/resources/paralus_group/resource.tf" }}
+
+### Users
+
+{{ tffile "examples/resources/paralus_group/resource_users.tf" }}
+
+{{ .SchemaMarkdown | trimspace }}

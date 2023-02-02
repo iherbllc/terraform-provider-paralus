@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	paralusUtils "github.com/iherbllc/terraform-provider-paralus/internal/utils"
+	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
 	"github.com/pkg/errors"
 
 	"github.com/paralus/cli/pkg/config"
@@ -17,7 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-// / Paralus Resource Project
+// Paralus Resource Project
 func ResourceProject() *schema.Resource {
 	return &schema.Resource{
 		Description:   "Resource containing paralus project information. Uses the [pctl](https://github.com/paralus/cli) library",
@@ -107,7 +107,7 @@ func resourceProjectCreate(ctx context.Context, d *schema.ResourceData, m interf
 
 	projectId := d.Get("name").(string)
 
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(config.GetConfig())))
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(config.GetConfig())))
 
 	diags := createOrUpdateProject(ctx, d, "POST")
 
@@ -122,7 +122,7 @@ func resourceProjectCreate(ctx context.Context, d *schema.ResourceData, m interf
 
 func resourceProjectUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(config.GetConfig())))
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(config.GetConfig())))
 	return createOrUpdateCluster(ctx, d, "PUT")
 }
 
@@ -130,6 +130,11 @@ func resourceProjectUpdate(ctx context.Context, d *schema.ResourceData, m interf
 func createOrUpdateProject(ctx context.Context, d *schema.ResourceData, requestType string) diag.Diagnostics {
 
 	projectId := d.Get("name").(string)
+
+	diags := utils.AssertStringNotEmpty("Project name cannot be empty", projectId)
+	if diags.HasError() {
+		return diags
+	}
 
 	howFail := "create"
 	if requestType == "PUT" {
@@ -140,23 +145,12 @@ func createOrUpdateProject(ctx context.Context, d *schema.ResourceData, requestT
 		"project": projectId,
 	})
 
-	if requestType == "POST" {
-		err := project.CreateProject(projectId, d.Get("description").(string))
-		if err != nil {
-			return diag.FromErr(errors.Wrap(err,
-				fmt.Sprintf("Failed to %s project %s", howFail, projectId)))
-		}
-	} else if requestType == "PUT" {
-		projectStruct := paralusUtils.BuildProjectStructFromResource(d)
-		err := project.ApplyProject(projectStruct)
-		if err != nil {
-			return diag.FromErr(errors.Wrap(err,
-				fmt.Sprintf("Failed to %s project %s", howFail,
-					projectId)))
-		}
-	} else {
-		return diag.FromErr(errors.Wrap(nil,
-			fmt.Sprintf("Unknown request type %s", requestType)))
+	projectStruct := utils.BuildProjectStructFromResource(d)
+	err := project.ApplyProject(projectStruct)
+	if err != nil {
+		return diag.FromErr(errors.Wrap(err,
+			fmt.Sprintf("Failed to %s project %s", howFail,
+				projectId)))
 	}
 
 	return resourceProjectRead(ctx, d, nil)
@@ -166,13 +160,22 @@ func createOrUpdateProject(ctx context.Context, d *schema.ResourceData, requestT
 func resourceProjectRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(config.GetConfig())))
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(config.GetConfig())))
 
 	projectId := d.Get("name").(string)
+
+	diags = utils.AssertStringNotEmpty("Project name cannot be empty", projectId)
+	if diags.HasError() {
+		return diags
+	}
 
 	tflog.Trace(ctx, "Retrieving project info", map[string]interface{}{
 		"project": projectId,
 	})
+
+	if projectId == "" {
+		return diag.FromErr(errors.New("Project name cannot be empty"))
+	}
 
 	projectStruct, err := project.GetProjectByName(projectId)
 	if projectStruct == nil {
@@ -183,7 +186,7 @@ func resourceProjectRead(ctx context.Context, d *schema.ResourceData, m interfac
 	}
 
 	// Update resource information from updated cluster
-	paralusUtils.BuildResourceFromProjectStruct(projectStruct, d)
+	utils.BuildResourceFromProjectStruct(projectStruct, d)
 
 	return diags
 }
@@ -193,7 +196,7 @@ func resourceProjectImport(ctx context.Context, d *schema.ResourceData, m interf
 
 	projectId := d.Id()
 
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(config.GetConfig())))
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(config.GetConfig())))
 
 	tflog.Trace(ctx, "Retrieving project info", map[string]interface{}{
 		"project": projectId,
@@ -205,7 +208,7 @@ func resourceProjectImport(ctx context.Context, d *schema.ResourceData, m interf
 		return nil, errors.Wrap(err, fmt.Sprintf("Project %s does not exist", projectId))
 	}
 
-	paralusUtils.BuildResourceFromProjectStruct(projectStruct, d)
+	utils.BuildResourceFromProjectStruct(projectStruct, d)
 
 	schemas := make([]*schema.ResourceData, 0)
 	schemas = append(schemas, d)
@@ -217,9 +220,14 @@ func resourceProjectImport(ctx context.Context, d *schema.ResourceData, m interf
 func resourceProjectDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(config.GetConfig())))
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(config.GetConfig())))
 
 	projectId := d.Get("name").(string)
+
+	diags = utils.AssertStringNotEmpty("Project name cannot be empty", projectId)
+	if diags.HasError() {
+		return diags
+	}
 
 	tflog.Trace(ctx, "Deleting Project info", map[string]interface{}{
 		"project": projectId,
