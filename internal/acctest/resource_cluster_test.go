@@ -296,6 +296,11 @@ func TestAccParalusResourceCluster_Full(t *testing.T) {
 				),
 			},
 			{
+				ResourceName:      projectRsName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
 				ResourceName:      clusterRsName,
 				ImportState:       true,
 				ImportStateVerify: true,

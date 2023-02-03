@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
 	"github.com/paralus/cli/pkg/group"
 )
 
@@ -203,8 +204,8 @@ func testAccCheckResourceGroupTypeAttribute(resourceName string, description str
 	}
 }
 
-// Paralus group creation for all projects admin rights
-func TestAccParalusResourceGroup_AlProjects(t *testing.T) {
+// Paralus group creation for one project
+func TestAccParalusResourceGroup_Project(t *testing.T) {
 
 	groupRsName := "paralus_group.test"
 
@@ -227,6 +228,10 @@ func TestAccParalusResourceGroup_AlProjects(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckResourceGroupExists(groupRsName),
 					testAccCheckResourceGroupTypeAttribute(groupRsName, "test group"),
+					testAccCheckResourceGroupProjectRoleMap(groupRsName, map[string]string{
+						"role":  "ADMIN",
+						"group": "test",
+					}),
 					resource.TestCheckResourceAttr(groupRsName, "description", "test group"),
 					resource.TestCheckTypeSetElemNestedAttrs(groupRsName, "project_roles.*", map[string]string{"role": "ADMIN"}),
 					resource.TestCheckTypeSetElemNestedAttrs(groupRsName, "project_roles.*", map[string]string{"group": "test"}),
@@ -239,4 +244,168 @@ func TestAccParalusResourceGroup_AlProjects(t *testing.T) {
 			},
 		},
 	})
+}
+
+// testAccCheckResourceGroupCheckUserList verifies user is in list from API
+func testAccCheckResourceGroupProjectRoleMap(resourceName string, projectRoles map[string]string) func(s *terraform.State) error {
+
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return fmt.Errorf("Not found: %s", resourceName)
+		}
+
+		groupStr := rs.Primary.Attributes["name"]
+
+		group, err := group.GetGroupByName(groupStr)
+
+		if err != nil {
+			return err
+		}
+
+		return utils.ValidateProjectNamespaceRolesSet(group.Spec.ProjectNamespaceRoles, projectRoles)
+	}
+}
+
+// Multiple group creation adding to previously created project
+func TestAccParalusResourceGroups_AddToProject(t *testing.T) {
+	projectRsName := "paralus_project.temp"
+	groupRsName1 := "paralus_group.test1"
+	groupRsName2 := "paralus_group.test2"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccConfigPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckGroupResourceDestroy(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderValidResource(`
+				resource "paralus_project" "temp" {
+					name = "tempproject"
+					description = "A temporary project"
+				}
+				resource "paralus_group" "test1" {
+					provider = paralus.valid_resource
+					name = "test1"
+					description = "test 1 group"
+					project_roles {
+						project = paralus_project.temp.name
+						role = "ADMIN"
+						group = "test1"
+					}
+				}
+				resource "paralus_group" "test2" {
+					provider = paralus.valid_resource
+					name = "test2"
+					description = "test 2 group"
+					project_roles {
+						project = paralus_project.temp.name
+						role = "ADMIN"
+						group = "test2"
+					}
+				}`),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckResourceGroupExists(groupRsName1),
+					testAccCheckResourceGroupTypeAttribute(groupRsName1, "test 1 group"),
+					resource.TestCheckResourceAttr(groupRsName1, "description", "test 1 group"),
+					resource.TestCheckTypeSetElemNestedAttrs(groupRsName1, "project_roles.*", map[string]string{"project": "tempproject"}),
+					resource.TestCheckTypeSetElemNestedAttrs(groupRsName1, "project_roles.*", map[string]string{"role": "ADMIN"}),
+					resource.TestCheckTypeSetElemNestedAttrs(groupRsName1, "project_roles.*", map[string]string{"group": "test1"}),
+
+					testAccCheckResourceGroupExists(groupRsName2),
+					testAccCheckResourceGroupTypeAttribute(groupRsName2, "test 2 group"),
+					resource.TestCheckResourceAttr(groupRsName2, "description", "test 2 group"),
+					resource.TestCheckTypeSetElemNestedAttrs(groupRsName2, "project_roles.*", map[string]string{"project": "tempproject"}),
+					resource.TestCheckTypeSetElemNestedAttrs(groupRsName2, "project_roles.*", map[string]string{"role": "ADMIN"}),
+					resource.TestCheckTypeSetElemNestedAttrs(groupRsName2, "project_roles.*", map[string]string{"group": "test2"}),
+
+					testAccCheckResourceProjectExists(projectRsName),
+					testAccCheckResourceProjectTypeAttribute(projectRsName, "A temporary project"),
+					resource.TestCheckResourceAttr(projectRsName, "description", "A temporary project"),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"role": "ADMIN"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"group": "test1"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"role": "ADMIN"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"group": "test2"}),
+				),
+			},
+			{
+				ResourceName:      groupRsName1,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				ResourceName:      groupRsName2,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				ResourceName:      projectRsName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+// Create a group with a user
+func TestAccParalusResourceGroup_AddUser(t *testing.T) {
+	groupRsName1 := "paralus_group.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccConfigPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckGroupResourceDestroy(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderValidResource(`
+				resource "paralus_group" "test" {
+					provider = paralus.valid_resource
+					name = "test1"
+					description = "test 1 group"
+					users = ["acctest-user@example.com"]
+				}`),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckResourceGroupExists(groupRsName1),
+					testAccCheckResourceGroupTypeAttribute(groupRsName1, "test 1 group"),
+					testAccCheckResourceGroupCheckUserList(groupRsName1, "acctest-user@example.com"),
+					resource.TestCheckResourceAttr(groupRsName1, "description", "test 1 group"),
+					resource.TestCheckResourceAttr(groupRsName1, "users.0", "acctest-user@example.com"),
+				),
+			},
+			{
+				ResourceName:      groupRsName1,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+// testAccCheckResourceGroupCheckUserList verifies user is in list from API
+func testAccCheckResourceGroupCheckUserList(resourceName string, user string) func(s *terraform.State) error {
+
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return fmt.Errorf("Not found: %s", resourceName)
+		}
+
+		groupStr := rs.Primary.Attributes["name"]
+
+		group, err := group.GetGroupByName(groupStr)
+
+		if err != nil {
+			return err
+		}
+
+		if len(group.Spec.Users) <= 0 {
+			return fmt.Errorf("User list is empty")
+		}
+
+		if group.Spec.Users[0] != user {
+			return fmt.Errorf("User list %s is missing %s", group.Spec.Users, user)
+		}
+
+		return nil
+	}
 }

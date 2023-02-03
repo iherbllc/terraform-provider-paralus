@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
 	"github.com/paralus/cli/pkg/project"
 )
 
@@ -204,7 +205,7 @@ func testAccCheckResourceProjectTypeAttribute(resourceName string, description s
 
 // Test creating project and adding in group
 func TestAccParalusResourceProject_AddToGroup(t *testing.T) {
-
+	groupRsName := "paralus_group.test"
 	projectRsName := "paralus_project.add_to_group"
 
 	resource.Test(t, resource.TestCase{
@@ -213,7 +214,15 @@ func TestAccParalusResourceProject_AddToGroup(t *testing.T) {
 		CheckDestroy: testAccCheckProjectResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
+				// we will have a non-empty plan because the project access removal will affect the group role as well
+				ExpectNonEmptyPlan: true,
 				Config: testAccProviderValidResource(`
+				resource "paralus_group" "test" {
+					provider = paralus.valid_resource
+					name = "test"
+					description = "test group"
+				}
+
 				resource "paralus_project" "add_to_group" {
 					provider = paralus.valid_resource
 					name = "test"
@@ -221,17 +230,30 @@ func TestAccParalusResourceProject_AddToGroup(t *testing.T) {
 					project_roles {
 						project = "test"
 						role = "PROJECT_READ_ONLY"
-						group = "AccTest"
+						group = paralus_group.test.name
 					}
 				}`),
 				Check: resource.ComposeTestCheckFunc(
+					testAccCheckResourceGroupExists(groupRsName),
+					testAccCheckResourceGroupTypeAttribute(groupRsName, "test group"),
+					resource.TestCheckResourceAttr(groupRsName, "description", "test group"),
 					testAccCheckResourceProjectExists(projectRsName),
 					testAccCheckResourceProjectTypeAttribute(projectRsName, "test project"),
 					resource.TestCheckResourceAttr(projectRsName, "description", "test project"),
-					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"role": "PROJECT_READ_ONLY"}),
-					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"group": "AccTest"}),
+					testAccCheckResourceProjectProjectRoleMap(projectRsName, map[string]string{"role": "PROJECT_READ_ONLY"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{
+						"role":    "PROJECT_READ_ONLY",
+						"group":   "test",
+						"project": "test",
+					}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"group": "test"}),
 					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"project": "test"}),
 				),
+			},
+			{
+				ResourceName:      groupRsName,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 			{
 				ResourceName:      projectRsName,
@@ -240,4 +262,25 @@ func TestAccParalusResourceProject_AddToGroup(t *testing.T) {
 			},
 		},
 	})
+}
+
+// testAccCheckResourceProjectProjectRoleMap verifies project role list for project
+func testAccCheckResourceProjectProjectRoleMap(resourceName string, projectRoles map[string]string) func(s *terraform.State) error {
+
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return fmt.Errorf("Not found: %s", resourceName)
+		}
+
+		projectStr := rs.Primary.Attributes["name"]
+
+		projectStruct, err := project.GetProjectByName(projectStr)
+
+		if err != nil {
+			return err
+		}
+
+		return utils.ValidateProjectNamespaceRolesSet(projectStruct.Spec.ProjectNamespaceRoles, projectRoles)
+	}
 }

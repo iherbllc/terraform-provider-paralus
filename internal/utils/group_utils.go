@@ -39,7 +39,11 @@ func BuildGroupStructFromResource(d *schema.ResourceData) *userv3.Group {
 	}
 
 	if users, ok := d.GetOk("users"); ok {
-		groupStruct.Spec.Users = users.([]string)
+		usersList := users.([]interface{})
+		groupStruct.Spec.Users = make([]string, len(usersList))
+		for i, v := range usersList {
+			groupStruct.Spec.Users[i] = v.(string)
+		}
 	}
 
 	if groupType, ok := d.GetOk("type"); ok {
