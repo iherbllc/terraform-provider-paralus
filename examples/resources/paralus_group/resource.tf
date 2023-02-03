@@ -1,4 +1,4 @@
-# This example shows how to create a project resource
+# This example shows how to create a Group resource for project/namespace role access
 
 resource "paralus_group" "test" {
     name = "test"
