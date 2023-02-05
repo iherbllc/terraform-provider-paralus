@@ -346,16 +346,14 @@ func resourceClusterDelete(ctx context.Context, d *schema.ResourceData, m interf
 		"project": projectId,
 	})
 
-	err := cluster.DeleteCluster(clusterId, projectId)
+	clusterStruct, _ := cluster.GetCluster(clusterId, projectId)
+	if clusterStruct != nil {
+		err := cluster.DeleteCluster(clusterId, projectId)
 
-	if err != nil {
-		// assume a no rows found error means the project does not exist
-		if strings.Contains(fmt.Sprint(err), "no rows in result set") {
-			d.SetId("")
-			return diags
+		if err != nil {
+			return diag.FromErr(errors.Wrap(err, fmt.Sprintf("Failed to delete cluster %s in project %s",
+				clusterId, projectId)))
 		}
-		return diag.FromErr(errors.Wrap(err, fmt.Sprintf("Failed to delete cluster %s in project %s",
-			clusterId, projectId)))
 	}
 
 	d.SetId("")

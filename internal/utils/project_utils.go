@@ -2,7 +2,9 @@
 package utils
 
 import (
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/pkg/errors"
 
 	commonv3 "github.com/paralus/paralus/proto/types/commonpb/v3"
 	systemv3 "github.com/paralus/paralus/proto/types/systempb/v3"
@@ -78,4 +80,23 @@ func BuildResourceFromProjectStruct(project *systemv3.Project, d *schema.Resourc
 		})
 	}
 	d.Set("user_roles", userRoles)
+}
+
+// Check to make sure that the list of roles from ProjectNamespaceRole has unique role values.
+// This is required due to a limitation with Paralus.
+// See: https://github.com/paralus/paralus/issues/136
+func AssertUniqueRoles(pnrStruct []*userv3.ProjectNamespaceRole) diag.Diagnostics {
+	var diags diag.Diagnostics
+	if len(pnrStruct) >= 2 {
+		pnrStructMap := make(map[string]string)
+		for _, role := range pnrStruct {
+			if _, exists := pnrStructMap[role.Role]; exists {
+				return diag.FromErr(errors.New("roles must be distinct between project_roles blocks. If the same is required, then grant through the group instead."))
+			}
+			pnrStructMap[role.Role] = "unique"
+		}
+
+	}
+
+	return diags
 }

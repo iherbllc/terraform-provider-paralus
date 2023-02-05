@@ -4,7 +4,6 @@ package resources
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
 	"github.com/pkg/errors"
@@ -218,17 +217,15 @@ func resourceGroupDelete(ctx context.Context, d *schema.ResourceData, m interfac
 		"group": groupId,
 	})
 
-	err := group.DeleteGroup(groupId)
+	// verify group exists before attempting delete
+	groupStruct, _ := group.GetGroupByName(groupId)
+	if groupStruct != nil {
 
-	// The group doesn't exist
-	if err != nil {
-		// assume a no rows found error means the group does not exist
-		if strings.Contains(fmt.Sprint(err), "no rows in result set") {
-			d.SetId("")
-			return diags
+		err := group.DeleteGroup(groupId)
+		if err != nil {
+			return diag.FromErr(errors.Wrap(err, fmt.Sprintf("Failed to delete group %s",
+				groupId)))
 		}
-		return diag.FromErr(errors.Wrap(err, fmt.Sprintf("Failed to delete group %s",
-			groupId)))
 	}
 
 	d.SetId("")

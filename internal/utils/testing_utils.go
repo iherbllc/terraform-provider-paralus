@@ -47,34 +47,14 @@ func ValidateProjectNamespaceRolesSet(pnrStruct []*userv3.ProjectNamespaceRole, 
 				return fmt.Errorf("invalid project: %s", projectRoles["project"])
 			}
 		case "namespace":
-			if *role.Project != projectRoles["namespace"] {
+			if *role.Namespace != projectRoles["namespace"] {
 				return fmt.Errorf("invalid namespace: %s", projectRoles["namespace"])
 			}
 		case "group":
-			if *role.Project != projectRoles["group"] {
+			if *role.Group != projectRoles["group"] {
 				return fmt.Errorf("invalid group: %s", projectRoles["group"])
 			}
 		}
 	}
 	return nil
-}
-
-// Check to make sure that the list of roles from ProjectNamespaceRole is unique.
-// This is required due to a limitation with Paralus.
-// See: https://github.com/paralus/paralus/issues/136
-func AssertUniqueRoles(pnrStruct []*userv3.ProjectNamespaceRole) diag.Diagnostics {
-	var diags diag.Diagnostics
-	if len(pnrStruct) >= 2 {
-		pnrStructMap := make(map[string]string)
-		for _, role := range pnrStruct {
-			roleInfo := fmt.Sprintf("%s, %s, %s, %s", *role.Group, *role.Namespace, role.Role, *role.Project)
-			if _, exists := pnrStructMap[roleInfo]; exists {
-				return diag.FromErr(errors.New("permissions must be distinct between project_roles blocks. Add the project permissions to the group directly if duplicates are required."))
-			}
-			pnrStructMap[roleInfo] = "unique"
-		}
-
-	}
-
-	return diags
 }

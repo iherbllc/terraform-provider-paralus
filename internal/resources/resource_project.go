@@ -4,7 +4,6 @@ package resources
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
 	"github.com/pkg/errors"
@@ -150,7 +149,7 @@ func createOrUpdateProject(ctx context.Context, d *schema.ResourceData, requestT
 	// Required due to limitation with paralus
 	// See issue: https://github.com/paralus/paralus/issues/136
 	// Remove once paralus supports this feature.
-	diags = utils.AssertUniqueRoles(projectStruct.Spec.GetProjectNamespaceRoles())
+	diags = utils.AssertUniqueRoles(projectStruct.Spec.ProjectNamespaceRoles)
 	if diags.HasError() {
 		return diags
 	}
@@ -242,17 +241,16 @@ func resourceProjectDelete(ctx context.Context, d *schema.ResourceData, m interf
 		"project": projectId,
 	})
 
-	err := project.DeleteProject(projectId)
+	// verify project exists before attempting delete
+	projectStruct, _ := project.GetProjectByName(projectId)
+	if projectStruct != nil {
 
-	// The project doesn't exist
-	if err != nil {
-		// assume a no rows found error means the project does not exist
-		if strings.Contains(fmt.Sprint(err), "no rows in result set") {
-			d.SetId("")
-			return diags
+		err := project.DeleteProject(projectId)
+		if err != nil {
+			return diag.FromErr(errors.Wrap(err, fmt.Sprintf("Failed to delete project %s",
+				projectId)))
 		}
-		return diag.FromErr(errors.Wrap(err, fmt.Sprintf("Failed to delete project %s",
-			projectId)))
+
 	}
 
 	d.SetId("")

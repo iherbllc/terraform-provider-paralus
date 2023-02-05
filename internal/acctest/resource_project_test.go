@@ -264,8 +264,338 @@ func TestAccParalusResourceProject_AddToGroup(t *testing.T) {
 	})
 }
 
-// Test creating project and adding two groups
-func TestAccParalusResourceProject_Add2Groups(t *testing.T) {
+// Test creating a project and adding a namespace role group and project role group
+func TestAccParalusResourceProject_Add2GroupsNamespaceAndProjectRoles(t *testing.T) {
+
+	groupRsName1 := "paralus_group.test1"
+	groupRsName2 := "paralus_group.test2"
+	projectRsName := "paralus_project.add_to_group"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccConfigPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckProjectResourceDestroy(t),
+		Steps: []resource.TestStep{
+			{
+				// we will have a non-empty plan because the project access removal will affect the group role as well
+				ExpectNonEmptyPlan: true,
+				Config: testAccProviderValidResource(`
+				resource "paralus_group" "test1" {
+					provider = paralus.valid_resource
+					name = "test1"
+					description = "test 1 group"
+				}
+
+				resource "paralus_group" "test2" {
+					provider = paralus.valid_resource
+					name = "test2"
+					description = "test 2 group"
+				}
+
+				resource "paralus_project" "add_to_group" {
+					provider = paralus.valid_resource
+					name = "test"
+					description = "test project"
+					project_roles {
+						project = "test"
+						role = "NAMESPACE_READ_ONLY"
+						namespace = "platform"
+						group = paralus_group.test1.name
+					}
+					project_roles {
+						project = "test"
+						role = "PROJECT_ADMIN"
+						group = paralus_group.test2.name
+					}
+				}`),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckResourceProjectExists(projectRsName),
+					testAccCheckResourceProjectTypeAttribute(projectRsName, "test project"),
+					resource.TestCheckResourceAttr(projectRsName, "description", "test project"),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"project": "test"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"role": "NAMESPACE_READ_ONLY"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"namespace": "platform"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"group": "test1"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"project": "test"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"role": "PROJECT_ADMIN"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"group": "test2"}),
+
+					testAccCheckResourceGroupExists(groupRsName1),
+					testAccCheckResourceGroupTypeAttribute(groupRsName1, "test 1 group"),
+					resource.TestCheckResourceAttr(groupRsName1, "description", "test 1 group"),
+					testAccCheckResourceGroupProjectRoleMap(groupRsName1, map[string]string{
+						"role":      "NAMESPACE_READ_ONLY",
+						"group":     "test1",
+						"project":   "test",
+						"namepsace": "platform",
+					}),
+
+					testAccCheckResourceGroupExists(groupRsName2),
+					testAccCheckResourceGroupTypeAttribute(groupRsName2, "test 2 group"),
+					resource.TestCheckResourceAttr(groupRsName2, "description", "test 2 group"),
+					testAccCheckResourceGroupProjectRoleMap(groupRsName2, map[string]string{
+						"role":    "PROJECT_ADMIN",
+						"group":   "test2",
+						"project": "test",
+					}),
+				),
+			},
+			{
+				ResourceName:      projectRsName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				ResourceName:      groupRsName1,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				ResourceName:      groupRsName2,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+// Test creating a project and adding two different namespace roles
+func TestAccParalusResourceProject_Add2GroupsDifferentNamespaceRoles(t *testing.T) {
+
+	groupRsName1 := "paralus_group.test1"
+	groupRsName2 := "paralus_group.test2"
+	projectRsName := "paralus_project.add_to_group"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccConfigPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckProjectResourceDestroy(t),
+		Steps: []resource.TestStep{
+			{
+				// we will have a non-empty plan because the project access removal will affect the group role as well
+				ExpectNonEmptyPlan: true,
+				Config: testAccProviderValidResource(`
+				resource "paralus_group" "test1" {
+					provider = paralus.valid_resource
+					name = "test1"
+					description = "test 1 group"
+				}
+
+				resource "paralus_group" "test2" {
+					provider = paralus.valid_resource
+					name = "test2"
+					description = "test 2 group"
+				}
+
+				resource "paralus_project" "add_to_group" {
+					provider = paralus.valid_resource
+					name = "test"
+					description = "test project"
+					project_roles {
+						project = "test"
+						role = "NAMESPACE_READ_ONLY"
+						namespace = "platform"
+						group = paralus_group.test1.name
+					}
+					project_roles {
+						project = "test"
+						role = "NAMESPACE_ADMIN"
+						namespace = "platform"
+						group = paralus_group.test2.name
+					}
+				}`),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckResourceProjectExists(projectRsName),
+					testAccCheckResourceProjectTypeAttribute(projectRsName, "test project"),
+					resource.TestCheckResourceAttr(projectRsName, "description", "test project"),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"project": "test"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"role": "NAMESPACE_READ_ONLY"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"namespace": "platform"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"group": "test1"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"project": "test"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"role": "NAMESPACE_ADMIN"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"namespace": "platform"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"group": "test2"}),
+
+					testAccCheckResourceGroupExists(groupRsName1),
+					testAccCheckResourceGroupTypeAttribute(groupRsName1, "test 1 group"),
+					resource.TestCheckResourceAttr(groupRsName1, "description", "test 1 group"),
+					testAccCheckResourceGroupProjectRoleMap(groupRsName1, map[string]string{
+						"role":      "NAMESPACE_READ_ONLY",
+						"group":     "test1",
+						"project":   "test",
+						"namespace": "platform",
+					}),
+
+					testAccCheckResourceGroupExists(groupRsName2),
+					testAccCheckResourceGroupTypeAttribute(groupRsName2, "test 2 group"),
+					resource.TestCheckResourceAttr(groupRsName2, "description", "test 2 group"),
+					testAccCheckResourceGroupProjectRoleMap(groupRsName2, map[string]string{
+						"role":      "NAMESPACE_ADMIN",
+						"group":     "test2",
+						"project":   "test",
+						"namespace": "platform",
+					}),
+				),
+			},
+			{
+				ResourceName:      projectRsName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				ResourceName:      groupRsName1,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				ResourceName:      groupRsName2,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+// Test creating a project and adding two different project roles
+func TestAccParalusResourceProject_Add2GroupsDifferentProjectRoles(t *testing.T) {
+
+	groupRsName1 := "paralus_group.test1"
+	groupRsName2 := "paralus_group.test2"
+	projectRsName := "paralus_project.add_to_group"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccConfigPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckProjectResourceDestroy(t),
+		Steps: []resource.TestStep{
+			{
+				// we will have a non-empty plan because the project access removal will affect the group role as well
+				ExpectNonEmptyPlan: true,
+				Config: testAccProviderValidResource(`
+				resource "paralus_group" "test1" {
+					provider = paralus.valid_resource
+					name = "test1"
+					description = "test 1 group"
+				}
+
+				resource "paralus_group" "test2" {
+					provider = paralus.valid_resource
+					name = "test2"
+					description = "test 2 group"
+				}
+
+				resource "paralus_project" "add_to_group" {
+					provider = paralus.valid_resource
+					name = "test"
+					description = "test project"
+					project_roles {
+						project = "test"
+						role = "PROJECT_READ_ONLY"
+						group = paralus_group.test1.name
+					}
+					project_roles {
+						project = "test"
+						role = "PROJECT_ADMIN"
+						group = paralus_group.test2.name
+					}
+				}`),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckResourceProjectExists(projectRsName),
+					testAccCheckResourceProjectTypeAttribute(projectRsName, "test project"),
+					resource.TestCheckResourceAttr(projectRsName, "description", "test project"),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"project": "test"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"role": "PROJECT_READ_ONLY"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"group": "test1"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"project": "test"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"role": "PROJECT_ADMIN"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"group": "test2"}),
+
+					testAccCheckResourceGroupExists(groupRsName1),
+					testAccCheckResourceGroupTypeAttribute(groupRsName1, "test 1 group"),
+					resource.TestCheckResourceAttr(groupRsName1, "description", "test 1 group"),
+					testAccCheckResourceGroupProjectRoleMap(groupRsName1, map[string]string{
+						"role":    "PROJECT_READ_ONLY",
+						"group":   "test1",
+						"project": "test",
+					}),
+
+					testAccCheckResourceGroupExists(groupRsName2),
+					testAccCheckResourceGroupTypeAttribute(groupRsName2, "test 2 group"),
+					resource.TestCheckResourceAttr(groupRsName2, "description", "test 2 group"),
+					testAccCheckResourceGroupProjectRoleMap(groupRsName2, map[string]string{
+						"role":    "PROJECT_ADMIN",
+						"group":   "test2",
+						"project": "test",
+					}),
+				),
+			},
+			{
+				ResourceName:      projectRsName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				ResourceName:      groupRsName1,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				ResourceName:      groupRsName2,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+// Test creating a project and adding groups with same namespace roles
+func TestAccParalusResourceProject_Add2GroupsSameNamespaceRoles(t *testing.T) {
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccConfigPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckProjectResourceDestroy(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderValidResource(`
+				resource "paralus_group" "test1" {
+					provider = paralus.valid_resource
+					name = "test1"
+					description = "test group1"
+				}
+
+				resource "paralus_group" "test2" {
+					provider = paralus.valid_resource
+					name = "test2"
+					description = "test group2"
+				}
+
+				resource "paralus_project" "add_to_group" {
+					provider = paralus.valid_resource
+					name = "test"
+					description = "test project"
+					project_roles {
+						namespace = "platform"
+						project = "test"
+						role = "NAMESPACE_READ_ONLY"
+						group = paralus_group.test1.name
+					}
+					project_roles {
+						namespace = "platform"
+						project = "test"
+						role = "NAMESPACE_READ_ONLY"
+						group = paralus_group.test2.name
+					}
+				}`),
+				ExpectError: regexp.MustCompile(".*roles must be distinct between project_roles blocks.*"),
+			},
+		},
+	})
+}
+
+// Test creating project and adding two groups with same project role
+func TestAccParalusResourceProject_Add2GroupsSameProjectRoles(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccConfigPreCheck(t) },
@@ -301,7 +631,7 @@ func TestAccParalusResourceProject_Add2Groups(t *testing.T) {
 						group = paralus_group.test2.name
 					}
 				}`),
-				ExpectError: regexp.MustCompile("permissions must be distinct between project_roles blocks.*"),
+				ExpectError: regexp.MustCompile(".*roles must be distinct between project_roles blocks.*"),
 			},
 		},
 	})
