@@ -176,12 +176,12 @@ func TestAccParalusResourceProjectCluster_full(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      projectRsName,
+				ResourceName:      clusterRsName,
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
 			{
-				ResourceName:      clusterRsName,
+				ResourceName:      projectRsName,
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
@@ -232,7 +232,7 @@ func TestAccParalusResourceCluster_WithProjectDatasource(t *testing.T) {
 				}
 				resource "paralus_cluster" "test" {
 					provider = paralus.valid_resource
-					name = "test"
+					name = "test1"
 					project = data.paralus_project.test.name
 					cluster_type = "imported"
 					params {
@@ -275,7 +275,7 @@ func TestAccParalusResourceCluster_Full(t *testing.T) {
 				}
 				resource "paralus_cluster" "test" {
 					provider = paralus.valid_resource
-					name = "test"
+					name = "test1"
 					project = paralus_project.test.name
 					cluster_type = "imported"
 					params {
@@ -296,12 +296,12 @@ func TestAccParalusResourceCluster_Full(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      projectRsName,
+				ResourceName:      clusterRsName,
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
 			{
-				ResourceName:      clusterRsName,
+				ResourceName:      projectRsName,
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
@@ -321,7 +321,7 @@ func TestAccParalusResourceCluster_basic(t *testing.T) {
 				Config: testAccProviderValidResource(`
 				resource "paralus_cluster" "test" {
 					provider = paralus.valid_resource
-					name = "test"
+					name = "test1"
 					project = "acctest-donotdelete"
 					cluster_type = "imported"
 					params {

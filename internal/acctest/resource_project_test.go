@@ -251,12 +251,12 @@ func TestAccParalusResourceProject_AddToGroup(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      groupRsName,
+				ResourceName:      projectRsName,
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
 			{
-				ResourceName:      projectRsName,
+				ResourceName:      groupRsName,
 				ImportState:       true,
 				ImportStateVerify: true,
 			},

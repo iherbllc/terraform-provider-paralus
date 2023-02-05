@@ -210,6 +210,14 @@ func createOrUpdateCluster(ctx context.Context, d *schema.ResourceData, requestT
 	})
 
 	if requestType == "POST" {
+		// due to error swallowing, have to make sure the cluster doesn't exist before
+		// attempting to create it.
+		lookupStruct, _ := cluster.GetCluster(clusterId, projectId)
+		if lookupStruct != nil {
+			return diag.FromErr(errors.Wrap(err,
+				fmt.Sprintf("Cluster %s already exists", clusterId)))
+		}
+
 		err := cluster.CreateCluster(clusterStruct)
 		if err != nil {
 			return diag.FromErr(errors.Wrap(err,
