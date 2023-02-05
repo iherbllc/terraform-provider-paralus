@@ -1,0 +1,30 @@
+---
+page_title: "{{.Type}} - {{.Name}}"
+subcategory: ""
+description: |-
+  {{.Description}}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{.Description}}
+
+NOTE: Due to a limitation with paralus, there cannot be more than one project_role block with the same role type. 
+Use the [Group Resource](https://registry.terraform.io/providers/iherbllc/paralus/latest/docs/resources/group) after
+creating the project to grant the same role.
+
+## Example Usage
+
+### Role - Single
+
+{{ tffile "examples/resources/paralus_project/resource.tf" }}
+
+### Role - Multiple
+
+{{ tffile "examples/resources/paralus_project/resource_multiple.tf" }}
+
+### Users
+
+{{ tffile "examples/resources/paralus_project/resource_users.tf" }}
+
+{{ .SchemaMarkdown | trimspace }}
