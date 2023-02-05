@@ -179,7 +179,7 @@ func testAccCheckResourceGroupExists(resourceName string) func(s *terraform.Stat
 
 		group, err := group.GetGroupByName(groupStr)
 
-		if err == nil {
+		if err != nil {
 			return err
 		}
 		log.Printf("group info %s", group)
@@ -279,6 +279,7 @@ func TestAccParalusResourceGroups_AddToProject(t *testing.T) {
 		CheckDestroy: testAccCheckGroupResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
+				ExpectNonEmptyPlan: true,
 				Config: testAccProviderValidResource(`
 				resource "paralus_project" "temp" {
 					name = "tempproject"
@@ -290,7 +291,7 @@ func TestAccParalusResourceGroups_AddToProject(t *testing.T) {
 					description = "test 1 group"
 					project_roles {
 						project = paralus_project.temp.name
-						role = "ADMIN"
+						role = "PROJECT_ADMIN"
 						group = "test1"
 					}
 				}
@@ -300,7 +301,7 @@ func TestAccParalusResourceGroups_AddToProject(t *testing.T) {
 					description = "test 2 group"
 					project_roles {
 						project = paralus_project.temp.name
-						role = "ADMIN"
+						role = "PROJECT_ADMIN"
 						group = "test2"
 					}
 				}`),
@@ -309,23 +310,27 @@ func TestAccParalusResourceGroups_AddToProject(t *testing.T) {
 					testAccCheckResourceGroupTypeAttribute(groupRsName1, "test 1 group"),
 					resource.TestCheckResourceAttr(groupRsName1, "description", "test 1 group"),
 					resource.TestCheckTypeSetElemNestedAttrs(groupRsName1, "project_roles.*", map[string]string{"project": "tempproject"}),
-					resource.TestCheckTypeSetElemNestedAttrs(groupRsName1, "project_roles.*", map[string]string{"role": "ADMIN"}),
+					resource.TestCheckTypeSetElemNestedAttrs(groupRsName1, "project_roles.*", map[string]string{"role": "PROJECT_ADMIN"}),
 					resource.TestCheckTypeSetElemNestedAttrs(groupRsName1, "project_roles.*", map[string]string{"group": "test1"}),
 
 					testAccCheckResourceGroupExists(groupRsName2),
 					testAccCheckResourceGroupTypeAttribute(groupRsName2, "test 2 group"),
 					resource.TestCheckResourceAttr(groupRsName2, "description", "test 2 group"),
 					resource.TestCheckTypeSetElemNestedAttrs(groupRsName2, "project_roles.*", map[string]string{"project": "tempproject"}),
-					resource.TestCheckTypeSetElemNestedAttrs(groupRsName2, "project_roles.*", map[string]string{"role": "ADMIN"}),
+					resource.TestCheckTypeSetElemNestedAttrs(groupRsName2, "project_roles.*", map[string]string{"role": "PROJECT_ADMIN"}),
 					resource.TestCheckTypeSetElemNestedAttrs(groupRsName2, "project_roles.*", map[string]string{"group": "test2"}),
 
 					testAccCheckResourceProjectExists(projectRsName),
 					testAccCheckResourceProjectTypeAttribute(projectRsName, "A temporary project"),
 					resource.TestCheckResourceAttr(projectRsName, "description", "A temporary project"),
-					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"role": "ADMIN"}),
-					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"group": "test1"}),
-					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"role": "ADMIN"}),
-					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"group": "test2"}),
+					testAccCheckResourceProjectProjectRoleMap(projectRsName, map[string]string{
+						"role":  "PROJECT_ADMIN",
+						"group": "test1",
+					}),
+					testAccCheckResourceProjectProjectRoleMap(projectRsName, map[string]string{
+						"role":  "PROJECT_ADMIN",
+						"group": "test2",
+					}),
 				),
 			},
 			{

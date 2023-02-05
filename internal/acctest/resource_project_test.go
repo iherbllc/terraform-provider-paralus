@@ -178,7 +178,7 @@ func testAccCheckResourceProjectExists(resourceName string) func(s *terraform.St
 
 		_, err := project.GetProjectByName(projectStr)
 
-		if err == nil {
+		if err != nil {
 			return err
 		}
 		return nil
@@ -259,6 +259,49 @@ func TestAccParalusResourceProject_AddToGroup(t *testing.T) {
 				ResourceName:      groupRsName,
 				ImportState:       true,
 				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+// Test creating project and adding two groups
+func TestAccParalusResourceProject_Add2Groups(t *testing.T) {
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccConfigPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckProjectResourceDestroy(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderValidResource(`
+				resource "paralus_group" "test1" {
+					provider = paralus.valid_resource
+					name = "test1"
+					description = "test group1"
+				}
+
+				resource "paralus_group" "test2" {
+					provider = paralus.valid_resource
+					name = "test2"
+					description = "test group2"
+				}
+
+				resource "paralus_project" "add_to_group" {
+					provider = paralus.valid_resource
+					name = "test"
+					description = "test project"
+					project_roles {
+						project = "test"
+						role = "PROJECT_READ_ONLY"
+						group = paralus_group.test1.name
+					}
+					project_roles {
+						project = "test"
+						role = "PROJECT_READ_ONLY"
+						group = paralus_group.test2.name
+					}
+				}`),
+				ExpectError: regexp.MustCompile("permissions must be distinct between project_roles blocks.*"),
 			},
 		},
 	})

@@ -146,6 +146,15 @@ func createOrUpdateProject(ctx context.Context, d *schema.ResourceData, requestT
 	})
 
 	projectStruct := utils.BuildProjectStructFromResource(d)
+
+	// Required due to limitation with paralus
+	// See issue: https://github.com/paralus/paralus/issues/136
+	// Remove once paralus supports this feature.
+	diags = utils.AssertUniqueRoles(projectStruct.Spec.GetProjectNamespaceRoles())
+	if diags.HasError() {
+		return diags
+	}
+
 	err := project.ApplyProject(projectStruct)
 	if err != nil {
 		return diag.FromErr(errors.Wrap(err,

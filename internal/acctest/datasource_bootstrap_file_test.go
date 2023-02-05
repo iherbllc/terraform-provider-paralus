@@ -76,7 +76,7 @@ func testAccCheckHasBootstrap(resourceName string) func(s *terraform.State) erro
 
 		_, err := cluster.GetBootstrapFile(clusterName, project)
 
-		if err == nil {
+		if err != nil {
 			return err
 		}
 		return nil

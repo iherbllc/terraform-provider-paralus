@@ -77,7 +77,7 @@ func testAccCheckDataSourceClusterExists(resourceName string) func(s *terraform.
 
 		_, err := cluster.GetCluster(clusterName, project)
 
-		if err == nil {
+		if err != nil {
 			return err
 		}
 		return nil
