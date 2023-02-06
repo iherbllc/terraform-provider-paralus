@@ -34,6 +34,29 @@ resource "paralus_project" "test" {
 resource "paralus_project" "test" {
     name = "test"
     description = "test project"
+    project_roles {
+        group = "group1"
+        role = "PROJECT_ADMIN"
+        project = "test"
+    }
+    project_roles {
+        group = "group2"
+        role = "NAMESPACE_ADMIN"
+        namespace = "platform"
+        project = "test"
+    }
+    project_roles {
+        group = "group2"
+        role = "NAMESPACE_READ_ONLY"
+        namespace = "monitoring"
+        project = "test"
+    }
+    project_roles {
+        group = "group3"
+        role = "NAMESPACE_ADMIN"
+        namespace = "prometheus"
+        project = "test"
+    }
 }
 ```
 
@@ -45,11 +68,11 @@ resource "paralus_project" "test" {
 resource "paralus_project" "test" {
     name = "test"
     description = "test project"
-    project_roles {
+    user_roles {
         user_id = "john.smith@example.com"
         role = "PROJECT_ADMIN"
     }
-    project_roles {
+    user_roles {
         user_id = "jane.doe@example.com"
         role = "NAMESPACE_ADMIN"
         namespace = "platform"
@@ -80,12 +103,12 @@ resource "paralus_project" "test" {
 
 Required:
 
+- `group` (String) Authorized group
 - `project` (String) Project name
 - `role` (String) Role name
 
 Optional:
 
-- `group` (String) Authorized group
 - `namespace` (String) Authorized namespace
 
 
@@ -96,3 +119,7 @@ Required:
 
 - `role` (String) Authorized role
 - `user` (String) Authorized user
+
+Optional:
+
+- `namespace` (String) Authorized namespace
