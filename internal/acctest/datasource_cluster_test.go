@@ -19,7 +19,7 @@ func TestAccParalusClusterNotFound_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccDataSourceClusterConfig("blah"),
-				ExpectError: regexp.MustCompile(".*Error locating cluster.*"),
+				ExpectError: regexp.MustCompile(".*error locating cluster.*"),
 			},
 		},
 	})
@@ -65,11 +65,11 @@ func testAccCheckDataSourceClusterExists(resourceName string) func(s *terraform.
 		// retrieve the resource by name from state
 		rs, ok := s.RootModule().Resources[resourceName]
 		if !ok {
-			return fmt.Errorf("Not found: %s", resourceName)
+			return fmt.Errorf("not found: %s", resourceName)
 		}
 
 		if rs.Primary.ID == "" {
-			return fmt.Errorf("Cluster ID is not set")
+			return fmt.Errorf("cluster id is not set")
 		}
 
 		project := rs.Primary.Attributes["project"]
@@ -90,10 +90,10 @@ func testAccCheckDataSourceClusterTypeAttribute(resourceName string, description
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[resourceName]
 		if !ok {
-			return fmt.Errorf("Not found: %s", resourceName)
+			return fmt.Errorf("not found: %s", resourceName)
 		}
 		if rs.Primary.Attributes["description"] != description {
-			return fmt.Errorf("Invalid description")
+			return fmt.Errorf("invalid description")
 		}
 
 		return nil

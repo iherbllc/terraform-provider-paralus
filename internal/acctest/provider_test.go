@@ -178,7 +178,7 @@ func TestAccProviderCreds_BadConfigJsonPath(t *testing.T) {
 					name     = "blah2"
 				  }
 				`,
-				ExpectError: regexp.MustCompile(".*Error parsing config_json file.*"),
+				ExpectError: regexp.MustCompile(".*error parsing config_json file.*"),
 			},
 		},
 	})

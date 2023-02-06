@@ -20,7 +20,7 @@ func TestAccParalusBootstrapNotFound_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccDataSourceBootstrapConfig("blah"),
-				ExpectError: regexp.MustCompile(".*Error locating cluster.*"),
+				ExpectError: regexp.MustCompile(".*error locating cluster.*"),
 			},
 		},
 	})
@@ -64,11 +64,11 @@ func testAccCheckHasBootstrap(resourceName string) func(s *terraform.State) erro
 		// retrieve the resource by name from state
 		rs, ok := s.RootModule().Resources[resourceName]
 		if !ok {
-			return fmt.Errorf("Not found: %s", resourceName)
+			return fmt.Errorf("not found: %s", resourceName)
 		}
 
 		if rs.Primary.ID == "" {
-			return fmt.Errorf("Cluster ID is not set")
+			return fmt.Errorf("cluster id is not set")
 		}
 
 		project := rs.Primary.Attributes["project"]
@@ -89,14 +89,14 @@ func testAccCheckDataSourceBootstrapAttributeNotNil(resourceName string) func(s 
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[resourceName]
 		if !ok {
-			return fmt.Errorf("Not found: %s", resourceName)
+			return fmt.Errorf("not found: %s", resourceName)
 		}
 		if rs.Primary.Attributes["bootstrap_files_combined"] == "" {
-			return fmt.Errorf("No bootstrap provided")
+			return fmt.Errorf("no bootstrap provided")
 		}
 		i, err := strconv.Atoi(rs.Primary.Attributes["bootstrap_files.#"])
 		if err != nil || i <= 0 {
-			return fmt.Errorf("No bootstrap files provided")
+			return fmt.Errorf("no bootstrap files provided")
 		}
 
 		return nil

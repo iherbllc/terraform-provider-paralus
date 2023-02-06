@@ -80,7 +80,7 @@ func TestAccParalusResourceClusterEmptyProject_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccClusterResourceConfiEmptyProject(),
-				ExpectError: regexp.MustCompile(".*project cannot be empty.*"),
+				ExpectError: regexp.MustCompile(".*expected not empty string.*"),
 			},
 		},
 	})
@@ -111,7 +111,7 @@ func TestAccParalusResourceEmptyCluster_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccClusterResourceConfigEmptyCluster(),
-				ExpectError: regexp.MustCompile(".*name cannot be empty.*"),
+				ExpectError: regexp.MustCompile(".*expected not empty string.*"),
 			},
 		},
 	})
@@ -211,7 +211,7 @@ func TestAccParalusResourceClusterUnknownProject_basic(t *testing.T) {
 						state = "PROVISION"
 					}
 				}`),
-				ExpectError: regexp.MustCompile(".*Project .* does not exist.*"),
+				ExpectError: regexp.MustCompile(".*project .* does not exist.*"),
 			},
 		},
 	})
@@ -380,11 +380,11 @@ func testAccCheckResourceClusterExists(resourceName string) func(s *terraform.St
 		// retrieve the resource by name from state
 		rs, ok := s.RootModule().Resources[resourceName]
 		if !ok {
-			return fmt.Errorf("Not found: %s", resourceName)
+			return fmt.Errorf("not found: %s", resourceName)
 		}
 
 		if rs.Primary.ID == "" {
-			return fmt.Errorf("Cluster ID is not set")
+			return fmt.Errorf("cluster id is not set")
 		}
 
 		project := rs.Primary.Attributes["project"]
@@ -405,10 +405,10 @@ func testAccCheckResourceClusterTypeAttribute(resourceName string, cluster_type 
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[resourceName]
 		if !ok {
-			return fmt.Errorf("Not found: %s", resourceName)
+			return fmt.Errorf("not found: %s", resourceName)
 		}
 		if rs.Primary.Attributes["cluster_type"] != cluster_type {
-			return fmt.Errorf("Invalid cluster type")
+			return fmt.Errorf("invalid cluster type")
 		}
 
 		return nil
@@ -420,10 +420,10 @@ func testAccCheckResourceAttributeSet(resourceName string, attrName string) func
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[resourceName]
 		if !ok {
-			return fmt.Errorf("Not found: %s", resourceName)
+			return fmt.Errorf("not found: %s", resourceName)
 		}
 		if rs.Primary.Attributes[attrName] == "" {
-			return fmt.Errorf(fmt.Sprintf("Attribute %s is empty", attrName))
+			return fmt.Errorf(fmt.Sprintf("attribute %s is empty", attrName))
 		}
 
 		return nil

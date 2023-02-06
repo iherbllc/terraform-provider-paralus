@@ -51,7 +51,7 @@ func TestAccParalusResourceEmptyProject_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccProjectResourceConfigEmptyProject(),
-				ExpectError: regexp.MustCompile(".*name cannot be empty.*"),
+				ExpectError: regexp.MustCompile(".*expected not empty string.*"),
 			},
 		},
 	})
@@ -81,7 +81,7 @@ func TestAccParalusResourceProjectBadOrg_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccProjectResourceConfigBadOrg(),
-				ExpectError: regexp.MustCompile(".*Failed to create project.*"),
+				ExpectError: regexp.MustCompile(".*failed to create project.*"),
 			},
 		},
 	})
@@ -167,11 +167,11 @@ func testAccCheckResourceProjectExists(resourceName string) func(s *terraform.St
 		// retrieve the resource by name from state
 		rs, ok := s.RootModule().Resources[resourceName]
 		if !ok {
-			return fmt.Errorf("Not found: %s", resourceName)
+			return fmt.Errorf("not found: %s", resourceName)
 		}
 
 		if rs.Primary.ID == "" {
-			return fmt.Errorf("Project ID is not set")
+			return fmt.Errorf("project id is not set")
 		}
 
 		projectStr := rs.Primary.Attributes["name"]
@@ -192,11 +192,11 @@ func testAccCheckResourceProjectTypeAttribute(resourceName string, description s
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[resourceName]
 		if !ok {
-			return fmt.Errorf("Not found: %s", resourceName)
+			return fmt.Errorf("not found: %s", resourceName)
 		}
 
 		if rs.Primary.Attributes["description"] != description {
-			return fmt.Errorf("Invalid description")
+			return fmt.Errorf("invalid description")
 		}
 
 		return nil
@@ -327,7 +327,7 @@ func TestAccParalusResourceProject_Add2GroupsNamespaceAndProjectRoles(t *testing
 						"role":      "NAMESPACE_READ_ONLY",
 						"group":     "test1",
 						"project":   "test",
-						"namepsace": "platform",
+						"namespace": "platform",
 					}),
 
 					testAccCheckResourceGroupExists(groupRsName2),
@@ -700,7 +700,7 @@ func testAccCheckResourceProjectProjectRoleMap(resourceName string, projectRoles
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[resourceName]
 		if !ok {
-			return fmt.Errorf("Not found: %s", resourceName)
+			return fmt.Errorf("not found: %s", resourceName)
 		}
 
 		projectStr := rs.Primary.Attributes["name"]
@@ -721,7 +721,7 @@ func testAccCheckResourceProjectUserRoleMap(resourceName string, userRoles map[s
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[resourceName]
 		if !ok {
-			return fmt.Errorf("Not found: %s", resourceName)
+			return fmt.Errorf("not found: %s", resourceName)
 		}
 
 		projectStr := rs.Primary.Attributes["name"]

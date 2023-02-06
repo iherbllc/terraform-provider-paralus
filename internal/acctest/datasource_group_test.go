@@ -61,11 +61,11 @@ func testAccCheckDataSourceGroupExists(resourceName string) func(s *terraform.St
 		// retrieve the resource by name from state
 		rs, ok := s.RootModule().Resources[resourceName]
 		if !ok {
-			return fmt.Errorf("Not found: %s", resourceName)
+			return fmt.Errorf("not found: %s", resourceName)
 		}
 
 		if rs.Primary.ID == "" {
-			return fmt.Errorf("Group ID is not set")
+			return fmt.Errorf("group id is not set")
 		}
 
 		groupStr := rs.Primary.Attributes["name"]
@@ -85,10 +85,10 @@ func testAccCheckDataSourceGroupTypeAttribute(resourceName string, description s
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[resourceName]
 		if !ok {
-			return fmt.Errorf("Not found: %s", resourceName)
+			return fmt.Errorf("not found: %s", resourceName)
 		}
 		if rs.Primary.Attributes["description"] != description {
-			return fmt.Errorf("Invalid description")
+			return fmt.Errorf("invalid description")
 		}
 
 		return nil

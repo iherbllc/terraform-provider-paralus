@@ -52,7 +52,7 @@ func TestAccParalusResourceEmptyGroup_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccGroupResourceConfigEmptyGroup(),
-				ExpectError: regexp.MustCompile(".*name cannot be empty.*"),
+				ExpectError: regexp.MustCompile(".*expected not empty string.*"),
 			},
 		},
 	})
@@ -168,11 +168,11 @@ func testAccCheckResourceGroupExists(resourceName string) func(s *terraform.Stat
 		// retrieve the resource by name from state
 		rs, ok := s.RootModule().Resources[resourceName]
 		if !ok {
-			return fmt.Errorf("Not found: %s", resourceName)
+			return fmt.Errorf("not found: %s", resourceName)
 		}
 
 		if rs.Primary.ID == "" {
-			return fmt.Errorf("Group ID is not set")
+			return fmt.Errorf("group id is not set")
 		}
 
 		groupStr := rs.Primary.Attributes["name"]
@@ -193,7 +193,7 @@ func testAccCheckResourceGroupTypeAttribute(resourceName string, description str
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[resourceName]
 		if !ok {
-			return fmt.Errorf("Not found: %s", resourceName)
+			return fmt.Errorf("not found: %s", resourceName)
 		}
 		if rs.Primary.Attributes["description"] != description {
 			return fmt.Errorf("Invalid description")
@@ -251,7 +251,7 @@ func testAccCheckResourceGroupProjectRoleMap(resourceName string, projectRoles m
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[resourceName]
 		if !ok {
-			return fmt.Errorf("Not found: %s", resourceName)
+			return fmt.Errorf("not found: %s", resourceName)
 		}
 
 		groupStr := rs.Primary.Attributes["name"]
@@ -386,7 +386,7 @@ func testAccCheckResourceGroupCheckUserList(resourceName string, user string) fu
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[resourceName]
 		if !ok {
-			return fmt.Errorf("Not found: %s", resourceName)
+			return fmt.Errorf("not found: %s", resourceName)
 		}
 
 		groupStr := rs.Primary.Attributes["name"]
@@ -398,11 +398,11 @@ func testAccCheckResourceGroupCheckUserList(resourceName string, user string) fu
 		}
 
 		if len(group.Spec.Users) <= 0 {
-			return fmt.Errorf("User list is empty")
+			return fmt.Errorf("user list is empty")
 		}
 
 		if group.Spec.Users[0] != user {
-			return fmt.Errorf("User list %s is missing %s", group.Spec.Users, user)
+			return fmt.Errorf("user list %s is missing %s", group.Spec.Users, user)
 		}
 
 		return nil

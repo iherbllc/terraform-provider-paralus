@@ -50,7 +50,7 @@ func TestAccParalusDataSourceEmptyProject_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccProjectDataSourceConfigEmptyProject(),
-				ExpectError: regexp.MustCompile(".*name cannot be empty.*"),
+				ExpectError: regexp.MustCompile(".*expected not empty string.*"),
 			},
 		},
 	})
@@ -124,7 +124,7 @@ func testAccCheckDataSourceProjectExists(resourceName string) func(s *terraform.
 		}
 
 		if rs.Primary.ID == "" {
-			return fmt.Errorf("Project ID is not set")
+			return fmt.Errorf("project id is not set")
 		}
 
 		projectStr := rs.Primary.Attributes["name"]
@@ -144,10 +144,10 @@ func testAccCheckDataSourceProjectTypeAttribute(resourceName string, description
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[resourceName]
 		if !ok {
-			return fmt.Errorf("Not found: %s", resourceName)
+			return fmt.Errorf("not found: %s", resourceName)
 		}
 		if rs.Primary.Attributes["description"] != description {
-			return fmt.Errorf("Invalid description")
+			return fmt.Errorf("invalid description")
 		}
 
 		return nil

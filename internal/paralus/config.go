@@ -28,7 +28,7 @@ func NewConfig(ctx context.Context, d *schema.ResourceData) (*config.Config, dia
 
 		err = config.GetConfig().MiniCheck()
 		if err != nil {
-			return nil, diag.FromErr(errors.Wrap(err, "Invalid loaded config"))
+			return nil, diag.FromErr(errors.Wrap(err, "invalid loaded config"))
 		}
 
 		return newConfig, diags
