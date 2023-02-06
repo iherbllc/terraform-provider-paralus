@@ -51,6 +51,7 @@ Read-Only:
 
 Read-Only:
 
+- `namespace` (String)
 - `role` (String)
 - `user` (String)
 

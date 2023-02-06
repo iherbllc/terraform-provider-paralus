@@ -1,4 +1,4 @@
-// Cluster DataSource acceptance test
+// Cluster DataSource bootstrap file acceptance test
 package acctest
 
 import (
@@ -20,7 +20,7 @@ func TestAccParalusBootstrapNotFound_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccDataSourceBootstrapConfig("blah"),
-				ExpectError: regexp.MustCompile(".*cluster not found.*"),
+				ExpectError: regexp.MustCompile(".*error locating cluster.*"),
 			},
 		},
 	})
@@ -34,7 +34,7 @@ func TestAccParalusDataSourceBootstrap_basic(t *testing.T) {
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDataSourceBootstrapConfig("ignoreme"),
+				Config: testAccDataSourceBootstrapConfig("man-acctest"),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckHasBootstrap(dsResourceName),
 					testAccCheckResourceAttributeSet(dsResourceName, "relays"),
@@ -52,7 +52,7 @@ func testAccDataSourceBootstrapConfig(clusterName string) string {
 	return fmt.Sprintf(`
 		data "paralus_bootstrap_file" "test" {
 			name = "%s"
-			project = "default"
+			project = "acctest-donotdelete"
 		}
 	`, clusterName)
 }
@@ -64,11 +64,11 @@ func testAccCheckHasBootstrap(resourceName string) func(s *terraform.State) erro
 		// retrieve the resource by name from state
 		rs, ok := s.RootModule().Resources[resourceName]
 		if !ok {
-			return fmt.Errorf("Not found: %s", resourceName)
+			return fmt.Errorf("not found: %s", resourceName)
 		}
 
 		if rs.Primary.ID == "" {
-			return fmt.Errorf("Cluster ID is not set")
+			return fmt.Errorf("cluster id is not set")
 		}
 
 		project := rs.Primary.Attributes["project"]
@@ -76,28 +76,27 @@ func testAccCheckHasBootstrap(resourceName string) func(s *terraform.State) erro
 
 		_, err := cluster.GetBootstrapFile(clusterName, project)
 
-		if err == nil {
+		if err != nil {
 			return err
 		}
 		return nil
 	}
 }
 
-// testAccCheckClusterTypeAttribute verifies project attribute is set correctly by
-// Terraform
+// Verifies project attribute is set correctly by Terraform
 func testAccCheckDataSourceBootstrapAttributeNotNil(resourceName string) func(s *terraform.State) error {
 
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[resourceName]
 		if !ok {
-			return fmt.Errorf("Not found: %s", resourceName)
+			return fmt.Errorf("not found: %s", resourceName)
 		}
 		if rs.Primary.Attributes["bootstrap_files_combined"] == "" {
-			return fmt.Errorf("No bootstrap provided")
+			return fmt.Errorf("no bootstrap provided")
 		}
 		i, err := strconv.Atoi(rs.Primary.Attributes["bootstrap_files.#"])
 		if err != nil || i <= 0 {
-			return fmt.Errorf("No bootstrap files provided")
+			return fmt.Errorf("no bootstrap files provided")
 		}
 
 		return nil

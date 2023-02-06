@@ -5,7 +5,7 @@ import (
 	"context"
 	"fmt"
 
-	paralusUtils "github.com/iherbllc/terraform-provider-paralus/internal/utils"
+	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
 	"github.com/pkg/errors"
 
 	"github.com/paralus/cli/pkg/config"
@@ -81,6 +81,11 @@ func DataSourceProject() *schema.Resource {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
+						"namespace": {
+							Type:        schema.TypeString,
+							Description: "Authorized namespace",
+							Computed:    true,
+						},
 					},
 				},
 			},
@@ -94,18 +99,23 @@ func datasourceProjectRead(ctx context.Context, d *schema.ResourceData, m interf
 
 	projectId := d.Get("name").(string)
 
+	diags = utils.AssertStringNotEmpty("project name", projectId)
+	if diags.HasError() {
+		return diags
+	}
+
 	tflog.Trace(ctx, "Retrieving project info", map[string]interface{}{
 		"project": projectId,
 	})
 
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", paralusUtils.GetConfigAsMap(config.GetConfig())))
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(config.GetConfig())))
 	project, err := project.GetProjectByName(projectId)
 	if err != nil {
-		return diag.FromErr(errors.Wrap(err, fmt.Sprintf("Error locating project %s",
+		return diag.FromErr(errors.Wrap(err, fmt.Sprintf("error locating project %s",
 			projectId)))
 	}
 
-	paralusUtils.BuildResourceFromProjectStruct(project, d)
+	utils.BuildResourceFromProjectStruct(project, d)
 
 	d.SetId(projectId)
 

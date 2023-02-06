@@ -76,11 +76,13 @@ func Provider() *schema.Provider {
 		ResourcesMap: map[string]*schema.Resource{
 			"paralus_cluster": resources.ResourceCluster(),
 			"paralus_project": resources.ResourceProject(),
+			"paralus_group":   resources.ResourceGroup(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
 			"paralus_bootstrap_file": datasources.DataSourceBootstrapFile(),
 			"paralus_cluster":        datasources.DataSourceCluster(),
 			"paralus_project":        datasources.DataSourceProject(),
+			"paralus_group":          datasources.DataSourceGroup(),
 		},
 		ConfigureContextFunc: providerConfigure,
 	}
