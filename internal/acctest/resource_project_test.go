@@ -135,7 +135,7 @@ func TestAccParalusResourceProject_basic(t *testing.T) {
 	})
 }
 
-// testAccCheckProjectResourceDestroy verifies the cluster has been destroyed
+// Verifies the cluster has been destroyed
 func testAccCheckProjectResourceDestroy(t *testing.T) func(s *terraform.State) error {
 
 	return func(s *terraform.State) error {
@@ -159,7 +159,7 @@ func testAccCheckProjectResourceDestroy(t *testing.T) func(s *terraform.State) e
 	}
 }
 
-// testAccCheckProjectExists uses the paralus API through PCTL to retrieve cluster info
+// Uses the paralus API through PCTL to retrieve project info
 // and store it as a PCTL Project instance
 func testAccCheckResourceProjectExists(resourceName string) func(s *terraform.State) error {
 
@@ -637,7 +637,64 @@ func TestAccParalusResourceProject_Add2GroupsSameProjectRoles(t *testing.T) {
 	})
 }
 
-// testAccCheckResourceProjectProjectRoleMap verifies project role list for project
+// Test creating a project and adding two different namespace roles
+func TestAccParalusResourceProject_Add2UserRoles(t *testing.T) {
+
+	projectRsName := "paralus_project.add_to_user"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccConfigPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckProjectResourceDestroy(t),
+		Steps: []resource.TestStep{
+			{
+				// we will have a non-empty plan because the access removal will affect the user roles as well
+				ExpectNonEmptyPlan: true,
+				Config: testAccProviderValidResource(`
+				resource "paralus_project" "add_to_user" {
+					provider = paralus.valid_resource
+					name = "test"
+					description = "test project"
+					user_roles {
+						role = "NAMESPACE_READ_ONLY"
+						user = "acctest-user@example.com"
+						namespace = "platform"
+					}
+					user_roles {
+						role = "PROJECT_READ_ONLY"
+						user = "acctest2-user@example.com"
+					}
+				}`),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckResourceProjectExists(projectRsName),
+					testAccCheckResourceProjectTypeAttribute(projectRsName, "test project"),
+					resource.TestCheckResourceAttr(projectRsName, "description", "test project"),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "user_roles.*", map[string]string{"user": "acctest-user@example.com"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "user_roles.*", map[string]string{"role": "NAMESPACE_READ_ONLY"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "user_roles.*", map[string]string{"namespace": "platform"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "user_roles.*", map[string]string{"user": "acctest2-user@example.com"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "user_roles.*", map[string]string{"role": "PROJECT_READ_ONLY"}),
+					testAccCheckResourceProjectUserRoleMap(projectRsName, map[string]string{
+						"role":      "NAMESPACE_READ_ONLY",
+						"user":      "acctest-user@example.com",
+						"namespace": "platform",
+					}),
+					testAccCheckResourceProjectUserRoleMap(projectRsName, map[string]string{
+						"role": "PROJECT_READ_ONLY",
+						"user": "acctest-user@example.com",
+					}),
+				),
+			},
+			{
+				ResourceName:      projectRsName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+// Verifies project role list has the expected value
 func testAccCheckResourceProjectProjectRoleMap(resourceName string, projectRoles map[string]string) func(s *terraform.State) error {
 
 	return func(s *terraform.State) error {
@@ -655,5 +712,26 @@ func testAccCheckResourceProjectProjectRoleMap(resourceName string, projectRoles
 		}
 
 		return utils.ValidateProjectNamespaceRolesSet(projectStruct.Spec.ProjectNamespaceRoles, projectRoles)
+	}
+}
+
+// Verifies user role list has the expected value
+func testAccCheckResourceProjectUserRoleMap(resourceName string, userRoles map[string]string) func(s *terraform.State) error {
+
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return fmt.Errorf("Not found: %s", resourceName)
+		}
+
+		projectStr := rs.Primary.Attributes["name"]
+
+		projectStruct, err := project.GetProjectByName(projectStr)
+
+		if err != nil {
+			return err
+		}
+
+		return utils.ValidateUserRolesSet(projectStruct.Spec.UserRoles, userRoles)
 	}
 }

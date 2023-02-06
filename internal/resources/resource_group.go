@@ -119,7 +119,7 @@ func createOrUpdateGroup(ctx context.Context, d *schema.ResourceData, requestTyp
 
 	groupId := d.Get("name").(string)
 
-	diags := utils.AssertStringNotEmpty("Group name cannot be empty", groupId)
+	diags := utils.AssertStringNotEmpty("group name", groupId)
 	if diags.HasError() {
 		return diags
 	}
@@ -137,7 +137,7 @@ func createOrUpdateGroup(ctx context.Context, d *schema.ResourceData, requestTyp
 	err := group.ApplyGroup(groupStruct)
 	if err != nil {
 		return diag.FromErr(errors.Wrap(err,
-			fmt.Sprintf("Failed to %s group %s", howFail,
+			fmt.Sprintf("failed to %s group %s", howFail,
 				groupId)))
 	}
 
@@ -152,7 +152,7 @@ func resourceGroupRead(ctx context.Context, d *schema.ResourceData, m interface{
 
 	groupId := d.Get("name").(string)
 
-	diags = utils.AssertStringNotEmpty("Group name cannot be empty", groupId)
+	diags = utils.AssertStringNotEmpty("group name", groupId)
 	if diags.HasError() {
 		return diags
 	}
@@ -189,7 +189,7 @@ func resourceGroupImport(ctx context.Context, d *schema.ResourceData, m interfac
 	groupStruct, err := group.GetGroupByName(groupId)
 	// unlike others, fail and stop the import if we fail to get group info
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("Group %s does not exist", groupId))
+		return nil, errors.Wrap(err, fmt.Sprintf("group %s does not exist", groupId))
 	}
 
 	utils.BuildResourceFromGroupStruct(groupStruct, d)
@@ -208,7 +208,7 @@ func resourceGroupDelete(ctx context.Context, d *schema.ResourceData, m interfac
 
 	groupId := d.Get("name").(string)
 
-	diags = utils.AssertStringNotEmpty("Group name cannot be empty", groupId)
+	diags = utils.AssertStringNotEmpty("group name", groupId)
 	if diags.HasError() {
 		return diags
 	}
@@ -223,7 +223,7 @@ func resourceGroupDelete(ctx context.Context, d *schema.ResourceData, m interfac
 
 		err := group.DeleteGroup(groupId)
 		if err != nil {
-			return diag.FromErr(errors.Wrap(err, fmt.Sprintf("Failed to delete group %s",
+			return diag.FromErr(errors.Wrap(err, fmt.Sprintf("failed to delete group %s",
 				groupId)))
 		}
 	}

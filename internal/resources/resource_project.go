@@ -73,7 +73,7 @@ func ResourceProject() *schema.Resource {
 						"group": {
 							Type:        schema.TypeString,
 							Description: "Authorized group",
-							Optional:    true,
+							Required:    true,
 						},
 					},
 				},
@@ -93,6 +93,11 @@ func ResourceProject() *schema.Resource {
 							Type:        schema.TypeString,
 							Description: "Authorized role",
 							Required:    true,
+						},
+						"namespace": {
+							Type:        schema.TypeString,
+							Description: "Authorized namespace",
+							Optional:    true,
 						},
 					},
 				},
@@ -130,7 +135,7 @@ func createOrUpdateProject(ctx context.Context, d *schema.ResourceData, requestT
 
 	projectId := d.Get("name").(string)
 
-	diags := utils.AssertStringNotEmpty("Project name cannot be empty", projectId)
+	diags := utils.AssertStringNotEmpty("project name", projectId)
 	if diags.HasError() {
 		return diags
 	}
@@ -157,7 +162,7 @@ func createOrUpdateProject(ctx context.Context, d *schema.ResourceData, requestT
 	err := project.ApplyProject(projectStruct)
 	if err != nil {
 		return diag.FromErr(errors.Wrap(err,
-			fmt.Sprintf("Failed to %s project %s", howFail,
+			fmt.Sprintf("failed to %s project %s", howFail,
 				projectId)))
 	}
 
@@ -172,7 +177,7 @@ func resourceProjectRead(ctx context.Context, d *schema.ResourceData, m interfac
 
 	projectId := d.Get("name").(string)
 
-	diags = utils.AssertStringNotEmpty("Project name cannot be empty", projectId)
+	diags = utils.AssertStringNotEmpty("project name", projectId)
 	if diags.HasError() {
 		return diags
 	}
@@ -182,13 +187,13 @@ func resourceProjectRead(ctx context.Context, d *schema.ResourceData, m interfac
 	})
 
 	if projectId == "" {
-		return diag.FromErr(errors.New("Project name cannot be empty"))
+		return diag.FromErr(errors.New("project name"))
 	}
 
 	projectStruct, err := project.GetProjectByName(projectId)
 	if projectStruct == nil {
 		// error should be "no rows in result set" but add it to TRACE in case it isn't.
-		tflog.Trace(ctx, fmt.Sprintf("Error retrieving project info: %s", err))
+		tflog.Trace(ctx, fmt.Sprintf("error retrieving project info: %s", err))
 		d.SetId("")
 		return diags
 	}
@@ -213,7 +218,7 @@ func resourceProjectImport(ctx context.Context, d *schema.ResourceData, m interf
 	projectStruct, err := project.GetProjectByName(projectId)
 	// unlike others, fail and stop the import if we fail to get project info
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("Project %s does not exist", projectId))
+		return nil, errors.Wrap(err, fmt.Sprintf("project %s does not exist", projectId))
 	}
 
 	utils.BuildResourceFromProjectStruct(projectStruct, d)
@@ -232,7 +237,7 @@ func resourceProjectDelete(ctx context.Context, d *schema.ResourceData, m interf
 
 	projectId := d.Get("name").(string)
 
-	diags = utils.AssertStringNotEmpty("Project name cannot be empty", projectId)
+	diags = utils.AssertStringNotEmpty("project name", projectId)
 	if diags.HasError() {
 		return diags
 	}
@@ -247,7 +252,7 @@ func resourceProjectDelete(ctx context.Context, d *schema.ResourceData, m interf
 
 		err := project.DeleteProject(projectId)
 		if err != nil {
-			return diag.FromErr(errors.Wrap(err, fmt.Sprintf("Failed to delete project %s",
+			return diag.FromErr(errors.Wrap(err, fmt.Sprintf("failed to delete project %s",
 				projectId)))
 		}
 

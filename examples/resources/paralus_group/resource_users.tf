@@ -3,5 +3,5 @@
 resource "paralus_group" "test" {
     name = "test"
     description = "test group"
-    users = ["john.smith@example.com"]
+    users = ["john.smith@example.com", "jane.doe@example.com"]
 }

@@ -73,12 +73,12 @@ func datasourceBootstrapFileRead(ctx context.Context, d *schema.ResourceData, m 
 	clusterId := d.Get("name").(string)
 	projectId := d.Get("project").(string)
 
-	diags = utils.AssertStringNotEmpty("Cluster project cannot be empty", projectId)
+	diags = utils.AssertStringNotEmpty("cluster project", projectId)
 	if diags.HasError() {
 		return diags
 	}
 
-	diags = utils.AssertStringNotEmpty("Cluster name cannot be empty", clusterId)
+	diags = utils.AssertStringNotEmpty("cluster name", clusterId)
 	if diags.HasError() {
 		return diags
 	}
@@ -96,7 +96,7 @@ func datasourceBootstrapFileRead(ctx context.Context, d *schema.ResourceData, m 
 
 	if err != nil {
 		d.SetId("")
-		return diag.FromErr(errors.Wrap(err, fmt.Sprintf("Error locating cluster %s in project %s",
+		return diag.FromErr(errors.Wrap(err, fmt.Sprintf("error locating cluster %s in project %s",
 			clusterId, projectId)))
 	}
 

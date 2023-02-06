@@ -83,8 +83,7 @@ func testAccCheckHasBootstrap(resourceName string) func(s *terraform.State) erro
 	}
 }
 
-// testAccCheckClusterTypeAttribute verifies project attribute is set correctly by
-// Terraform
+// Verifies project attribute is set correctly by Terraform
 func testAccCheckDataSourceBootstrapAttributeNotNil(resourceName string) func(s *terraform.State) error {
 
 	return func(s *terraform.State) error {

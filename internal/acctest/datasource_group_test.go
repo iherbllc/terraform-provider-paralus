@@ -53,7 +53,7 @@ func testAccDataSourceGroupConfig(groupName string) string {
 	`, groupName)
 }
 
-// testAccCheckDataSourceGroupExists uses the paralus API through PCTL to retrieve cluster info
+// Uses the paralus API through PCTL to retrieve group info
 // and store it as a PCTL Group instance
 func testAccCheckDataSourceGroupExists(resourceName string) func(s *terraform.State) error {
 
@@ -79,8 +79,7 @@ func testAccCheckDataSourceGroupExists(resourceName string) func(s *terraform.St
 	}
 }
 
-// testAccCheckDataSourceGroupTypeAttribute verifies group attribute is set correctly by
-// Terraform
+// Verifies group attribute is set correctly by Terraform
 func testAccCheckDataSourceGroupTypeAttribute(resourceName string, description string) func(s *terraform.State) error {
 
 	return func(s *terraform.State) error {

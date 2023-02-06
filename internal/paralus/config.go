@@ -23,7 +23,7 @@ func NewConfig(ctx context.Context, d *schema.ResourceData) (*config.Config, dia
 		newConfig, err := NewConfigFromFile(configJson.(string))
 		if err != nil {
 			return nil, diag.FromErr(errors.Wrap(err,
-				fmt.Sprintf("Error parsing config_json file %s", configJson)))
+				fmt.Sprintf("error parsing config_json file %s", configJson)))
 		}
 
 		err = config.GetConfig().MiniCheck()
@@ -56,7 +56,7 @@ func NewConfig(ctx context.Context, d *schema.ResourceData) (*config.Config, dia
 
 	err := config.GetConfig().MiniCheck()
 	if err != nil {
-		return nil, diag.FromErr(errors.Wrap(err, "Error assigning config values"))
+		return nil, diag.FromErr(errors.Wrap(err, "error assigning config values"))
 	}
 
 	return config.GetConfig(), diags

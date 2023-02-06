@@ -47,8 +47,9 @@ func BuildProjectStructFromResource(d *schema.ResourceData) *systemv3.Project {
 		for _, eachRole := range rolesList {
 			if role, ok := eachRole.(map[string]interface{}); ok {
 				projectStruct.Spec.UserRoles = append(projectStruct.Spec.UserRoles, &userv3.UserRole{
-					User: role["user"].(string),
-					Role: role["role"].(string),
+					User:      role["user"].(string),
+					Role:      role["role"].(string),
+					Namespace: role["namespace"].(string),
 				})
 			}
 		}
@@ -73,10 +74,11 @@ func BuildResourceFromProjectStruct(project *systemv3.Project, d *schema.Resourc
 	}
 	d.Set("project_roles", projectRoles)
 	userRoles := make([]map[string]interface{}, 0)
-	for _, role := range project.Spec.GetUserRoles() {
+	for _, role := range project.Spec.UserRoles {
 		userRoles = append(userRoles, map[string]interface{}{
-			"user": role.User,
-			"role": role.Role,
+			"user":      role.User,
+			"role":      role.Role,
+			"namespace": role.Namespace,
 		})
 	}
 	d.Set("user_roles", userRoles)

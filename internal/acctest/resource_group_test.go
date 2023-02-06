@@ -136,7 +136,7 @@ func TestAccParalusResourceGroup_basic(t *testing.T) {
 	})
 }
 
-// testAccCheckGroupResourceDestroy verifies the cluster has been destroyed
+// Verifies the cluster has been destroyed
 func testAccCheckGroupResourceDestroy(t *testing.T) func(s *terraform.State) error {
 
 	return func(s *terraform.State) error {
@@ -160,7 +160,7 @@ func testAccCheckGroupResourceDestroy(t *testing.T) func(s *terraform.State) err
 	}
 }
 
-// testAccCheckGroupExists uses the paralus API through PCTL to retrieve cluster info
+// Uses the paralus API through PCTL to retrieve group info
 // and store it as a PCTL Group instance
 func testAccCheckResourceGroupExists(resourceName string) func(s *terraform.State) error {
 
@@ -187,8 +187,7 @@ func testAccCheckResourceGroupExists(resourceName string) func(s *terraform.Stat
 	}
 }
 
-// testAccCheckGroupTypeAttribute verifies group attribute is set correctly by
-// Terraform
+// Verifies group attribute is set correctly by Terraform
 func testAccCheckResourceGroupTypeAttribute(resourceName string, description string) func(s *terraform.State) error {
 
 	return func(s *terraform.State) error {
@@ -246,7 +245,7 @@ func TestAccParalusResourceGroup_Project(t *testing.T) {
 	})
 }
 
-// testAccCheckResourceGroupCheckUserList verifies user is in list from API
+// Verifies user is in list from API
 func testAccCheckResourceGroupProjectRoleMap(resourceName string, projectRoles map[string]string) func(s *terraform.State) error {
 
 	return func(s *terraform.State) error {
@@ -381,7 +380,7 @@ func TestAccParalusResourceGroup_AddUser(t *testing.T) {
 	})
 }
 
-// testAccCheckResourceGroupCheckUserList verifies user is in list from API
+// Verifies user is in list from API
 func testAccCheckResourceGroupCheckUserList(resourceName string, user string) func(s *terraform.State) error {
 
 	return func(s *terraform.State) error {

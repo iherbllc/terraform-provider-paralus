@@ -86,7 +86,7 @@ func datasourceGroupRead(ctx context.Context, d *schema.ResourceData, m interfac
 
 	groupId := d.Get("name").(string)
 
-	diags = utils.AssertStringNotEmpty("Group name cannot be empty", groupId)
+	diags = utils.AssertStringNotEmpty("group name", groupId)
 	if diags.HasError() {
 		return diags
 	}
@@ -98,7 +98,7 @@ func datasourceGroupRead(ctx context.Context, d *schema.ResourceData, m interfac
 	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(config.GetConfig())))
 	group, err := group.GetGroupByName(groupId)
 	if err != nil {
-		return diag.FromErr(errors.Wrap(err, fmt.Sprintf("Error locating group %s",
+		return diag.FromErr(errors.Wrap(err, fmt.Sprintf("error locating group %s",
 			groupId)))
 	}
 

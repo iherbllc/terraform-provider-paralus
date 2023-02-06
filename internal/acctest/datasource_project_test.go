@@ -112,7 +112,7 @@ func testAccDataSourceProjectConfig(projectName string) string {
 	`, projectName)
 }
 
-// testAccCheckDataSourceProjectExists uses the paralus API through PCTL to retrieve cluster info
+// Uses the paralus API through PCTL to retrieve project info
 // and store it as a PCTL Project instance
 func testAccCheckDataSourceProjectExists(resourceName string) func(s *terraform.State) error {
 
@@ -138,8 +138,7 @@ func testAccCheckDataSourceProjectExists(resourceName string) func(s *terraform.
 	}
 }
 
-// testAccCheckDataSourceProjectTypeAttribute verifies project attribute is set correctly by
-// Terraform
+// Verifies project attribute is set correctly by Terraform
 func testAccCheckDataSourceProjectTypeAttribute(resourceName string, description string) func(s *terraform.State) error {
 
 	return func(s *terraform.State) error {

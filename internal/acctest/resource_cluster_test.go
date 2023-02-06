@@ -347,7 +347,7 @@ func TestAccParalusResourceCluster_basic(t *testing.T) {
 	})
 }
 
-// testAccCheckClusterResourceDestroy verifies the cluster has been destroyed
+// Verifies the cluster has been destroyed
 func testAccCheckClusterResourceDestroy(t *testing.T) func(s *terraform.State) error {
 
 	return func(s *terraform.State) error {
@@ -372,7 +372,7 @@ func testAccCheckClusterResourceDestroy(t *testing.T) func(s *terraform.State) e
 	}
 }
 
-// testAccCheckResourceClusterExists uses the paralus API through PCTL to retrieve cluster info
+// Uses the paralus API through PCTL to retrieve cluster info
 // and store it as a PCTL Cluster instance
 func testAccCheckResourceClusterExists(resourceName string) func(s *terraform.State) error {
 
@@ -399,8 +399,7 @@ func testAccCheckResourceClusterExists(resourceName string) func(s *terraform.St
 	}
 }
 
-// testAccCheckResourceClusterTypeAttribute verifies project attribute is set correctly by
-// Terraform
+// Verifies cluster attribute is set correctly by Terraform
 func testAccCheckResourceClusterTypeAttribute(resourceName string, cluster_type string) func(s *terraform.State) error {
 
 	return func(s *terraform.State) error {
