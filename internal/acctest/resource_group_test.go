@@ -278,6 +278,7 @@ func TestAccParalusResourceGroups_AddToProject(t *testing.T) {
 		CheckDestroy: testAccCheckGroupResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
+				ExpectNonEmptyPlan: true,
 				Config: testAccProviderValidResource(`
 				resource "paralus_project" "temp" {
 					name = "tempproject"
@@ -321,10 +322,16 @@ func TestAccParalusResourceGroups_AddToProject(t *testing.T) {
 					testAccCheckResourceProjectExists(projectRsName),
 					testAccCheckResourceProjectTypeAttribute(projectRsName, "A temporary project"),
 					resource.TestCheckResourceAttr(projectRsName, "description", "A temporary project"),
-					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"role": "PROJECT_ADMIN"}),
-					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"group": "test1"}),
-					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"role": "PROJECT_ADMIN"}),
-					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"group": "test2"}),
+					testAccCheckResourceProjectProjectRoleMap(projectRsName, map[string]string{
+						"role":    "PROJECT_ADMIN",
+						"group":   "test1",
+						"project": "tempproject",
+					}),
+					testAccCheckResourceProjectProjectRoleMap(projectRsName, map[string]string{
+						"role":    "PROJECT_ADMIN",
+						"group":   "test2",
+						"project": "tempproject",
+					}),
 				),
 			},
 			{
