@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
+	"github.com/paralus/cli/pkg/cluster"
 	"github.com/paralus/cli/pkg/project"
 )
 
@@ -151,7 +152,10 @@ func testAccCheckProjectResourceDestroy(t *testing.T) func(s *terraform.State) e
 			_, err := project.GetProjectByName(projectStr)
 
 			if err == nil {
-				project.DeleteProject(projectStr)
+				clusters, _ := cluster.ListAllClusters(projectStr)
+				if len(clusters) == 0 {
+					project.DeleteProject(projectStr)
+				}
 			}
 		}
 

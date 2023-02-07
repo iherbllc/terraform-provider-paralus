@@ -8,6 +8,7 @@ import (
 	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
 	"github.com/pkg/errors"
 
+	"github.com/paralus/cli/pkg/cluster"
 	"github.com/paralus/cli/pkg/config"
 	"github.com/paralus/cli/pkg/project"
 
@@ -249,6 +250,12 @@ func resourceProjectDelete(ctx context.Context, d *schema.ResourceData, m interf
 	// verify project exists before attempting delete
 	projectStruct, _ := project.GetProjectByName(projectId)
 	if projectStruct != nil {
+		// make sure the project is empty before allowing its deletion.
+		clusters, _ := cluster.ListAllClusters(projectId)
+		if len(clusters) > 0 {
+			return diag.FromErr(errors.New(fmt.Sprintf("project %s not empty. Remove all clusters before attempting deletion",
+				projectId)))
+		}
 
 		err := project.DeleteProject(projectId)
 		if err != nil {
