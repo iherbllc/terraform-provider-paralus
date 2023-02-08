@@ -2,8 +2,13 @@
 package utils
 
 import (
+	"errors"
+	"fmt"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"github.com/paralus/cli/pkg/group"
 	commonv3 "github.com/paralus/paralus/proto/types/commonpb/v3"
 	userv3 "github.com/paralus/paralus/proto/types/userpb/v3"
 )
@@ -23,10 +28,10 @@ func BuildGroupStructFromResource(d *schema.ResourceData) *userv3.Group {
 	if projectRoles, ok := d.GetOk("project_roles"); ok {
 		groupStruct.Spec.ProjectNamespaceRoles = make([]*userv3.ProjectNamespaceRole, 0)
 		rolesList := projectRoles.([]interface{})
+		group := d.Get("name").(string) // group will always default to the group name to avoid user error
 		for _, eachRole := range rolesList {
 			if role, ok := eachRole.(map[string]interface{}); ok {
 				namespace := role["namespace"].(string)
-				group := role["group"].(string)
 				project := role["project"].(string)
 				groupStruct.Spec.ProjectNamespaceRoles = append(groupStruct.Spec.ProjectNamespaceRoles, &userv3.ProjectNamespaceRole{
 					Project:   &project,
@@ -69,4 +74,28 @@ func BuildResourceFromGroupStruct(group *userv3.Group, d *schema.ResourceData) {
 	d.Set("project_roles", projectRoles)
 	d.Set("users", group.Spec.Users)
 	d.Set("type", group.Spec.Type)
+}
+
+// Check groups specified in the ProjectNamespaceRoles struct exist in Paralus
+func CheckGroupsFromPNRStructExist(pnrStruct []*userv3.ProjectNamespaceRole) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	if len(pnrStruct) > 0 {
+		for _, pnr := range pnrStruct {
+			groupName := pnr.Group
+			if groupName != nil {
+				// error if we have an empty group name
+				if *groupName == "" {
+					return diag.FromErr(errors.New("group name cannot be empty"))
+				}
+				groupStruct, _ := group.GetGroupByName(*groupName)
+				if groupStruct == nil {
+					return diag.FromErr(fmt.Errorf("group '%s' does not exist", *groupName))
+				}
+
+			}
+		}
+	}
+
+	return diags
 }

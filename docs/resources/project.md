@@ -11,7 +11,9 @@ Resource containing paralus project information. Uses the [pctl](https://github.
 
 NOTE: Due to a limitation with paralus, there cannot be more than one project_role block with the same role type. 
 Use the [Group Resource](https://registry.terraform.io/providers/iherbllc/paralus/latest/docs/resources/group) after
-creating the project to grant the same role.
+creating the project to grant the same role. 
+
+See the paralus issue [136](https://github.com/paralus/paralus/issues/136) for more information.
 
 ## Example Usage
 
@@ -104,12 +106,15 @@ resource "paralus_project" "test" {
 Required:
 
 - `group` (String) Authorized group
-- `project` (String) Project name
 - `role` (String) Role name
 
 Optional:
 
 - `namespace` (String) Authorized namespace
+
+Read-Only:
+
+- `project` (String) Project name. This will always be the same as the resource project name.
 
 
 <a id="nestedblock--user_roles"></a>

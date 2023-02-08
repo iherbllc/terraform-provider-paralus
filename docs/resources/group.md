@@ -96,10 +96,13 @@ resource "paralus_group" "test" {
 
 Required:
 
-- `group` (String) Authorized group
 - `role` (String) Role name
 
 Optional:
 
 - `namespace` (String) Authorized namespace
 - `project` (String) Project name
+
+Read-Only:
+
+- `group` (String) Authorized group. This will always be the same as the resource group name.

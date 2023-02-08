@@ -58,8 +58,8 @@ func ResourceProject() *schema.Resource {
 					Schema: map[string]*schema.Schema{
 						"project": {
 							Type:        schema.TypeString,
-							Description: "Project name",
-							Required:    true,
+							Description: "Project name. This will always be the same as the resource project name.",
+							Computed:    true,
 						},
 						"role": {
 							Type:        schema.TypeString,
@@ -151,6 +151,18 @@ func createOrUpdateProject(ctx context.Context, d *schema.ResourceData, requestT
 	})
 
 	projectStruct := utils.BuildProjectStructFromResource(d)
+
+	// before creating the project, verify that requested group exists
+	diags = utils.CheckGroupsFromPNRStructExist(projectStruct.Spec.GetProjectNamespaceRoles())
+	if diags.HasError() {
+		return diags
+	}
+
+	// before creating the project, verify that users in question exist
+	diags = utils.CheckUserRoleUsersExist(projectStruct.Spec.GetUserRoles())
+	if diags.HasError() {
+		return diags
+	}
 
 	// Required due to limitation with paralus
 	// See issue: https://github.com/paralus/paralus/issues/136
@@ -253,8 +265,8 @@ func resourceProjectDelete(ctx context.Context, d *schema.ResourceData, m interf
 		// make sure the project is empty before allowing its deletion.
 		clusters, _ := cluster.ListAllClusters(projectId)
 		if len(clusters) > 0 {
-			return diag.FromErr(errors.New(fmt.Sprintf("project %s not empty. Remove all clusters before attempting deletion",
-				projectId)))
+			return diag.FromErr(fmt.Errorf("project %s not empty. Remove all clusters before attempting deletion",
+				projectId))
 		}
 
 		err := project.DeleteProject(projectId)
