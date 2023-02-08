@@ -111,7 +111,7 @@ func resourceGroupCreate(ctx context.Context, d *schema.ResourceData, m interfac
 func resourceGroupUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 
 	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(config.GetConfig())))
-	return createOrUpdateCluster(ctx, d, "PUT")
+	return createOrUpdateGroup(ctx, d, "PUT")
 }
 
 // Creates a new group or updates an existing one
