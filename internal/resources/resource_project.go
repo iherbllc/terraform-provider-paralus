@@ -128,7 +128,7 @@ func resourceProjectCreate(ctx context.Context, d *schema.ResourceData, m interf
 func resourceProjectUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 
 	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(config.GetConfig())))
-	return createOrUpdateCluster(ctx, d, "PUT")
+	return createOrUpdateProject(ctx, d, "PUT")
 }
 
 // Creates a new project or updates an existing one
