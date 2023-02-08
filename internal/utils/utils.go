@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/pkg/errors"
 )
 
 func MultiEnvSearch(ks []string) string {
@@ -49,8 +48,8 @@ func AssertStringNotEmpty(message, str string) diag.Diagnostics {
 	}
 
 	if message != "" {
-		return diag.FromErr(errors.New(fmt.Sprintf("%s: expected not empty string.", message)))
+		return diag.FromErr(fmt.Errorf("%s: expected not empty string", message))
 	} else {
-		return diag.FromErr(errors.New("expected not empty string."))
+		return diag.FromErr(fmt.Errorf("expected not empty string"))
 	}
 }

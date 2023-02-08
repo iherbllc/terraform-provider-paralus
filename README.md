@@ -13,7 +13,7 @@ See [docs](/docs) page for a full explanation of the various datasource/resource
 
 ## Acceptance Tests
 
-Acceptance tests (deployed under the /internal/acctest directory) can be run one of two ways. 
+Acceptance tests (deployed under the /internal/acctest directory) can be run one of two ways.
 
 *Note:* Some of the tests require certain items already be setup. These are as follows:
 
@@ -32,6 +32,9 @@ Acceptance tests (deployed under the /internal/acctest directory) can be run one
         - name: acctest-user@example.com
         - first name: acctest
         - last name: user
+- New Group:
+        - name: acctest-group
+        - description: For acceptance testing
 
 ### Single Test
 
@@ -71,9 +74,9 @@ If you wish to run a specific acceptance test, do the following:
     }
     ```
 
-5. Go into the individual test case within your go file and highlight the func name
-6. Go to `Run and Debug` on the left and select `Launch a test function` from the top
-7. Look at the `DEBUG_CONSOLE` window to see the result
+4. Go into the individual test case within your go file and highlight the func name
+5. Go to `Run and Debug` on the left and select `Launch a test function` from the top
+6. Look at the `DEBUG_CONSOLE` window to see the result
 
 ### All Tests
 

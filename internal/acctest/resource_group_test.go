@@ -221,7 +221,6 @@ func TestAccParalusResourceGroup_Project(t *testing.T) {
 					description = "test group"
 					project_roles {
 						role = "ADMIN"
-						group = "test"
 					}
 				}`),
 				Check: resource.ComposeTestCheckFunc(
@@ -291,7 +290,6 @@ func TestAccParalusResourceGroups_AddToProject(t *testing.T) {
 					project_roles {
 						project = paralus_project.temp.name
 						role = "PROJECT_ADMIN"
-						group = "test1"
 					}
 				}
 				resource "paralus_group" "test2" {
@@ -301,7 +299,6 @@ func TestAccParalusResourceGroups_AddToProject(t *testing.T) {
 					project_roles {
 						project = paralus_project.temp.name
 						role = "PROJECT_ADMIN"
-						group = "test2"
 					}
 				}`),
 				Check: resource.ComposeTestCheckFunc(
@@ -382,6 +379,74 @@ func TestAccParalusResourceGroup_AddUser(t *testing.T) {
 				ResourceName:      groupRsName1,
 				ImportState:       true,
 				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+// Test adding a non-existing user to a group
+func TestAccParalusResourceGroup_AddNonExistingUser(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccConfigPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckGroupResourceDestroy(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderValidResource(`
+				resource "paralus_group" "test" {
+					provider = paralus.valid_resource
+					name = "test1"
+					description = "test 1 group"
+					users = ["nobody@here.com"]
+				}`),
+				ExpectError: regexp.MustCompile(".*does not exist.*"),
+			},
+		},
+	})
+}
+
+// Test adding a non-existing project to a group
+func TestAccParalusResourceGroup_AddNonExistingProject(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccConfigPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckGroupResourceDestroy(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderValidResource(`
+				resource "paralus_group" "test" {
+					provider = paralus.valid_resource
+					name = "test1"
+					description = "test 1 group"
+					project_roles {
+						role = "PROJECT_ADMIN"
+						project = "i dont exist"
+					}
+				}`),
+				ExpectError: regexp.MustCompile(".*does not exist.*"),
+			},
+		},
+	})
+}
+
+// Test requesting a project role witihout specifying a project
+func TestAccParalusResourceProject_NoProjectSpecified(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccConfigPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckGroupResourceDestroy(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderValidResource(`
+				resource "paralus_group" "test" {
+					provider = paralus.valid_resource
+					name = "test1"
+					description = "test 1 group"
+					project_roles {
+						role = "PROJECT_ADMIN"
+					}
+				}`),
+				ExpectError: regexp.MustCompile(".*project must be specified.*"),
 			},
 		},
 	})

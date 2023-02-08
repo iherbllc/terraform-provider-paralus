@@ -2,10 +2,13 @@
 package utils
 
 import (
+	"fmt"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/pkg/errors"
 
+	"github.com/paralus/cli/pkg/project"
 	commonv3 "github.com/paralus/paralus/proto/types/commonpb/v3"
 	systemv3 "github.com/paralus/paralus/proto/types/systempb/v3"
 	userv3 "github.com/paralus/paralus/proto/types/userpb/v3"
@@ -32,7 +35,7 @@ func BuildProjectStructFromResource(d *schema.ResourceData) *systemv3.Project {
 				namespace := role["namespace"].(string)
 				group := role["group"].(string)
 				projectStruct.Spec.ProjectNamespaceRoles = append(projectStruct.Spec.ProjectNamespaceRoles, &userv3.ProjectNamespaceRole{
-					Project:   &projectStruct.Metadata.Name,
+					Project:   &projectStruct.Metadata.Name, // project will always default to the project name to avoid user error
 					Role:      role["role"].(string),
 					Namespace: &namespace,
 					Group:     &group,
@@ -93,7 +96,7 @@ func AssertUniqueRoles(pnrStruct []*userv3.ProjectNamespaceRole) diag.Diagnostic
 		pnrStructMap := make(map[string]string)
 		for _, role := range pnrStruct {
 			if _, exists := pnrStructMap[role.Role]; exists {
-				return diag.FromErr(errors.New("roles must be distinct between project_roles blocks. If the same is required, then grant through the group instead."))
+				return diag.FromErr(errors.New("roles must be distinct between project_roles blocks. If the same is required, then grant through the group instead"))
 			}
 			pnrStructMap[role.Role] = "unique"
 		}
@@ -101,4 +104,48 @@ func AssertUniqueRoles(pnrStruct []*userv3.ProjectNamespaceRole) diag.Diagnostic
 	}
 
 	return diags
+}
+
+// Check projects specified in the ProjectNamespaceRoles struct exist in Paralus
+func CheckProjectsFromPNRStructExist(pnrStruct []*userv3.ProjectNamespaceRole) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	if len(pnrStruct) > 0 {
+		for _, pnr := range pnrStruct {
+			projectName := pnr.Project
+			if projectName != nil {
+				// if we get an empty project name, verify the role allows it
+				if *projectName == "" {
+					diags = CheckAllowEmptyProject(pnr.Role)
+					if diags.HasError() {
+						return diags
+					}
+					continue
+				}
+				projectStruct, _ := project.GetProjectByName(*projectName)
+				if projectStruct == nil {
+					return diag.FromErr(fmt.Errorf("project '%s' does not exist", *projectName))
+				}
+
+			}
+		}
+	}
+
+	return diags
+}
+
+// Thesea are the roles that don't require specifying a project
+var NON_PROJECT_ROLES = []string{"ADMIN", "ADMIN_READ_ONLY"}
+
+// Check the role desired allows for no project specified
+func CheckAllowEmptyProject(role string) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	for _, nonProjectRole := range NON_PROJECT_ROLES {
+		if nonProjectRole == role {
+			return diags
+		}
+	}
+
+	return diag.FromErr(fmt.Errorf("project must be specified when assigning role '%s'", role))
 }

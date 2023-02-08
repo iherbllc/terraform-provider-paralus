@@ -67,8 +67,8 @@ func ResourceGroup() *schema.Resource {
 						},
 						"group": {
 							Type:        schema.TypeString,
-							Description: "Authorized group",
-							Required:    true,
+							Description: "Authorized group. This will always be the same as the resource group name.",
+							Computed:    true,
 						},
 					},
 				},
@@ -133,6 +133,18 @@ func createOrUpdateGroup(ctx context.Context, d *schema.ResourceData, requestTyp
 		"group": groupId,
 	})
 	groupStruct := utils.BuildGroupStructFromResource(d)
+
+	// before creating the group, verify that projects in PNR structs exist
+	diags = utils.CheckProjectsFromPNRStructExist(groupStruct.Spec.GetProjectNamespaceRoles())
+	if diags.HasError() {
+		return diags
+	}
+
+	// before creating the group, verify that users in question exist
+	diags = utils.CheckUsersExist(groupStruct.Spec.Users)
+	if diags.HasError() {
+		return diags
+	}
 
 	err := group.ApplyGroup(groupStruct)
 	if err != nil {

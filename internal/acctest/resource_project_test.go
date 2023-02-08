@@ -207,6 +207,78 @@ func testAccCheckResourceProjectTypeAttribute(resourceName string, description s
 	}
 }
 
+// Test adding a non-existing user to a project
+func TestAccParalusResourceProject_AddNonExistingUser(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccConfigPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckGroupResourceDestroy(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderValidResource(`
+				resource "paralus_project" "test" {
+					provider = paralus.valid_resource
+					name = "test1"
+					description = "test 1 group"
+					user_roles {
+						user = "nobody@here.com"
+						role = "PROJECT_ADMIN"
+					}
+				}`),
+				ExpectError: regexp.MustCompile(".*does not exist.*"),
+			},
+		},
+	})
+}
+
+// Test requesting an empty group name for the project roles
+func TestAccParalusResourceProject_GroupNameEmpty(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccConfigPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckGroupResourceDestroy(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderValidResource(`
+				resource "paralus_project" "test" {
+					provider = paralus.valid_resource
+					name = "test1"
+					description = "test 1 group"
+					project_roles {
+						group = ""
+						role = "PROJECT_ADMIN"
+					}
+				}`),
+				ExpectError: regexp.MustCompile(".*cannot be empty.*"),
+			},
+		},
+	})
+}
+
+// Test adding a non-existing group to a project
+func TestAccParalusResourceProject_AddNonExistingGroup(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccConfigPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckGroupResourceDestroy(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderValidResource(`
+				resource "paralus_project" "test" {
+					provider = paralus.valid_resource
+					name = "test1"
+					description = "test 1 group"
+					project_roles {
+						group = "does not exist"
+						role = "PROJECT_ADMIN"
+					}
+				}`),
+				ExpectError: regexp.MustCompile(".*does not exist.*"),
+			},
+		},
+	})
+}
+
 // Test creating project and adding in group
 func TestAccParalusResourceProject_AddToGroup(t *testing.T) {
 	groupRsName := "paralus_group.test"
@@ -232,7 +304,6 @@ func TestAccParalusResourceProject_AddToGroup(t *testing.T) {
 					name = "test"
 					description = "test project"
 					project_roles {
-						project = "test"
 						role = "PROJECT_READ_ONLY"
 						group = paralus_group.test.name
 					}
@@ -301,13 +372,11 @@ func TestAccParalusResourceProject_Add2GroupsNamespaceAndProjectRoles(t *testing
 					name = "test"
 					description = "test project"
 					project_roles {
-						project = "test"
 						role = "NAMESPACE_READ_ONLY"
 						namespace = "platform"
 						group = paralus_group.test1.name
 					}
 					project_roles {
-						project = "test"
 						role = "PROJECT_ADMIN"
 						group = paralus_group.test2.name
 					}
@@ -396,13 +465,11 @@ func TestAccParalusResourceProject_Add2GroupsDifferentNamespaceRoles(t *testing.
 					name = "test"
 					description = "test project"
 					project_roles {
-						project = "test"
 						role = "NAMESPACE_READ_ONLY"
 						namespace = "platform"
 						group = paralus_group.test1.name
 					}
 					project_roles {
-						project = "test"
 						role = "NAMESPACE_ADMIN"
 						namespace = "platform"
 						group = paralus_group.test2.name
@@ -494,12 +561,10 @@ func TestAccParalusResourceProject_Add2GroupsDifferentProjectRoles(t *testing.T)
 					name = "test"
 					description = "test project"
 					project_roles {
-						project = "test"
 						role = "PROJECT_READ_ONLY"
 						group = paralus_group.test1.name
 					}
 					project_roles {
-						project = "test"
 						role = "PROJECT_ADMIN"
 						group = paralus_group.test2.name
 					}
@@ -581,13 +646,11 @@ func TestAccParalusResourceProject_Add2GroupsSameNamespaceRoles(t *testing.T) {
 					description = "test project"
 					project_roles {
 						namespace = "platform"
-						project = "test"
 						role = "NAMESPACE_READ_ONLY"
 						group = paralus_group.test1.name
 					}
 					project_roles {
 						namespace = "platform"
-						project = "test"
 						role = "NAMESPACE_READ_ONLY"
 						group = paralus_group.test2.name
 					}
@@ -625,12 +688,10 @@ func TestAccParalusResourceProject_Add2GroupsSameProjectRoles(t *testing.T) {
 					name = "test"
 					description = "test project"
 					project_roles {
-						project = "test"
 						role = "PROJECT_READ_ONLY"
 						group = paralus_group.test1.name
 					}
 					project_roles {
-						project = "test"
 						role = "PROJECT_READ_ONLY"
 						group = paralus_group.test2.name
 					}
