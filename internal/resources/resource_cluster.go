@@ -277,7 +277,7 @@ func resourceClusterRead(ctx context.Context, d *schema.ResourceData, m interfac
 
 	err = utils.SetBootstrapFileAndRelays(ctx, d)
 	if err != nil {
-		return diag.FromErr(err)
+		return diag.FromErr(errors.Wrap(err, "called from resourceClusterRead"))
 	}
 
 	return diags
@@ -313,7 +313,7 @@ func resourceClusterImport(ctx context.Context, d *schema.ResourceData, m interf
 	err = utils.SetBootstrapFileAndRelays(ctx, d)
 	if err != nil {
 		d.SetId("")
-		return nil, err
+		return nil, errors.Wrap(err, "called from resourceClusterImport")
 	}
 
 	schemas := make([]*schema.ResourceData, 0)
