@@ -265,9 +265,10 @@ func resourceClusterRead(ctx context.Context, d *schema.ResourceData, m interfac
 
 	clusterStruct, err := cluster.GetCluster(clusterId, projectId)
 
+	tflog.Trace(ctx, fmt.Sprintf("ClusterStruct from GetCluster: %v", clusterStruct))
+	tflog.Trace(ctx, fmt.Sprintf("Error from GetCluster: %s", err))
+
 	if clusterStruct == nil {
-		// error should be "no rows in result set" but add it to TRACE in case it isn't.
-		tflog.Trace(ctx, fmt.Sprintf("Error retrieving cluster info: %s", err))
 		d.SetId("")
 		return diags
 	}
