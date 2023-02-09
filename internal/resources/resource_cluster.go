@@ -265,9 +265,10 @@ func resourceClusterRead(ctx context.Context, d *schema.ResourceData, m interfac
 
 	clusterStruct, err := cluster.GetCluster(clusterId, projectId)
 
+	tflog.Trace(ctx, fmt.Sprintf("ClusterStruct from GetCluster: %v", clusterStruct))
+	tflog.Trace(ctx, fmt.Sprintf("Error from GetCluster: %s", err))
+
 	if clusterStruct == nil {
-		// error should be "no rows in result set" but add it to TRACE in case it isn't.
-		tflog.Trace(ctx, fmt.Sprintf("Error retrieving cluster info: %s", err))
 		d.SetId("")
 		return diags
 	}
@@ -277,7 +278,7 @@ func resourceClusterRead(ctx context.Context, d *schema.ResourceData, m interfac
 
 	err = utils.SetBootstrapFileAndRelays(ctx, d)
 	if err != nil {
-		return diag.FromErr(err)
+		return diag.FromErr(errors.Wrap(err, "called from resourceClusterRead"))
 	}
 
 	return diags
@@ -313,7 +314,7 @@ func resourceClusterImport(ctx context.Context, d *schema.ResourceData, m interf
 	err = utils.SetBootstrapFileAndRelays(ctx, d)
 	if err != nil {
 		d.SetId("")
-		return nil, err
+		return nil, errors.Wrap(err, "called from resourceClusterImport")
 	}
 
 	schemas := make([]*schema.ResourceData, 0)
