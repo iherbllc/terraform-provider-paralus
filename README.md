@@ -13,6 +13,12 @@ See [docs](/docs) page for a full explanation of the various datasource/resource
 
 ## Acceptance Tests
 
+### Pre-requisites
+
+In order to run the tests, you will need a functioning paralus environment. You can either use one existing, or install the development environment outlined [here](https://github.com/paralus/paralus/blob/main/CONTRIBUTING.md) and [here](https://github.com/paralus/dashboard/blob/v0.1.6/CONTRIBUTING.md), for the paralus server and dashboard respectively.
+
+### Running the tests
+
 Acceptance tests (deployed under the /internal/acctest directory) can be run one of two ways.
 
 *Note:* Some of the tests require certain items already be setup. These are as follows:
@@ -29,8 +35,8 @@ Acceptance tests (deployed under the /internal/acctest directory) can be run one
         - first name: acctest
         - last name: user
 - New User:
-        - name: acctest-user@example.com
-        - first name: acctest
+        - name: acctest2-user@example.com
+        - first name: acctest2
         - last name: user
 - New Group:
         - name: acctest-group
