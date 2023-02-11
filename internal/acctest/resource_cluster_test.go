@@ -190,6 +190,27 @@ func TestAccParalusResourceProjectCluster_full(t *testing.T) {
 }
 
 // Test unknown project
+func TestAccParalusResourceCluster_MissingClusterType(t *testing.T) {
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccConfigPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckClusterResourceDestroy(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderValidResource(`
+				resource "paralus_cluster" "test" {
+					provider = paralus.valid_resource
+					name = "test"
+					project = "acctest-donotdelete"
+				}`),
+				ExpectError: regexp.MustCompile(".*argument \"cluster_type\" is required.*"),
+			},
+		},
+	})
+}
+
+// Test unknown project
 func TestAccParalusResourceClusterUnknownProject_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{

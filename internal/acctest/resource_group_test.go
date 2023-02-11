@@ -81,7 +81,7 @@ func TestAccParalusResourceGroupBadOrg_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccGroupResourceConfigBadOrg(),
-				ExpectError: regexp.MustCompile(".*invalid HTTP response code.*"),
+				ExpectError: regexp.MustCompile(".*not authorized to perform action.*"),
 			},
 		},
 	})

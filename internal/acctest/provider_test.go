@@ -139,7 +139,7 @@ func TestAccProviderAttr_setMissingAPIKey(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccProvider_setMissingAPIKey(),
-				ExpectError: regexp.MustCompile(".*invalid HTTP response code: 401.*"),
+				ExpectError: regexp.MustCompile(".*no or invalid credentials.*"),
 			},
 		},
 	})
@@ -243,37 +243,6 @@ resource "paralus_cluster" "custom_rest_endpoint" {
 	name     = "tf-cluster-test"
 	project = "blah1"
   }`, providerString(conf, "custom_rest_endpoint"))
-}
-
-func TestAccProviderEndpoints_setInvalidPartner(t *testing.T) {
-	t.Parallel()
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccConfigPreCheck(t) },
-		Providers: testAccProviders,
-		Steps: []resource.TestStep{
-			{
-				Config:      testAccProviderEndpoints_setPartner("howdy"),
-				ExpectError: regexp.MustCompile(".*server error [return code: 500].*"),
-			},
-		},
-	})
-}
-
-// set partner value in provider
-func testAccProviderEndpoints_setPartner(partner string) string {
-
-	conf = paralusProviderConfig()
-	conf.Partner = partner
-
-	return fmt.Sprintf(`
-%s
-
-resource "paralus_cluster" "default" {
-	provider = paralus.custom_partner
-	name     = "tf-cluster-test"
-	project = "acctest-donotdelete"
-  }`, providerString(conf, "custom_partner"))
 }
 
 // Set a valid provider

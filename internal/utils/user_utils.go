@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/paralus/cli/pkg/user"
 	userv3 "github.com/paralus/paralus/proto/types/userpb/v3"
 )
 
@@ -29,7 +28,7 @@ func CheckUserRoleUsersExist(userRoles []*userv3.UserRole) diag.Diagnostics {
 	var diags diag.Diagnostics
 	if len(userRoles) > 0 {
 		for _, userRole := range userRoles {
-			userStruct, _ := user.GetUserByName(userRole.User)
+			userStruct, _ := GetUserByName(userRole.User)
 			if userStruct == nil {
 				return diag.FromErr(fmt.Errorf("user '%s' does not exist", userRole.User))
 			}
