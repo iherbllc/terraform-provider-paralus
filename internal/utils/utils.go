@@ -3,6 +3,7 @@ package utils
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -103,11 +104,14 @@ func makeRestCall(uri string, method string, payload interface{}) (string, error
 		return "", fmt.Errorf("connection error: %v", err)
 	}
 	statusCode := resp.StatusCode()
+	respBody := resp.Body()
 	if statusCode != http.StatusOK {
-		return "", fmt.Errorf("invalid HTTP response code: %d", statusCode)
+		if string(respBody) == "" {
+			return "", fmt.Errorf("invalid HTTP response code: %d", statusCode)
+		}
+		return "", errors.New(string(respBody))
 	}
 
-	respBody := resp.Body()
 	f := &commonv3.HttpBody{}
 	err = json.Unmarshal([]byte(respBody), f)
 	if err != nil {
