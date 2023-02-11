@@ -3,6 +3,7 @@ package utils
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -11,7 +12,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	k8Scheme "k8s.io/client-go/kubernetes/scheme"
 
-	"github.com/paralus/cli/pkg/cluster"
+	"github.com/paralus/cli/pkg/config"
 	commonv3 "github.com/paralus/paralus/proto/types/commonpb/v3"
 	infrav3 "github.com/paralus/paralus/proto/types/infrapb/v3"
 )
@@ -158,7 +159,7 @@ func SetBootstrapFileAndRelays(ctx context.Context, d *schema.ResourceData) erro
 	clusterId := d.Get("name").(string)
 
 	// already checked earlier for cluster to exist, so don't have to check again.
-	bootstrapFile, err := cluster.GetBootstrapFile(clusterId, projectId)
+	bootstrapFile, err := getBootstrapFile(clusterId, projectId)
 
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("Error retrieving bootstrap file for cluster %s in project %s",
@@ -177,4 +178,103 @@ func SetBootstrapFileAndRelays(ctx context.Context, d *schema.ResourceData) erro
 	d.Set("relays", resp)
 
 	return nil
+}
+
+// GetBootstrapFile will retrieve the bootstrap file for imported clusters
+func getBootstrapFile(name, project string) (string, error) {
+	auth := config.GetConfig().GetAppAuthProfile()
+	uri := fmt.Sprintf("%s/infra/v3/project/%s/cluster/%s/download", auth.URL, project, name)
+	return makeRestCall(uri, "GET", nil)
+
+}
+
+// Retrieves cluster info
+func GetCluster(name, project string) (*infrav3.Cluster, error) {
+	auth := config.GetConfig().GetAppAuthProfile()
+	uri := fmt.Sprintf("%s/infra/v3/project/%s/cluster/%s", auth.URL, project, name)
+	resp, err := makeRestCall(uri, "GET", nil)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching cluster details: %s", err)
+	}
+	var cluster infrav3.Cluster
+	if err := json.Unmarshal([]byte(resp), &cluster); err != nil {
+		return nil, fmt.Errorf("error unmarshalling cluster details: %s", err)
+	}
+	return &cluster, nil
+}
+
+// Delete the cluster
+func DeleteCluster(name, project string) error {
+	// get cluster
+	_, err := GetCluster(name, project)
+	if err != nil {
+		return err
+	}
+
+	uri := fmt.Sprintf("/infra/v3/project/%s/cluster/%s", project, name)
+	_, err = makeRestCall(uri, "DELETE", nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Update cluster takes the updated cluster details and sends it to the core
+func CreateCluster(cluster *infrav3.Cluster) error {
+	uri := fmt.Sprintf("/infra/v3/project/%s/cluster", cluster.Metadata.Project)
+	_, err := makeRestCall(uri, "POST", cluster)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Update cluster takes the updated cluster details and sends it to the core
+func UpdateCluster(cluster *infrav3.Cluster) error {
+	uri := fmt.Sprintf("/infra/v3/project/%s/cluster/%s", cluster.Metadata.Project, cluster.Metadata.Name)
+	_, err := makeRestCall(uri, "PUT", cluster)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// ListAllClusters uses the lower level func ListClusters to retrieve a list of all clusters
+func ListAllClusters(projectId string) ([]*infrav3.Cluster, error) {
+	var clusters []*infrav3.Cluster
+	limit := 10000
+	c, count, err := listClusters(projectId, limit, 0)
+	if err != nil {
+		return nil, err
+	}
+	clusters = c
+	for count > limit {
+		offset := limit
+		limit = count
+		c, _, err = listClusters(projectId, limit, offset)
+		if err != nil {
+			return clusters, err
+		}
+		clusters = append(clusters, c...)
+	}
+	return clusters, nil
+}
+
+/*
+ListClusters paginates through a list of clusters
+*/
+func listClusters(project string, limit, offset int) ([]*infrav3.Cluster, int, error) {
+	// check to make sure the limit or offset is not negative
+	if limit < 0 || offset < 0 {
+		return nil, 0, fmt.Errorf("provided limit (%d) or offset (%d) cannot be negative", limit, offset)
+	}
+	uri := fmt.Sprintf("/infra/v3/project/%s/cluster?limit=%d&offset=%d", project, limit, offset)
+	resp, err := makeRestCall(uri, "GET", nil)
+	if err != nil {
+		return nil, 0, err
+	}
+	a := infrav3.ClusterList{}
+	_ = json.Unmarshal([]byte(resp), &a)
+	return a.Items, int(a.Metadata.Count), nil
 }

@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/paralus/cli/pkg/config"
-	"github.com/paralus/cli/pkg/group"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -96,7 +95,7 @@ func datasourceGroupRead(ctx context.Context, d *schema.ResourceData, m interfac
 	})
 
 	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(config.GetConfig())))
-	group, err := group.GetGroupByName(groupId)
+	group, err := utils.GetGroupByName(groupId)
 	if err != nil {
 		return diag.FromErr(errors.Wrap(err, fmt.Sprintf("error locating group %s",
 			groupId)))

@@ -8,7 +8,6 @@ import (
 
 	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
 
-	"github.com/paralus/cli/pkg/cluster"
 	"github.com/paralus/cli/pkg/config"
 	"github.com/paralus/cli/pkg/project"
 
@@ -212,20 +211,20 @@ func createOrUpdateCluster(ctx context.Context, d *schema.ResourceData, requestT
 	if requestType == "POST" {
 		// due to error swallowing, have to make sure the cluster doesn't exist before
 		// attempting to create it.
-		lookupStruct, _ := cluster.GetCluster(clusterId, projectId)
+		lookupStruct, _ := utils.GetCluster(clusterId, projectId)
 		if lookupStruct != nil {
 			return diag.FromErr(errors.Wrap(err,
 				fmt.Sprintf("cluster %s already exists", clusterId)))
 		}
 
-		err := cluster.CreateCluster(clusterStruct)
+		err := utils.CreateCluster(clusterStruct)
 		if err != nil {
 			return diag.FromErr(errors.Wrap(err,
 				fmt.Sprintf("failed to %s cluster %s in project %s", howFail,
 					clusterId, projectId)))
 		}
 	} else if requestType == "PUT" {
-		err := cluster.UpdateCluster(clusterStruct)
+		err := utils.UpdateCluster(clusterStruct)
 		if err != nil {
 			return diag.FromErr(errors.Wrap(err,
 				fmt.Sprintf("failed to %s cluster %s in project %s", howFail,
@@ -263,7 +262,7 @@ func resourceClusterRead(ctx context.Context, d *schema.ResourceData, m interfac
 		"project": projectId,
 	})
 
-	clusterStruct, err := cluster.GetCluster(clusterId, projectId)
+	clusterStruct, err := utils.GetCluster(clusterId, projectId)
 
 	tflog.Trace(ctx, fmt.Sprintf("ClusterStruct from GetCluster: %v", clusterStruct))
 	tflog.Trace(ctx, fmt.Sprintf("Error from GetCluster: %s", err))
@@ -301,7 +300,7 @@ func resourceClusterImport(ctx context.Context, d *schema.ResourceData, m interf
 		"cluster": clusterProjectId[1],
 	})
 
-	clusterStruct, err := cluster.GetCluster(clusterProjectId[1], clusterProjectId[0])
+	clusterStruct, err := utils.GetCluster(clusterProjectId[1], clusterProjectId[0])
 
 	if err != nil {
 		d.SetId("")
@@ -347,9 +346,9 @@ func resourceClusterDelete(ctx context.Context, d *schema.ResourceData, m interf
 		"project": projectId,
 	})
 
-	clusterStruct, _ := cluster.GetCluster(clusterId, projectId)
+	clusterStruct, _ := utils.GetCluster(clusterId, projectId)
 	if clusterStruct != nil {
-		err := cluster.DeleteCluster(clusterId, projectId)
+		err := utils.DeleteCluster(clusterId, projectId)
 
 		if err != nil {
 			return diag.FromErr(errors.Wrap(err, fmt.Sprintf("failed to delete cluster %s in project %s",

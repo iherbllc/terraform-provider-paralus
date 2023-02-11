@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/paralus/cli/pkg/config"
-	"github.com/paralus/cli/pkg/group"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -146,7 +145,7 @@ func createOrUpdateGroup(ctx context.Context, d *schema.ResourceData, requestTyp
 		return diags
 	}
 
-	err := group.ApplyGroup(groupStruct)
+	err := utils.ApplyGroup(groupStruct)
 	if err != nil {
 		return diag.FromErr(errors.Wrap(err,
 			fmt.Sprintf("failed to %s group %s", howFail,
@@ -173,7 +172,7 @@ func resourceGroupRead(ctx context.Context, d *schema.ResourceData, m interface{
 		"group": groupId,
 	})
 
-	groupStruct, err := group.GetGroupByName(groupId)
+	groupStruct, err := utils.GetGroupByName(groupId)
 	if groupStruct == nil {
 		// error should be "no rows in result set" but add it to TRACE in case it isn't.
 		tflog.Trace(ctx, fmt.Sprintf("Error retrieving group info: %s", err))
@@ -198,7 +197,7 @@ func resourceGroupImport(ctx context.Context, d *schema.ResourceData, m interfac
 		"group": groupId,
 	})
 
-	groupStruct, err := group.GetGroupByName(groupId)
+	groupStruct, err := utils.GetGroupByName(groupId)
 	// unlike others, fail and stop the import if we fail to get group info
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("group %s does not exist", groupId))
@@ -230,10 +229,10 @@ func resourceGroupDelete(ctx context.Context, d *schema.ResourceData, m interfac
 	})
 
 	// verify group exists before attempting delete
-	groupStruct, _ := group.GetGroupByName(groupId)
+	groupStruct, _ := utils.GetGroupByName(groupId)
 	if groupStruct != nil {
 
-		err := group.DeleteGroup(groupId)
+		err := utils.DeleteGroup(groupId)
 		if err != nil {
 			return diag.FromErr(errors.Wrap(err, fmt.Sprintf("failed to delete group %s",
 				groupId)))
