@@ -98,10 +98,11 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	- pctl_config_json: %s
 	- pctl_partner: %s
 	- pctl_organization: %s
+	- pctl_skip_server_cert_valid: %s
 	`, d.Get("pctl_profile"),
 		d.Get("pctl_rest_endpoint"), d.Get("pctl_ops_endpoint"),
 		d.Get("pctl_config_json"), d.Get("pctl_partner"),
-		d.Get("pctl_organization")))
+		d.Get("pctl_organization"), d.Get("pctl_skip_server_cert_valid")))
 
 	return paralus.NewConfig(ctx, d)
 }

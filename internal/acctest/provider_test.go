@@ -139,7 +139,7 @@ func TestAccProviderAttr_setMissingAPIKey(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccProvider_setMissingAPIKey(),
-				ExpectError: regexp.MustCompile(".*invalid credentials.*"),
+				ExpectError: regexp.MustCompile(".*invalid HTTP response code: 401.*"),
 			},
 		},
 	})
@@ -254,7 +254,7 @@ func TestAccProviderEndpoints_setInvalidPartner(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccProviderEndpoints_setPartner("howdy"),
-				ExpectError: regexp.MustCompile(".*could not complete operation.*"),
+				ExpectError: regexp.MustCompile(".*server error [return code: 500].*"),
 			},
 		},
 	})

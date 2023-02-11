@@ -72,7 +72,7 @@ func makeRestCall(uri string, method string, payload interface{}) (string, error
 
 	// Get URI from a pool
 	url := fasthttp.AcquireURI()
-	url.Parse(nil, []byte(uri))
+	url.Parse(nil, []byte(auth.URL+uri))
 
 	client := &fasthttp.Client{}
 

@@ -12,7 +12,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	k8Scheme "k8s.io/client-go/kubernetes/scheme"
 
-	"github.com/paralus/cli/pkg/config"
 	commonv3 "github.com/paralus/paralus/proto/types/commonpb/v3"
 	infrav3 "github.com/paralus/paralus/proto/types/infrapb/v3"
 )
@@ -159,7 +158,7 @@ func SetBootstrapFileAndRelays(ctx context.Context, d *schema.ResourceData) erro
 	clusterId := d.Get("name").(string)
 
 	// already checked earlier for cluster to exist, so don't have to check again.
-	bootstrapFile, err := getBootstrapFile(clusterId, projectId)
+	bootstrapFile, err := GetBootstrapFile(clusterId, projectId)
 
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("Error retrieving bootstrap file for cluster %s in project %s",
@@ -180,18 +179,16 @@ func SetBootstrapFileAndRelays(ctx context.Context, d *schema.ResourceData) erro
 	return nil
 }
 
-// GetBootstrapFile will retrieve the bootstrap file for imported clusters
-func getBootstrapFile(name, project string) (string, error) {
-	auth := config.GetConfig().GetAppAuthProfile()
-	uri := fmt.Sprintf("%s/infra/v3/project/%s/cluster/%s/download", auth.URL, project, name)
+// Will retrieve the bootstrap file for imported clusters
+func GetBootstrapFile(name, project string) (string, error) {
+	uri := fmt.Sprintf("/infra/v3/project/%s/cluster/%s/download", project, name)
 	return makeRestCall(uri, "GET", nil)
 
 }
 
 // Retrieves cluster info
 func GetCluster(name, project string) (*infrav3.Cluster, error) {
-	auth := config.GetConfig().GetAppAuthProfile()
-	uri := fmt.Sprintf("%s/infra/v3/project/%s/cluster/%s", auth.URL, project, name)
+	uri := fmt.Sprintf("/infra/v3/project/%s/cluster/%s", project, name)
 	resp, err := makeRestCall(uri, "GET", nil)
 	if err != nil {
 		return nil, fmt.Errorf("error fetching cluster details: %s", err)

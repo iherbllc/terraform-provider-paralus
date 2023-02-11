@@ -9,7 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/paralus/cli/pkg/cluster"
+	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
 )
 
 // Test cluster not found
@@ -74,7 +74,7 @@ func testAccCheckHasBootstrap(resourceName string) func(s *terraform.State) erro
 		project := rs.Primary.Attributes["project"]
 		clusterName := rs.Primary.Attributes["name"]
 
-		_, err := cluster.GetBootstrapFile(clusterName, project)
+		_, err := utils.GetBootstrapFile(clusterName, project)
 
 		if err != nil {
 			return err

@@ -8,7 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/paralus/cli/pkg/project"
+	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
 )
 
 // Test missing project name
@@ -129,7 +129,7 @@ func testAccCheckDataSourceProjectExists(resourceName string) func(s *terraform.
 
 		projectStr := rs.Primary.Attributes["name"]
 
-		_, err := project.GetProjectByName(projectStr)
+		_, err := utils.GetProjectByName(projectStr)
 
 		if err != nil {
 			return err

@@ -8,7 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/paralus/cli/pkg/cluster"
+	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
 )
 
 // Test missing cluster name
@@ -361,10 +361,10 @@ func testAccCheckClusterResourceDestroy(t *testing.T) func(s *terraform.State) e
 			project := rs.Primary.Attributes["project"]
 			clusterName := rs.Primary.Attributes["name"]
 
-			_, err := cluster.GetCluster(clusterName, project)
+			_, err := utils.GetCluster(clusterName, project)
 
 			if err == nil {
-				cluster.DeleteCluster(clusterName, project)
+				utils.DeleteCluster(clusterName, project)
 			}
 		}
 
@@ -390,7 +390,7 @@ func testAccCheckResourceClusterExists(resourceName string) func(s *terraform.St
 		project := rs.Primary.Attributes["project"]
 		clusterName := rs.Primary.Attributes["name"]
 
-		_, err := cluster.GetCluster(clusterName, project)
+		_, err := utils.GetCluster(clusterName, project)
 
 		if err != nil {
 			return err

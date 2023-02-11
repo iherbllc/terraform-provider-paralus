@@ -89,7 +89,7 @@ If you wish to run a specific acceptance test, do the following:
 To run all acceptance tests, use the make command by doing the following:
 
 1. Download the config.json from Paralus UI. See [CLI](https://www.paralus.io/docs/usage/cli)
-2. Put the json into the same directory as the make file
+2. Put the json into the same directory as the make file. Make sure to name it `config.json` or update the name in the makefile
 3. Run the command `make testacc`
 
 Note: This will run all acceptance tests in the `internal/acctest` directory
