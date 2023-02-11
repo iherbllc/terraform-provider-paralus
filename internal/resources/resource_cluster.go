@@ -9,7 +9,6 @@ import (
 	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
 
 	"github.com/paralus/cli/pkg/config"
-	"github.com/paralus/cli/pkg/project"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -190,7 +189,7 @@ func createOrUpdateCluster(ctx context.Context, d *schema.ResourceData, requestT
 
 	tflog.Trace(ctx, fmt.Sprintf("Checking for project %s existance", projectId))
 
-	projectStruct, err := project.GetProjectByName(projectId)
+	projectStruct, err := utils.GetProjectByName(projectId)
 	if projectStruct == nil {
 		return diag.FromErr(errors.Wrap(err,
 			fmt.Sprintf("project %s does not exist", projectId)))

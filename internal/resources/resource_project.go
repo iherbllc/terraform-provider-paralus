@@ -197,10 +197,6 @@ func resourceProjectRead(ctx context.Context, d *schema.ResourceData, m interfac
 		"project": projectId,
 	})
 
-	if projectId == "" {
-		return diag.FromErr(errors.New("project name"))
-	}
-
 	projectStruct, err := utils.GetProjectByName(projectId)
 	if projectStruct == nil {
 		// error should be "no rows in result set" but add it to TRACE in case it isn't.
