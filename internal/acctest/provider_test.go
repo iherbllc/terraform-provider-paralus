@@ -242,6 +242,7 @@ resource "paralus_cluster" "custom_rest_endpoint" {
 	provider = paralus.custom_rest_endpoint
 	name     = "tf-cluster-test"
 	project = "blah1"
+	cluster_type = "imported"
   }`, providerString(conf, "custom_rest_endpoint"))
 }
 

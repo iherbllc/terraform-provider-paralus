@@ -22,8 +22,8 @@ func NewConfig(ctx context.Context, d *schema.ResourceData) (*config.Config, dia
 		tflog.Debug(ctx, fmt.Sprintf("Using PCTL config json %s", configJson))
 		newConfig, err := NewConfigFromFile(configJson.(string))
 		if err != nil {
-			return nil, diag.FromErr(errors.Wrap(err,
-				fmt.Sprintf("error parsing config_json file %s", configJson)))
+			return nil, diag.FromErr(errors.Wrapf(err,
+				"error parsing config_json file %s", configJson))
 		}
 
 		err = config.GetConfig().MiniCheck()

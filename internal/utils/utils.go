@@ -78,8 +78,6 @@ func makeRestCall(uri string, method string, payload interface{}) (string, error
 	client := &fasthttp.Client{}
 
 	req := fasthttp.AcquireRequest()
-	defer fasthttp.ReleaseRequest(req)
-
 	req.SetURI(url)          // copy url into request
 	fasthttp.ReleaseURI(url) // now you may release the URI
 
@@ -98,13 +96,15 @@ func makeRestCall(uri string, method string, payload interface{}) (string, error
 	}
 
 	resp := fasthttp.AcquireResponse()
-	defer fasthttp.ReleaseResponse(resp)
 	err = client.Do(req, resp)
 	if err != nil {
 		return "", fmt.Errorf("connection error: %v", err)
 	}
+	fasthttp.ReleaseRequest(req)
+
 	statusCode := resp.StatusCode()
 	respBody := resp.Body()
+	fasthttp.ReleaseResponse(resp)
 	if statusCode != http.StatusOK {
 		if string(respBody) == "" {
 			return "", fmt.Errorf("invalid HTTP response code: %d", statusCode)

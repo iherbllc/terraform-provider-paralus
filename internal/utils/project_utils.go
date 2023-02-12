@@ -5,10 +5,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/rand"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/jpillora/backoff"
 	"github.com/pkg/errors"
 
 	"github.com/paralus/cli/pkg/config"
@@ -195,7 +198,36 @@ func ApplyProject(proj *systemv3.Project) error {
 // Delete project
 func DeleteProject(project string) error {
 	cfg := config.GetConfig()
-	uri := fmt.Sprintf("/auth/v3/partner/%s/organization/%s/project/%s", cfg.Partner, cfg.Organization, project)
-	_, err := makeRestCall(uri, "DELETE", nil)
-	return err
+
+	// Need to add delay to cluster list check due to the circumstances
+	// where the cluster resource deletion is faster then the API process to remove the clusters.
+	// Using jitter for better randomness
+	b := &backoff.Backoff{
+		Max:    5 * time.Minute,
+		Jitter: true,
+	}
+
+	rand.Seed(42)
+
+	for {
+		// Before delete, let's make sure the project is empty
+		clusters, _ := ListAllClusters(project)
+		if len(clusters) == 0 {
+			uri := fmt.Sprintf("/auth/v3/partner/%s/organization/%s/project/%s", cfg.Partner, cfg.Organization, project)
+			_, err := makeRestCall(uri, "DELETE", nil)
+			return err
+		}
+		d := b.Duration()
+		if d >= b.Max {
+			break
+		}
+		tflog.Info(context.Background(), fmt.Sprintf("Project %s is not empty. Will check again in %s", project, d))
+		time.Sleep(d)
+
+	}
+	maxCheck := b.Duration()
+	b.Reset()
+	return fmt.Errorf("after %s, project %s is still not empty. Remove all clusters before attempting deletion",
+		maxCheck, project)
+
 }

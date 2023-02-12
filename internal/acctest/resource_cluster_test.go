@@ -97,6 +97,7 @@ func testAccClusterResourceConfiEmptyProject() string {
 			provider = paralus.project_empty_name
 			name = "test"
 			project = ""
+			cluster_type = "imported"
 		}
 	`, providerConfig)
 }
@@ -128,6 +129,7 @@ func testAccClusterResourceConfigEmptyCluster() string {
 			provider = paralus.cluster_empty_name
 			name = ""
 			project = "test"
+			cluster_type = "imported"
 		}
 	`, providerConfig)
 }
@@ -147,13 +149,13 @@ func TestAccParalusResourceProjectCluster_full(t *testing.T) {
 				Config: testAccProviderValidResource(`
 				resource "paralus_project" "testproject" {
 					provider = paralus.valid_resource
-					name = "projectresource"
+					name = "projectresource3"
 					description = "from acct test"
 				}
 		
 				resource "paralus_cluster" "testcluster" {
 					provider = paralus.valid_resource
-					name = "clusterresource"
+					name = "clusterresource3"
 					project = paralus_project.testproject.name
 					cluster_type = "imported"
 					params {
@@ -171,7 +173,7 @@ func TestAccParalusResourceProjectCluster_full(t *testing.T) {
 					testAccCheckResourceClusterTypeAttribute(clusterRsName, "imported"),
 					testAccCheckResourceAttributeSet(clusterRsName, "relays"),
 					resource.TestCheckResourceAttr(projectRsName, "description", "from acct test"),
-					resource.TestCheckResourceAttr(clusterRsName, "project", "projectresource"),
+					resource.TestCheckResourceAttr(clusterRsName, "project", "projectresource3"),
 					resource.TestCheckTypeSetElemAttr(clusterRsName, "bootstrap_files.*", "12"),
 				),
 			},

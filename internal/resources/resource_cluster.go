@@ -191,8 +191,7 @@ func createOrUpdateCluster(ctx context.Context, d *schema.ResourceData, requestT
 
 	projectStruct, err := utils.GetProjectByName(projectId)
 	if projectStruct == nil {
-		return diag.FromErr(errors.Wrap(err,
-			fmt.Sprintf("project %s does not exist", projectId)))
+		return diag.FromErr(errors.Wrapf(err, "project %s does not exist", projectId))
 	}
 
 	howFail := "create"
@@ -212,26 +211,26 @@ func createOrUpdateCluster(ctx context.Context, d *schema.ResourceData, requestT
 		// attempting to create it.
 		lookupStruct, _ := utils.GetCluster(clusterId, projectId)
 		if lookupStruct != nil {
-			return diag.FromErr(errors.Wrap(err,
-				fmt.Sprintf("cluster %s already exists", clusterId)))
+			return diag.FromErr(errors.Wrapf(err,
+				"cluster %s already exists", clusterId))
 		}
 
 		err := utils.CreateCluster(clusterStruct)
 		if err != nil {
-			return diag.FromErr(errors.Wrap(err,
-				fmt.Sprintf("failed to %s cluster %s in project %s", howFail,
-					clusterId, projectId)))
+			return diag.FromErr(errors.Wrapf(err,
+				"failed to %s cluster %s in project %s", howFail,
+				clusterId, projectId))
 		}
 	} else if requestType == "PUT" {
 		err := utils.UpdateCluster(clusterStruct)
 		if err != nil {
-			return diag.FromErr(errors.Wrap(err,
-				fmt.Sprintf("failed to %s cluster %s in project %s", howFail,
-					clusterId, projectId)))
+			return diag.FromErr(errors.Wrapf(err,
+				"failed to %s cluster %s in project %s", howFail,
+				clusterId, projectId))
 		}
 	} else {
-		return diag.FromErr(errors.Wrap(err,
-			fmt.Sprintf("unknown request type %s", requestType)))
+		return diag.FromErr(errors.Wrapf(err,
+			"unknown request type %s", requestType))
 	}
 
 	return resourceClusterRead(ctx, d, nil)
@@ -273,7 +272,6 @@ func resourceClusterRead(ctx context.Context, d *schema.ResourceData, m interfac
 
 	// Update resource information from created/updated cluster
 	utils.BuildResourceFromClusterStruct(clusterStruct, d)
-
 	err = utils.SetBootstrapFileAndRelays(ctx, d)
 	if err != nil {
 		return diag.FromErr(errors.Wrap(err, "called from resourceClusterRead"))
@@ -291,7 +289,8 @@ func resourceClusterImport(ctx context.Context, d *schema.ResourceData, m interf
 
 	if len(clusterProjectId) != 2 {
 		d.SetId("")
-		return nil, errors.Wrap(nil, fmt.Sprintf("unable to import. ID must be in format PROJECT_NAME:CLUSTER_NAME. Got %s", d.Id()))
+		return nil, errors.Wrapf(nil,
+			"unable to import. ID must be in format PROJECT_NAME:CLUSTER_NAME. Got %s", d.Id())
 	}
 
 	tflog.Trace(ctx, "Retrieving cluster info", map[string]interface{}{
@@ -304,8 +303,8 @@ func resourceClusterImport(ctx context.Context, d *schema.ResourceData, m interf
 	if err != nil {
 		d.SetId("")
 		// unlike others, we want to throw an error if the cluster does not exist so we can fail the import
-		return nil, errors.Wrap(err, fmt.Sprintf("cluster %s does not exist in project %s",
-			clusterProjectId[1], clusterProjectId[0]))
+		return nil, errors.Wrapf(err, "cluster %s does not exist in project %s",
+			clusterProjectId[1], clusterProjectId[0])
 	}
 
 	utils.BuildResourceFromClusterStruct(clusterStruct, d)
@@ -350,8 +349,8 @@ func resourceClusterDelete(ctx context.Context, d *schema.ResourceData, m interf
 		err := utils.DeleteCluster(clusterId, projectId)
 
 		if err != nil {
-			return diag.FromErr(errors.Wrap(err, fmt.Sprintf("failed to delete cluster %s in project %s",
-				clusterId, projectId)))
+			return diag.FromErr(errors.Wrapf(err, "failed to delete cluster %s in project %s",
+				clusterId, projectId))
 		}
 	}
 

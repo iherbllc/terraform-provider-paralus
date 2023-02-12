@@ -5,9 +5,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"strings"
+	"time"
 
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/jpillora/backoff"
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 	k8Scheme "k8s.io/client-go/kubernetes/scheme"
@@ -151,30 +155,60 @@ func getBootstrapRelays(bootstrapFiles []string) (string, error) {
 }
 
 // Retrieve the YAML files that will be used to setup paralus agents in cluster and assign it to the schema
-// Also retrieve the relays from  the data of the relay-agent configMap YAML file
+// Also retrieve the relays from  the data of the relay-agent configMap YAML
+// Due to the parallel nature of testing, it might be that the cluster would be created
+// before the relay was effectively populated. So let's do a increased delay check
 func SetBootstrapFileAndRelays(ctx context.Context, d *schema.ResourceData) error {
 
 	projectId := d.Get("project").(string)
 	clusterId := d.Get("name").(string)
 
-	// already checked earlier for cluster to exist, so don't have to check again.
-	bootstrapFile, err := GetBootstrapFile(clusterId, projectId)
+	b := &backoff.Backoff{
+		Jitter: true,
+		Max:    5 * time.Minute,
+	}
+	rand.Seed(42)
 
-	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("Error retrieving bootstrap file for cluster %s in project %s",
-			clusterId, projectId))
+	var bootstrapFile string
+	var bootstrapFiles []string
+	var relay_or_resp string
+	var err error
+
+	for {
+		// already checked earlier for cluster to exist, so don't have to check again.
+		bootstrapFile, err = GetBootstrapFile(clusterId, projectId)
+
+		if err != nil {
+			return errors.Wrapf(err, "Error retrieving bootstrap file for cluster %s in project %s",
+				clusterId, projectId)
+		}
+
+		bootstrapFiles = splitSingleYAMLIntoList(bootstrapFile)
+		relay_or_resp, err = getBootstrapRelays(bootstrapFiles)
+		if err != nil {
+			return errors.Wrapf(err, "Error while decoding YAML object %s", relay_or_resp)
+		}
+
+		d := b.Duration()
+		if relay_or_resp != "" || d >= b.Max {
+			break
+		}
+
+		// If the GetBootstrapFile call is too fast, it might lead to the relay info not ending up in the cluster
+		// yet, so will need to try again. Using jitter to avoid flooding the API.
+
+		tflog.Info(ctx, fmt.Sprintf("No relay populated yet, retrying in %s", d))
+		time.Sleep(d)
 	}
 
-	d.Set("bootstrap_files_combined", bootstrapFile)
-	bootstrapFiles := splitSingleYAMLIntoList(bootstrapFile)
+	if relay_or_resp == "" {
+		return errors.Errorf("Unable to retrieve relay info from created cluster within %s", b.Duration())
+	}
+
+	b.Reset()
+	d.Set("relays", relay_or_resp)
 	d.Set("bootstrap_files", bootstrapFiles)
-
-	resp, err := getBootstrapRelays(bootstrapFiles)
-	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("Error while decoding YAML object %s", resp))
-	}
-
-	d.Set("relays", resp)
+	d.Set("bootstrap_files_combined", bootstrapFile)
 
 	return nil
 }

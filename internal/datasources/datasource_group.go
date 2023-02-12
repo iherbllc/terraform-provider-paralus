@@ -97,8 +97,8 @@ func datasourceGroupRead(ctx context.Context, d *schema.ResourceData, m interfac
 	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(config.GetConfig())))
 	group, err := utils.GetGroupByName(groupId)
 	if err != nil {
-		return diag.FromErr(errors.Wrap(err, fmt.Sprintf("error locating group %s",
-			groupId)))
+		return diag.FromErr(errors.Wrapf(err, "error locating group %s",
+			groupId))
 	}
 
 	utils.BuildResourceFromGroupStruct(group, d)

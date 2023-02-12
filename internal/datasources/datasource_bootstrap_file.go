@@ -95,10 +95,9 @@ func datasourceBootstrapFileRead(ctx context.Context, d *schema.ResourceData, m 
 
 	if err != nil {
 		d.SetId("")
-		return diag.FromErr(errors.Wrap(err, fmt.Sprintf("error locating cluster %s in project %s",
-			clusterId, projectId)))
+		return diag.FromErr(errors.Wrapf(err, "error locating cluster %s in project %s",
+			clusterId, projectId))
 	}
-
 	err = utils.SetBootstrapFileAndRelays(ctx, d)
 	if err != nil {
 		return diag.FromErr(err)

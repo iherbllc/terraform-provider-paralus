@@ -147,9 +147,9 @@ func createOrUpdateGroup(ctx context.Context, d *schema.ResourceData, requestTyp
 
 	err := utils.ApplyGroup(groupStruct)
 	if err != nil {
-		return diag.FromErr(errors.Wrap(err,
-			fmt.Sprintf("failed to %s group %s", howFail,
-				groupId)))
+		return diag.FromErr(errors.Wrapf(err,
+			"failed to %s group %s", howFail,
+			groupId))
 	}
 
 	return resourceGroupRead(ctx, d, nil)
@@ -200,7 +200,7 @@ func resourceGroupImport(ctx context.Context, d *schema.ResourceData, m interfac
 	groupStruct, err := utils.GetGroupByName(groupId)
 	// unlike others, fail and stop the import if we fail to get group info
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("group %s does not exist", groupId))
+		return nil, errors.Wrapf(err, "group %s does not exist", groupId)
 	}
 
 	utils.BuildResourceFromGroupStruct(groupStruct, d)
@@ -234,8 +234,8 @@ func resourceGroupDelete(ctx context.Context, d *schema.ResourceData, m interfac
 
 		err := utils.DeleteGroup(groupId)
 		if err != nil {
-			return diag.FromErr(errors.Wrap(err, fmt.Sprintf("failed to delete group %s",
-				groupId)))
+			return diag.FromErr(errors.Wrapf(err, "failed to delete group %s",
+				groupId))
 		}
 	}
 

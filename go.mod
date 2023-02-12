@@ -6,13 +6,14 @@ require (
 	github.com/hashicorp/terraform-plugin-docs v0.13.0
 	github.com/hashicorp/terraform-plugin-log v0.7.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.24.1
+	github.com/jpillora/backoff v1.0.0
 	github.com/levigross/grequests v0.0.0-20190908174114-253788527a1a
 	github.com/paralus/cli v0.1.2
 	github.com/paralus/paralus v0.2.0
 	github.com/pkg/errors v0.9.1
+	github.com/valyala/fasthttp v1.44.0
 	k8s.io/api v0.26.1
 	k8s.io/client-go v0.26.1
-	github.com/valyala/fasthttp v1.44.0
 )
 
 require (
@@ -71,7 +72,6 @@ require (
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.15.9 // indirect
-	github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.17 // indirect

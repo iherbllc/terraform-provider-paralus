@@ -110,8 +110,8 @@ func datasourceProjectRead(ctx context.Context, d *schema.ResourceData, m interf
 	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(config.GetConfig())))
 	project, err := utils.GetProjectByName(projectId)
 	if err != nil {
-		return diag.FromErr(errors.Wrap(err, fmt.Sprintf("error locating project %s",
-			projectId)))
+		return diag.FromErr(errors.Wrapf(err, "error locating project %s",
+			projectId))
 	}
 
 	utils.BuildResourceFromProjectStruct(project, d)
