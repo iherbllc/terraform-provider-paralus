@@ -139,7 +139,7 @@ func TestAccProviderAttr_setMissingAPIKey(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccProvider_setMissingAPIKey(),
-				ExpectError: regexp.MustCompile(".*no or invalid credentials.*"),
+				ExpectError: regexp.MustCompile(".*invalid credentials.*"),
 			},
 		},
 	})

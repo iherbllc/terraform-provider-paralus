@@ -198,11 +198,12 @@ func resourceProjectRead(ctx context.Context, d *schema.ResourceData, m interfac
 	})
 
 	projectStruct, err := utils.GetProjectByName(projectId)
-	if projectStruct == nil {
-		// error should be "no rows in result set" but add it to TRACE in case it isn't.
-		tflog.Trace(ctx, fmt.Sprintf("error retrieving project info: %s", err))
+	if err == utils.ErrResourceNotExists {
 		d.SetId("")
 		return diags
+	}
+	if err != nil {
+		return diag.FromErr(errors.Wrapf(err, "Error retrieving info for project %s", projectId))
 	}
 
 	// Update resource information from updated cluster

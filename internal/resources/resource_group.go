@@ -173,11 +173,12 @@ func resourceGroupRead(ctx context.Context, d *schema.ResourceData, m interface{
 	})
 
 	groupStruct, err := utils.GetGroupByName(groupId)
-	if groupStruct == nil {
-		// error should be "no rows in result set" but add it to TRACE in case it isn't.
-		tflog.Trace(ctx, fmt.Sprintf("Error retrieving group info: %s", err))
+	if err == utils.ErrResourceNotExists {
 		d.SetId("")
 		return diags
+	}
+	if err != nil {
+		return diag.FromErr(errors.Wrapf(err, "Error retrieving group info for %s", groupId))
 	}
 
 	// Update resource information from updated cluster

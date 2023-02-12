@@ -213,7 +213,7 @@ func createOrUpdateCluster(ctx context.Context, d *schema.ResourceData, requestT
 		if lookupStruct != nil {
 			return diag.FromErr(errors.Errorf("cluster %s already exists", clusterId))
 		}
-		if err != nil {
+		if err != utils.ErrResourceNotExists {
 			return diag.FromErr(errors.Wrapf(err,
 				"failed to get cluster %s in project %s",
 				clusterId, projectId))
@@ -269,9 +269,12 @@ func resourceClusterRead(ctx context.Context, d *schema.ResourceData, m interfac
 	tflog.Trace(ctx, fmt.Sprintf("ClusterStruct from GetCluster: %v", clusterStruct))
 	tflog.Trace(ctx, fmt.Sprintf("Error from GetCluster: %s", err))
 
-	if clusterStruct == nil {
+	if err == utils.ErrResourceNotExists {
 		d.SetId("")
 		return diags
+	}
+	if err != nil {
+		return diag.FromErr(errors.Wrapf(err, "Error retrieving info for cluster %s in project %s", clusterId, projectId))
 	}
 
 	// Update resource information from created/updated cluster
