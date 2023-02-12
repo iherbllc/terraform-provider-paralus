@@ -47,7 +47,7 @@ func ResourceCluster() *schema.Resource {
 			},
 			"cluster_type": {
 				Type:        schema.TypeString,
-				Description: "Cluster type. For example, \"imported.\" ",
+				Description: "Type of cluster being created. For example, \"imported\"",
 				Required:    true,
 				ForceNew:    true,
 			},

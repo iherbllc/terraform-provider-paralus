@@ -33,7 +33,7 @@ resource "paralus_cluster" "testcluster" {
 
 ### Required
 
-- `cluster_type` (String) Cluster type. For example, "imported."
+- `cluster_type` (String) Type of cluster being created. For example, "imported"
 - `name` (String) Cluster name
 - `project` (String) Project containing cluster
 
