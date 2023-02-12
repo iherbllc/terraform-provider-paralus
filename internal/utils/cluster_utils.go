@@ -238,6 +238,11 @@ func GetCluster(name, project string) (*infrav3.Cluster, error) {
 func DeleteCluster(name, project string) error {
 	// get cluster
 	_, err := GetCluster(name, project)
+
+	if err == ErrResourceNotExists {
+		return nil
+	}
+
 	if err != nil {
 		return err
 	}

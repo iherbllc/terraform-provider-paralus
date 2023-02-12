@@ -207,13 +207,11 @@ func createOrUpdateCluster(ctx context.Context, d *schema.ResourceData, requestT
 	})
 
 	if requestType == "POST" {
-		// due to error swallowing, have to make sure the cluster doesn't exist before
-		// attempting to create it.
 		lookupStruct, err := utils.GetCluster(clusterId, projectId)
 		if lookupStruct != nil {
-			return diag.FromErr(errors.Errorf("cluster %s already exists", clusterId))
+			return diag.FromErr(errors.Errorf("cluster %s in project %s already exists", clusterId, projectId))
 		}
-		if err != utils.ErrResourceNotExists {
+		if err != nil && err != utils.ErrResourceNotExists {
 			return diag.FromErr(errors.Wrapf(err,
 				"failed to get cluster %s in project %s",
 				clusterId, projectId))
@@ -352,7 +350,7 @@ func resourceClusterDelete(ctx context.Context, d *schema.ResourceData, m interf
 	})
 
 	_, err := utils.GetCluster(clusterId, projectId)
-	if err != utils.ErrResourceNotExists {
+	if err != nil && err != utils.ErrResourceNotExists {
 		return diag.FromErr(errors.Wrapf(err, "failed to get cluster %s in project %s",
 			clusterId, projectId))
 	}

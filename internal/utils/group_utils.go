@@ -133,7 +133,7 @@ func ApplyGroup(grp *groupv3.Group) error {
 		}
 	} else {
 
-		if err != ErrResourceNotExists {
+		if err != nil && err != ErrResourceNotExists {
 			return err
 		}
 
@@ -149,8 +149,17 @@ func ApplyGroup(grp *groupv3.Group) error {
 
 // Delete group
 func DeleteGroup(groupName string) error {
+	_, err := GetGroupByName(groupName)
+	if err == ErrResourceNotExists {
+		return nil
+	}
+
+	if err != nil {
+		return err
+	}
+
 	cfg := config.GetConfig()
 	uri := fmt.Sprintf("/auth/v3/partner/%s/organization/%s/group/%s", cfg.Partner, cfg.Organization, groupName)
-	_, err := makeRestCall(uri, "DELETE", nil)
+	_, err = makeRestCall(uri, "DELETE", nil)
 	return err
 }

@@ -185,7 +185,7 @@ func ApplyProject(proj *systemv3.Project) error {
 			return err
 		}
 	} else {
-		if err != ErrResourceNotExists {
+		if err != nil && err != ErrResourceNotExists {
 			return err
 		}
 		tflog.Debug(context.Background(), fmt.Sprintf("creating project: %s", proj.Metadata.Name))
@@ -220,7 +220,7 @@ func DeleteProject(project string) error {
 			_, err := makeRestCall(uri, "DELETE", nil)
 			return err
 		}
-		if err != ErrResourceNotExists {
+		if err != nil && err != ErrResourceNotExists {
 			return err
 		}
 

@@ -2,6 +2,7 @@
 package acctest
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"testing"
@@ -65,7 +66,7 @@ func testAccClusterResourceConfigMissingProject() string {
 
 		resource "paralus_cluster" "missingname_test" {
 			provider = paralus.project_missing_name
-			name = "test"
+			name = "crcmp-test"
 		}
 	`, providerConfig)
 }
@@ -95,7 +96,7 @@ func testAccClusterResourceConfiEmptyProject() string {
 
 		resource "paralus_cluster" "missingname_test" {
 			provider = paralus.project_empty_name
-			name = "test"
+			name = "crcep-test"
 			project = ""
 			cluster_type = "imported"
 		}
@@ -128,7 +129,7 @@ func testAccClusterResourceConfigEmptyCluster() string {
 		resource "paralus_cluster" "emptyname_test" {
 			provider = paralus.cluster_empty_name
 			name = ""
-			project = "test"
+			project = "ccec-test"
 			cluster_type = "imported"
 		}
 	`, providerConfig)
@@ -203,7 +204,7 @@ func TestAccParalusResourceCluster_MissingClusterType(t *testing.T) {
 				Config: testAccProviderValidResource(`
 				resource "paralus_cluster" "test" {
 					provider = paralus.valid_resource
-					name = "test"
+					name = "cmct-test"
 					project = "acctest-donotdelete"
 				}`),
 				ExpectError: regexp.MustCompile(".*argument \"cluster_type\" is required.*"),
@@ -224,7 +225,7 @@ func TestAccParalusResourceClusterUnknownProject_basic(t *testing.T) {
 				Config: testAccProviderValidResource(`
 				resource "paralus_cluster" "test" {
 					provider = paralus.valid_resource
-					name = "test"
+					name = "cup-test"
 					project = "blah"
 					cluster_type = "imported"
 					params {
@@ -255,7 +256,7 @@ func TestAccParalusResourceCluster_WithProjectDatasource(t *testing.T) {
 				}
 				resource "paralus_cluster" "test" {
 					provider = paralus.valid_resource
-					name = "test1"
+					name = "pds-cluster-test1"
 					project = data.paralus_project.test.name
 					cluster_type = "imported"
 					params {
@@ -298,7 +299,7 @@ func TestAccParalusResourceCluster_Full(t *testing.T) {
 				}
 				resource "paralus_cluster" "test" {
 					provider = paralus.valid_resource
-					name = "test1"
+					name = "dynamic-test1"
 					project = paralus_project.test.name
 					cluster_type = "imported"
 					params {
@@ -344,7 +345,7 @@ func TestAccParalusResourceCluster_basic(t *testing.T) {
 				Config: testAccProviderValidResource(`
 				resource "paralus_cluster" "test" {
 					provider = paralus.valid_resource
-					name = "test1"
+					name = "basic-test1"
 					project = "acctest-donotdelete"
 					cluster_type = "imported"
 					params {
@@ -371,6 +372,7 @@ func TestAccParalusResourceCluster_basic(t *testing.T) {
 }
 
 // Verifies the cluster has been destroyed
+// and destroys it if it is not
 func testAccCheckClusterResourceDestroy(t *testing.T) func(s *terraform.State) error {
 
 	return func(s *terraform.State) error {
@@ -386,8 +388,8 @@ func testAccCheckClusterResourceDestroy(t *testing.T) func(s *terraform.State) e
 
 			_, err := utils.GetCluster(clusterName, project)
 
-			if err == nil {
-				utils.DeleteCluster(clusterName, project)
+			if err == nil || err != utils.ErrResourceNotExists {
+				return utils.DeleteCluster(clusterName, project)
 			}
 		}
 
@@ -407,7 +409,7 @@ func testAccCheckResourceClusterExists(resourceName string) func(s *terraform.St
 		}
 
 		if rs.Primary.ID == "" {
-			return fmt.Errorf("cluster id is not set")
+			return errors.New("cluster id is not set")
 		}
 
 		project := rs.Primary.Attributes["project"]
