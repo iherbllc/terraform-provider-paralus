@@ -33,13 +33,13 @@ resource "paralus_cluster" "testcluster" {
 
 ### Required
 
+- `cluster_type` (String) Cluster type. For example, "imported."
 - `name` (String) Cluster name
 - `project` (String) Project containing cluster
 
 ### Optional
 
 - `annotations` (Map of String) Map of annotations to include for cluster
-- `cluster_type` (String) Cluster type. For example, "imported."
 - `labels` (Map of String) Map of lables to include for cluster
 - `params` (Block Set, Max: 1) Import parameters (see [below for nested schema](#nestedblock--params))
 
