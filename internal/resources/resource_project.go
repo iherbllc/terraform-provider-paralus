@@ -8,9 +8,7 @@ import (
 	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
 	"github.com/pkg/errors"
 
-	"github.com/paralus/cli/pkg/cluster"
 	"github.com/paralus/cli/pkg/config"
-	"github.com/paralus/cli/pkg/project"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -172,11 +170,11 @@ func createOrUpdateProject(ctx context.Context, d *schema.ResourceData, requestT
 		return diags
 	}
 
-	err := project.ApplyProject(projectStruct)
+	err := utils.ApplyProject(projectStruct)
 	if err != nil {
-		return diag.FromErr(errors.Wrap(err,
-			fmt.Sprintf("failed to %s project %s", howFail,
-				projectId)))
+		return diag.FromErr(errors.Wrapf(err,
+			"failed to %s project %s", howFail,
+			projectId))
 	}
 
 	return resourceProjectRead(ctx, d, nil)
@@ -199,11 +197,7 @@ func resourceProjectRead(ctx context.Context, d *schema.ResourceData, m interfac
 		"project": projectId,
 	})
 
-	if projectId == "" {
-		return diag.FromErr(errors.New("project name"))
-	}
-
-	projectStruct, err := project.GetProjectByName(projectId)
+	projectStruct, err := utils.GetProjectByName(projectId)
 	if projectStruct == nil {
 		// error should be "no rows in result set" but add it to TRACE in case it isn't.
 		tflog.Trace(ctx, fmt.Sprintf("error retrieving project info: %s", err))
@@ -228,10 +222,10 @@ func resourceProjectImport(ctx context.Context, d *schema.ResourceData, m interf
 		"project": projectId,
 	})
 
-	projectStruct, err := project.GetProjectByName(projectId)
+	projectStruct, err := utils.GetProjectByName(projectId)
 	// unlike others, fail and stop the import if we fail to get project info
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("project %s does not exist", projectId))
+		return nil, errors.Wrapf(err, "project %s does not exist", projectId)
 	}
 
 	utils.BuildResourceFromProjectStruct(projectStruct, d)
@@ -260,19 +254,12 @@ func resourceProjectDelete(ctx context.Context, d *schema.ResourceData, m interf
 	})
 
 	// verify project exists before attempting delete
-	projectStruct, _ := project.GetProjectByName(projectId)
+	projectStruct, _ := utils.GetProjectByName(projectId)
 	if projectStruct != nil {
-		// make sure the project is empty before allowing its deletion.
-		clusters, _ := cluster.ListAllClusters(projectId)
-		if len(clusters) > 0 {
-			return diag.FromErr(fmt.Errorf("project %s not empty. Remove all clusters before attempting deletion",
-				projectId))
-		}
-
-		err := project.DeleteProject(projectId)
+		err := utils.DeleteProject(projectId)
 		if err != nil {
-			return diag.FromErr(errors.Wrap(err, fmt.Sprintf("failed to delete project %s",
-				projectId)))
+			return diag.FromErr(errors.Wrapf(err, "failed to delete project %s",
+				projectId))
 		}
 
 	}

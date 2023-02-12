@@ -9,8 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
-	"github.com/paralus/cli/pkg/cluster"
-	"github.com/paralus/cli/pkg/project"
 )
 
 // Test missing project name
@@ -149,12 +147,12 @@ func testAccCheckProjectResourceDestroy(t *testing.T) func(s *terraform.State) e
 
 			projectStr := rs.Primary.Attributes["name"]
 
-			_, err := project.GetProjectByName(projectStr)
+			_, err := utils.GetProjectByName(projectStr)
 
 			if err == nil {
-				clusters, _ := cluster.ListAllClusters(projectStr)
+				clusters, _ := utils.ListAllClusters(projectStr)
 				if len(clusters) == 0 {
-					project.DeleteProject(projectStr)
+					utils.DeleteProject(projectStr)
 				}
 			}
 		}
@@ -180,7 +178,7 @@ func testAccCheckResourceProjectExists(resourceName string) func(s *terraform.St
 
 		projectStr := rs.Primary.Attributes["name"]
 
-		_, err := project.GetProjectByName(projectStr)
+		_, err := utils.GetProjectByName(projectStr)
 
 		if err != nil {
 			return err
@@ -770,7 +768,7 @@ func testAccCheckResourceProjectProjectRoleMap(resourceName string, projectRoles
 
 		projectStr := rs.Primary.Attributes["name"]
 
-		projectStruct, err := project.GetProjectByName(projectStr)
+		projectStruct, err := utils.GetProjectByName(projectStr)
 
 		if err != nil {
 			return err
@@ -791,7 +789,7 @@ func testAccCheckResourceProjectUserRoleMap(resourceName string, userRoles map[s
 
 		projectStr := rs.Primary.Attributes["name"]
 
-		projectStruct, err := project.GetProjectByName(projectStr)
+		projectStruct, err := utils.GetProjectByName(projectStr)
 
 		if err != nil {
 			return err

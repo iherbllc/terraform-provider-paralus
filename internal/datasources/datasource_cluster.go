@@ -7,7 +7,6 @@ import (
 
 	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
 
-	"github.com/paralus/cli/pkg/cluster"
 	"github.com/paralus/cli/pkg/config"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -151,16 +150,15 @@ func datasourceClusterRead(ctx context.Context, d *schema.ResourceData, m interf
 
 	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(config.GetConfig())))
 
-	clusterStruct, err := cluster.GetCluster(clusterId, projectId)
+	clusterStruct, err := utils.GetCluster(clusterId, projectId)
 
 	if err != nil {
 		d.SetId("")
-		return diag.FromErr(errors.Wrap(err, fmt.Sprintf("error locating cluster %s in project %s",
-			clusterId, projectId)))
+		return diag.FromErr(errors.Wrapf(err, "error locating cluster %s in project %s",
+			clusterId, projectId))
 	}
 
 	utils.BuildResourceFromClusterStruct(clusterStruct, d)
-
 	err = utils.SetBootstrapFileAndRelays(ctx, d)
 	if err != nil {
 		return diag.FromErr(err)

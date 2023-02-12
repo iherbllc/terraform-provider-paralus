@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/paralus/cli/pkg/config"
-	"github.com/paralus/cli/pkg/project"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -109,10 +108,10 @@ func datasourceProjectRead(ctx context.Context, d *schema.ResourceData, m interf
 	})
 
 	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(config.GetConfig())))
-	project, err := project.GetProjectByName(projectId)
+	project, err := utils.GetProjectByName(projectId)
 	if err != nil {
-		return diag.FromErr(errors.Wrap(err, fmt.Sprintf("error locating project %s",
-			projectId)))
+		return diag.FromErr(errors.Wrapf(err, "error locating project %s",
+			projectId))
 	}
 
 	utils.BuildResourceFromProjectStruct(project, d)

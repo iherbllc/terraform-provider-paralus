@@ -8,7 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/paralus/cli/pkg/group"
+	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
 )
 
 // Test group not found
@@ -70,7 +70,7 @@ func testAccCheckDataSourceGroupExists(resourceName string) func(s *terraform.St
 
 		groupStr := rs.Primary.Attributes["name"]
 
-		_, err := group.GetGroupByName(groupStr)
+		_, err := utils.GetGroupByName(groupStr)
 
 		if err != nil {
 			return err

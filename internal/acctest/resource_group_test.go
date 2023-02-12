@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
-	"github.com/paralus/cli/pkg/group"
 )
 
 // Test missing group name
@@ -82,7 +81,7 @@ func TestAccParalusResourceGroupBadOrg_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccGroupResourceConfigBadOrg(),
-				ExpectError: regexp.MustCompile(".*could not complete operation.*"),
+				ExpectError: regexp.MustCompile(".*not authorized to perform action.*"),
 			},
 		},
 	})
@@ -149,10 +148,10 @@ func testAccCheckGroupResourceDestroy(t *testing.T) func(s *terraform.State) err
 
 			groupStr := rs.Primary.Attributes["name"]
 
-			_, err := group.GetGroupByName(groupStr)
+			_, err := utils.GetGroupByName(groupStr)
 
 			if err == nil {
-				group.DeleteGroup(groupStr)
+				utils.DeleteGroup(groupStr)
 			}
 		}
 
@@ -177,7 +176,7 @@ func testAccCheckResourceGroupExists(resourceName string) func(s *terraform.Stat
 
 		groupStr := rs.Primary.Attributes["name"]
 
-		group, err := group.GetGroupByName(groupStr)
+		group, err := utils.GetGroupByName(groupStr)
 
 		if err != nil {
 			return err
@@ -255,7 +254,7 @@ func testAccCheckResourceGroupProjectRoleMap(resourceName string, projectRoles m
 
 		groupStr := rs.Primary.Attributes["name"]
 
-		group, err := group.GetGroupByName(groupStr)
+		group, err := utils.GetGroupByName(groupStr)
 
 		if err != nil {
 			return err
@@ -463,7 +462,7 @@ func testAccCheckResourceGroupCheckUserList(resourceName string, user string) fu
 
 		groupStr := rs.Primary.Attributes["name"]
 
-		group, err := group.GetGroupByName(groupStr)
+		group, err := utils.GetGroupByName(groupStr)
 
 		if err != nil {
 			return err

@@ -8,7 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/paralus/cli/pkg/cluster"
+	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
 )
 
 // Test missing cluster name
@@ -97,6 +97,7 @@ func testAccClusterResourceConfiEmptyProject() string {
 			provider = paralus.project_empty_name
 			name = "test"
 			project = ""
+			cluster_type = "imported"
 		}
 	`, providerConfig)
 }
@@ -128,6 +129,7 @@ func testAccClusterResourceConfigEmptyCluster() string {
 			provider = paralus.cluster_empty_name
 			name = ""
 			project = "test"
+			cluster_type = "imported"
 		}
 	`, providerConfig)
 }
@@ -147,13 +149,13 @@ func TestAccParalusResourceProjectCluster_full(t *testing.T) {
 				Config: testAccProviderValidResource(`
 				resource "paralus_project" "testproject" {
 					provider = paralus.valid_resource
-					name = "projectresource"
+					name = "projectresource3"
 					description = "from acct test"
 				}
 		
 				resource "paralus_cluster" "testcluster" {
 					provider = paralus.valid_resource
-					name = "clusterresource"
+					name = "clusterresource3"
 					project = paralus_project.testproject.name
 					cluster_type = "imported"
 					params {
@@ -171,7 +173,7 @@ func TestAccParalusResourceProjectCluster_full(t *testing.T) {
 					testAccCheckResourceClusterTypeAttribute(clusterRsName, "imported"),
 					testAccCheckResourceAttributeSet(clusterRsName, "relays"),
 					resource.TestCheckResourceAttr(projectRsName, "description", "from acct test"),
-					resource.TestCheckResourceAttr(clusterRsName, "project", "projectresource"),
+					resource.TestCheckResourceAttr(clusterRsName, "project", "projectresource3"),
 					resource.TestCheckTypeSetElemAttr(clusterRsName, "bootstrap_files.*", "12"),
 				),
 			},
@@ -184,6 +186,27 @@ func TestAccParalusResourceProjectCluster_full(t *testing.T) {
 				ResourceName:      projectRsName,
 				ImportState:       true,
 				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+// Test unknown project
+func TestAccParalusResourceCluster_MissingClusterType(t *testing.T) {
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccConfigPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckClusterResourceDestroy(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderValidResource(`
+				resource "paralus_cluster" "test" {
+					provider = paralus.valid_resource
+					name = "test"
+					project = "acctest-donotdelete"
+				}`),
+				ExpectError: regexp.MustCompile(".*argument \"cluster_type\" is required.*"),
 			},
 		},
 	})
@@ -361,10 +384,10 @@ func testAccCheckClusterResourceDestroy(t *testing.T) func(s *terraform.State) e
 			project := rs.Primary.Attributes["project"]
 			clusterName := rs.Primary.Attributes["name"]
 
-			_, err := cluster.GetCluster(clusterName, project)
+			_, err := utils.GetCluster(clusterName, project)
 
 			if err == nil {
-				cluster.DeleteCluster(clusterName, project)
+				utils.DeleteCluster(clusterName, project)
 			}
 		}
 
@@ -390,7 +413,7 @@ func testAccCheckResourceClusterExists(resourceName string) func(s *terraform.St
 		project := rs.Primary.Attributes["project"]
 		clusterName := rs.Primary.Attributes["name"]
 
-		_, err := cluster.GetCluster(clusterName, project)
+		_, err := utils.GetCluster(clusterName, project)
 
 		if err != nil {
 			return err

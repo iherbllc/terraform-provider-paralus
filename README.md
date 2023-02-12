@@ -13,6 +13,12 @@ See [docs](/docs) page for a full explanation of the various datasource/resource
 
 ## Acceptance Tests
 
+### Pre-requisites
+
+In order to run the tests, you will need a functioning paralus environment. You can either use one existing, or install the development environment outlined [here](https://github.com/paralus/paralus/blob/main/CONTRIBUTING.md) and [here](https://github.com/paralus/dashboard/blob/v0.1.6/CONTRIBUTING.md), for the paralus server and dashboard respectively.
+
+### Running the tests
+
 Acceptance tests (deployed under the /internal/acctest directory) can be run one of two ways.
 
 *Note:* Some of the tests require certain items already be setup. These are as follows:
@@ -29,8 +35,8 @@ Acceptance tests (deployed under the /internal/acctest directory) can be run one
         - first name: acctest
         - last name: user
 - New User:
-        - name: acctest-user@example.com
-        - first name: acctest
+        - name: acctest2-user@example.com
+        - first name: acctest2
         - last name: user
 - New Group:
         - name: acctest-group
@@ -83,7 +89,7 @@ If you wish to run a specific acceptance test, do the following:
 To run all acceptance tests, use the make command by doing the following:
 
 1. Download the config.json from Paralus UI. See [CLI](https://www.paralus.io/docs/usage/cli)
-2. Put the json into the same directory as the make file
+2. Put the json into the same directory as the make file. Make sure to name it `config.json` or update the name in the makefile
 3. Run the command `make testacc`
 
 Note: This will run all acceptance tests in the `internal/acctest` directory
