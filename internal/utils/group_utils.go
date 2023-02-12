@@ -91,8 +91,8 @@ func CheckGroupsFromPNRStructExist(pnrStruct []*groupv3.ProjectNamespaceRole) di
 				if *groupName == "" {
 					return diag.FromErr(errors.New("group name cannot be empty"))
 				}
-				groupStruct, _ := GetGroupByName(*groupName)
-				if groupStruct == nil {
+				_, err := GetGroupByName(*groupName)
+				if err == ErrResourceNotExists {
 					return diag.FromErr(fmt.Errorf("group '%s' does not exist", *groupName))
 				}
 
@@ -123,7 +123,7 @@ func GetGroupByName(groupName string) (*groupv3.Group, error) {
 // Apply group takes the group details and sends it to the core
 func ApplyGroup(grp *groupv3.Group) error {
 	cfg := config.GetConfig()
-	grpExisting, _ := GetGroupByName(grp.Metadata.Name)
+	grpExisting, err := GetGroupByName(grp.Metadata.Name)
 	if grpExisting != nil {
 		tflog.Debug(context.Background(), fmt.Sprintf("updating group: %s", grp.Metadata.Name))
 		uri := fmt.Sprintf("/auth/v3/partner/%s/organization/%s/group/%s", cfg.Partner, cfg.Organization, grp.Metadata.Name)
@@ -132,6 +132,11 @@ func ApplyGroup(grp *groupv3.Group) error {
 			return err
 		}
 	} else {
+
+		if err != ErrResourceNotExists {
+			return err
+		}
+
 		tflog.Debug(context.Background(), fmt.Sprintf("creating group: %s", grp.Metadata.Name))
 		uri := fmt.Sprintf("/auth/v3/partner/%s/organization/%s/groups", cfg.Partner, cfg.Organization)
 		_, err := makeRestCall(uri, "POST", grp)

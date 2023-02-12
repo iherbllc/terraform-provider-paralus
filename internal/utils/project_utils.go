@@ -128,8 +128,8 @@ func CheckProjectsFromPNRStructExist(pnrStruct []*userv3.ProjectNamespaceRole) d
 					}
 					continue
 				}
-				projectStruct, _ := GetProjectByName(*projectName)
-				if projectStruct == nil {
+				_, err := GetProjectByName(*projectName)
+				if err == ErrResourceNotExists {
 					return diag.FromErr(fmt.Errorf("project '%s' does not exist", *projectName))
 				}
 
@@ -176,7 +176,7 @@ func GetProjectByName(projectName string) (*systemv3.Project, error) {
 // Apply project takes the project details and sends it to the core
 func ApplyProject(proj *systemv3.Project) error {
 	cfg := config.GetConfig()
-	projExisting, _ := GetProjectByName(proj.Metadata.Name)
+	projExisting, err := GetProjectByName(proj.Metadata.Name)
 	if projExisting != nil {
 		tflog.Debug(context.Background(), fmt.Sprintf("updating project: %s", proj.Metadata.Name))
 		uri := fmt.Sprintf("/auth/v3/partner/%s/organization/%s/project/%s", cfg.Partner, cfg.Organization, proj.Metadata.Name)
@@ -185,6 +185,9 @@ func ApplyProject(proj *systemv3.Project) error {
 			return err
 		}
 	} else {
+		if err != ErrResourceNotExists {
+			return err
+		}
 		tflog.Debug(context.Background(), fmt.Sprintf("creating project: %s", proj.Metadata.Name))
 		uri := fmt.Sprintf("/auth/v3/partner/%s/organization/%s/project", cfg.Partner, cfg.Organization)
 		_, err := makeRestCall(uri, "POST", proj)
@@ -211,12 +214,16 @@ func DeleteProject(project string) error {
 
 	for {
 		// Before delete, let's make sure the project is empty
-		clusters, _ := ListAllClusters(project)
-		if len(clusters) == 0 {
+		clusters, err := ListAllClusters(project)
+		if len(clusters) == 0 || err == ErrResourceNotExists {
 			uri := fmt.Sprintf("/auth/v3/partner/%s/organization/%s/project/%s", cfg.Partner, cfg.Organization, project)
 			_, err := makeRestCall(uri, "DELETE", nil)
 			return err
 		}
+		if err != ErrResourceNotExists {
+			return err
+		}
+
 		d := b.Duration()
 		if d >= b.Max {
 			break

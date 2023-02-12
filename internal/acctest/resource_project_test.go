@@ -150,8 +150,8 @@ func testAccCheckProjectResourceDestroy(t *testing.T) func(s *terraform.State) e
 			_, err := utils.GetProjectByName(projectStr)
 
 			if err == nil {
-				clusters, _ := utils.ListAllClusters(projectStr)
-				if len(clusters) == 0 {
+				clusters, err := utils.ListAllClusters(projectStr)
+				if len(clusters) == 0 || err == utils.ErrResourceNotExists {
 					utils.DeleteProject(projectStr)
 				}
 			}

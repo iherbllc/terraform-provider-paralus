@@ -60,6 +60,13 @@ func AssertStringNotEmpty(message, str string) diag.Diagnostics {
 	}
 }
 
+// error types
+var (
+	ErrResourceNotExists   = errors.New("resource does not exist")
+	ErrOperationNotAllowed = errors.New("operation not allowed")
+	ErrInvalidCredentials  = errors.New("invalid credentials")
+)
+
 // Makes the desired REST call
 func makeRestCall(uri string, method string, payload interface{}) (string, error) {
 	auth := config.GetConfig().GetAppAuthProfile()
@@ -106,6 +113,23 @@ func makeRestCall(uri string, method string, payload interface{}) (string, error
 	respBody := resp.Body()
 	fasthttp.ReleaseResponse(resp)
 	if statusCode != http.StatusOK {
+		// check if error type is permission issue
+		if strings.Contains(string(respBody), "no or invalid credentials") {
+			return "", ErrInvalidCredentials
+		}
+		// check if error type is resource not found
+		if strings.Contains(string(respBody), "no rows in result set") {
+			return "", ErrResourceNotExists
+		}
+		// check if error type is permission issue
+		if strings.Contains(string(respBody), "method or route not allowed") {
+			return "", ErrOperationNotAllowed
+		}
+		// check if error type is permission issue
+		if strings.Contains(string(respBody), "You do not have enough privileges") {
+			return "", ErrOperationNotAllowed
+		}
+
 		if string(respBody) == "" {
 			return "", fmt.Errorf("invalid HTTP response code: %d", statusCode)
 		}

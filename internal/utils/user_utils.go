@@ -14,8 +14,8 @@ func CheckUsersExist(users []string) diag.Diagnostics {
 	var diags diag.Diagnostics
 	if len(users) > 0 {
 		for _, usr := range users {
-			userStruct, _ := GetUserByName(usr)
-			if userStruct == nil {
+			_, err := GetUserByName(usr)
+			if err == ErrResourceNotExists {
 				return diag.FromErr(fmt.Errorf("user '%s' does not exist", usr))
 			}
 		}
@@ -28,8 +28,8 @@ func CheckUserRoleUsersExist(userRoles []*userv3.UserRole) diag.Diagnostics {
 	var diags diag.Diagnostics
 	if len(userRoles) > 0 {
 		for _, userRole := range userRoles {
-			userStruct, _ := GetUserByName(userRole.User)
-			if userStruct == nil {
+			_, err := GetUserByName(userRole.User)
+			if err == ErrResourceNotExists {
 				return diag.FromErr(fmt.Errorf("user '%s' does not exist", userRole.User))
 			}
 		}

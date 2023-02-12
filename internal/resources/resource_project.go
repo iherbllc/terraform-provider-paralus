@@ -254,14 +254,16 @@ func resourceProjectDelete(ctx context.Context, d *schema.ResourceData, m interf
 	})
 
 	// verify project exists before attempting delete
-	projectStruct, _ := utils.GetProjectByName(projectId)
-	if projectStruct != nil {
-		err := utils.DeleteProject(projectId)
-		if err != nil {
-			return diag.FromErr(errors.Wrapf(err, "failed to delete project %s",
-				projectId))
-		}
+	_, err := utils.GetProjectByName(projectId)
+	if err != utils.ErrResourceNotExists {
+		return diag.FromErr(errors.Wrapf(err, "failed to retrieve project %s",
+			projectId))
+	}
 
+	err = utils.DeleteProject(projectId)
+	if err != nil {
+		return diag.FromErr(errors.Wrapf(err, "failed to delete project %s",
+			projectId))
 	}
 
 	d.SetId("")

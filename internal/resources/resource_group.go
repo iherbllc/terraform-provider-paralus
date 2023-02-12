@@ -229,14 +229,16 @@ func resourceGroupDelete(ctx context.Context, d *schema.ResourceData, m interfac
 	})
 
 	// verify group exists before attempting delete
-	groupStruct, _ := utils.GetGroupByName(groupId)
-	if groupStruct != nil {
+	_, err := utils.GetGroupByName(groupId)
+	if err != utils.ErrResourceNotExists {
+		return diag.FromErr(errors.Wrapf(err, "failed to retrieve group %s",
+			groupId))
+	}
 
-		err := utils.DeleteGroup(groupId)
-		if err != nil {
-			return diag.FromErr(errors.Wrapf(err, "failed to delete group %s",
-				groupId))
-		}
+	err = utils.DeleteGroup(groupId)
+	if err != nil {
+		return diag.FromErr(errors.Wrapf(err, "failed to delete group %s",
+			groupId))
 	}
 
 	d.SetId("")
