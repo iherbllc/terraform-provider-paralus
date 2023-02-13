@@ -207,15 +207,17 @@ func createOrUpdateCluster(ctx context.Context, d *schema.ResourceData, requestT
 	})
 
 	if requestType == "POST" {
-		// due to error swallowing, have to make sure the cluster doesn't exist before
-		// attempting to create it.
-		lookupStruct, _ := utils.GetCluster(clusterId, projectId)
+		lookupStruct, err := utils.GetCluster(clusterId, projectId)
 		if lookupStruct != nil {
+			return diag.FromErr(errors.Errorf("cluster %s in project %s already exists", clusterId, projectId))
+		}
+		if err != nil && err != utils.ErrResourceNotExists {
 			return diag.FromErr(errors.Wrapf(err,
-				"cluster %s already exists", clusterId))
+				"failed to get cluster %s in project %s",
+				clusterId, projectId))
 		}
 
-		err := utils.CreateCluster(clusterStruct)
+		err = utils.CreateCluster(clusterStruct)
 		if err != nil {
 			return diag.FromErr(errors.Wrapf(err,
 				"failed to %s cluster %s in project %s", howFail,
@@ -265,9 +267,12 @@ func resourceClusterRead(ctx context.Context, d *schema.ResourceData, m interfac
 	tflog.Trace(ctx, fmt.Sprintf("ClusterStruct from GetCluster: %v", clusterStruct))
 	tflog.Trace(ctx, fmt.Sprintf("Error from GetCluster: %s", err))
 
-	if clusterStruct == nil {
+	if err == utils.ErrResourceNotExists {
 		d.SetId("")
 		return diags
+	}
+	if err != nil {
+		return diag.FromErr(errors.Wrapf(err, "Error retrieving info for cluster %s in project %s", clusterId, projectId))
 	}
 
 	// Update resource information from created/updated cluster
@@ -344,14 +349,17 @@ func resourceClusterDelete(ctx context.Context, d *schema.ResourceData, m interf
 		"project": projectId,
 	})
 
-	clusterStruct, _ := utils.GetCluster(clusterId, projectId)
-	if clusterStruct != nil {
-		err := utils.DeleteCluster(clusterId, projectId)
+	_, err := utils.GetCluster(clusterId, projectId)
+	if err != nil && err != utils.ErrResourceNotExists {
+		return diag.FromErr(errors.Wrapf(err, "failed to get cluster %s in project %s",
+			clusterId, projectId))
+	}
 
-		if err != nil {
-			return diag.FromErr(errors.Wrapf(err, "failed to delete cluster %s in project %s",
-				clusterId, projectId))
-		}
+	err = utils.DeleteCluster(clusterId, projectId)
+
+	if err != nil {
+		return diag.FromErr(errors.Wrapf(err, "failed to delete cluster %s in project %s",
+			clusterId, projectId))
 	}
 
 	d.SetId("")

@@ -225,7 +225,7 @@ func GetCluster(name, project string) (*infrav3.Cluster, error) {
 	uri := fmt.Sprintf("/infra/v3/project/%s/cluster/%s", project, name)
 	resp, err := makeRestCall(uri, "GET", nil)
 	if err != nil {
-		return nil, fmt.Errorf("error fetching cluster details: %s", err)
+		return nil, err
 	}
 	var cluster infrav3.Cluster
 	if err := json.Unmarshal([]byte(resp), &cluster); err != nil {
@@ -238,6 +238,11 @@ func GetCluster(name, project string) (*infrav3.Cluster, error) {
 func DeleteCluster(name, project string) error {
 	// get cluster
 	_, err := GetCluster(name, project)
+
+	if err == ErrResourceNotExists {
+		return nil
+	}
+
 	if err != nil {
 		return err
 	}

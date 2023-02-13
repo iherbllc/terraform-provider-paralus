@@ -116,7 +116,7 @@ func TestAccParalusResourceProject_basic(t *testing.T) {
 				Config: testAccProviderValidResource(`
 				resource "paralus_project" "test" {
 					provider = paralus.valid_resource
-					name = "test"
+					name = "pb-test"
 					description = "test project"
 				}`),
 				Check: resource.ComposeTestCheckFunc(
@@ -149,11 +149,8 @@ func testAccCheckProjectResourceDestroy(t *testing.T) func(s *terraform.State) e
 
 			_, err := utils.GetProjectByName(projectStr)
 
-			if err == nil {
-				clusters, _ := utils.ListAllClusters(projectStr)
-				if len(clusters) == 0 {
-					utils.DeleteProject(projectStr)
-				}
+			if err == nil || err != utils.ErrResourceNotExists {
+				return fmt.Errorf("project %s still exists", projectStr)
 			}
 		}
 
@@ -216,7 +213,7 @@ func TestAccParalusResourceProject_AddNonExistingUser(t *testing.T) {
 				Config: testAccProviderValidResource(`
 				resource "paralus_project" "test" {
 					provider = paralus.valid_resource
-					name = "test1"
+					name = "paneu-test1"
 					description = "test 1 group"
 					user_roles {
 						user = "nobody@here.com"
@@ -240,7 +237,7 @@ func TestAccParalusResourceProject_GroupNameEmpty(t *testing.T) {
 				Config: testAccProviderValidResource(`
 				resource "paralus_project" "test" {
 					provider = paralus.valid_resource
-					name = "test1"
+					name = "pgne-test1"
 					description = "test 1 group"
 					project_roles {
 						group = ""
@@ -264,7 +261,7 @@ func TestAccParalusResourceProject_AddNonExistingGroup(t *testing.T) {
 				Config: testAccProviderValidResource(`
 				resource "paralus_project" "test" {
 					provider = paralus.valid_resource
-					name = "test1"
+					name = "paneg-test1"
 					description = "test 1 group"
 					project_roles {
 						group = "does not exist"
@@ -293,13 +290,13 @@ func TestAccParalusResourceProject_AddToGroup(t *testing.T) {
 				Config: testAccProviderValidResource(`
 				resource "paralus_group" "test" {
 					provider = paralus.valid_resource
-					name = "test"
+					name = "pa2g-test"
 					description = "test group"
 				}
 
 				resource "paralus_project" "add_to_group" {
 					provider = paralus.valid_resource
-					name = "test"
+					name = "pa2g-test"
 					description = "test project"
 					project_roles {
 						role = "PROJECT_READ_ONLY"
@@ -316,11 +313,11 @@ func TestAccParalusResourceProject_AddToGroup(t *testing.T) {
 					testAccCheckResourceProjectProjectRoleMap(projectRsName, map[string]string{"role": "PROJECT_READ_ONLY"}),
 					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{
 						"role":    "PROJECT_READ_ONLY",
-						"group":   "test",
-						"project": "test",
+						"group":   "pa2g-test",
+						"project": "pa2g-test",
 					}),
-					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"group": "test"}),
-					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"project": "test"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"group": "pa2g-test"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"project": "pa2g-test"}),
 				),
 			},
 			{
@@ -355,19 +352,19 @@ func TestAccParalusResourceProject_Add2GroupsNamespaceAndProjectRoles(t *testing
 				Config: testAccProviderValidResource(`
 				resource "paralus_group" "test1" {
 					provider = paralus.valid_resource
-					name = "test1"
+					name = "pa2gnapr-test1"
 					description = "test 1 group"
 				}
 
 				resource "paralus_group" "test2" {
 					provider = paralus.valid_resource
-					name = "test2"
+					name = "pa2gnapr-test2"
 					description = "test 2 group"
 				}
 
 				resource "paralus_project" "add_to_group" {
 					provider = paralus.valid_resource
-					name = "test"
+					name = "pa2gnaprp-test"
 					description = "test project"
 					project_roles {
 						role = "NAMESPACE_READ_ONLY"
@@ -383,21 +380,21 @@ func TestAccParalusResourceProject_Add2GroupsNamespaceAndProjectRoles(t *testing
 					testAccCheckResourceProjectExists(projectRsName),
 					testAccCheckResourceProjectTypeAttribute(projectRsName, "test project"),
 					resource.TestCheckResourceAttr(projectRsName, "description", "test project"),
-					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"project": "test"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"project": "pa2gnaprp-test"}),
 					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"role": "NAMESPACE_READ_ONLY"}),
 					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"namespace": "platform"}),
-					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"group": "test1"}),
-					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"project": "test"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"group": "pa2gnapr-test1"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"project": "pa2gnaprp-test"}),
 					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"role": "PROJECT_ADMIN"}),
-					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"group": "test2"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"group": "pa2gnapr-test2"}),
 
 					testAccCheckResourceGroupExists(groupRsName1),
 					testAccCheckResourceGroupTypeAttribute(groupRsName1, "test 1 group"),
 					resource.TestCheckResourceAttr(groupRsName1, "description", "test 1 group"),
 					testAccCheckResourceGroupProjectRoleMap(groupRsName1, map[string]string{
 						"role":      "NAMESPACE_READ_ONLY",
-						"group":     "test1",
-						"project":   "test",
+						"group":     "pa2gnapr-test1",
+						"project":   "pa2gnaprp-test",
 						"namespace": "platform",
 					}),
 
@@ -406,8 +403,8 @@ func TestAccParalusResourceProject_Add2GroupsNamespaceAndProjectRoles(t *testing
 					resource.TestCheckResourceAttr(groupRsName2, "description", "test 2 group"),
 					testAccCheckResourceGroupProjectRoleMap(groupRsName2, map[string]string{
 						"role":    "PROJECT_ADMIN",
-						"group":   "test2",
-						"project": "test",
+						"group":   "pa2gnapr-test2",
+						"project": "pa2gnaprp-test",
 					}),
 				),
 			},
@@ -448,19 +445,19 @@ func TestAccParalusResourceProject_Add2GroupsDifferentNamespaceRoles(t *testing.
 				Config: testAccProviderValidResource(`
 				resource "paralus_group" "test1" {
 					provider = paralus.valid_resource
-					name = "test1"
+					name = "pa2gdnr-test1"
 					description = "test 1 group"
 				}
 
 				resource "paralus_group" "test2" {
 					provider = paralus.valid_resource
-					name = "test2"
+					name = "pa2gdnr-test2"
 					description = "test 2 group"
 				}
 
 				resource "paralus_project" "add_to_group" {
 					provider = paralus.valid_resource
-					name = "test"
+					name = "pa2gdnrp-test"
 					description = "test project"
 					project_roles {
 						role = "NAMESPACE_READ_ONLY"
@@ -477,22 +474,22 @@ func TestAccParalusResourceProject_Add2GroupsDifferentNamespaceRoles(t *testing.
 					testAccCheckResourceProjectExists(projectRsName),
 					testAccCheckResourceProjectTypeAttribute(projectRsName, "test project"),
 					resource.TestCheckResourceAttr(projectRsName, "description", "test project"),
-					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"project": "test"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"project": "pa2gdnrp-test"}),
 					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"role": "NAMESPACE_READ_ONLY"}),
 					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"namespace": "platform"}),
-					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"group": "test1"}),
-					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"project": "test"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"group": "pa2gdnr-test1"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"project": "pa2gdnrp-test"}),
 					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"role": "NAMESPACE_ADMIN"}),
 					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"namespace": "platform"}),
-					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"group": "test2"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"group": "pa2gdnr-test2"}),
 
 					testAccCheckResourceGroupExists(groupRsName1),
 					testAccCheckResourceGroupTypeAttribute(groupRsName1, "test 1 group"),
 					resource.TestCheckResourceAttr(groupRsName1, "description", "test 1 group"),
 					testAccCheckResourceGroupProjectRoleMap(groupRsName1, map[string]string{
 						"role":      "NAMESPACE_READ_ONLY",
-						"group":     "test1",
-						"project":   "test",
+						"group":     "pa2gdnr-test1",
+						"project":   "pa2gdnrp-test",
 						"namespace": "platform",
 					}),
 
@@ -501,8 +498,8 @@ func TestAccParalusResourceProject_Add2GroupsDifferentNamespaceRoles(t *testing.
 					resource.TestCheckResourceAttr(groupRsName2, "description", "test 2 group"),
 					testAccCheckResourceGroupProjectRoleMap(groupRsName2, map[string]string{
 						"role":      "NAMESPACE_ADMIN",
-						"group":     "test2",
-						"project":   "test",
+						"group":     "pa2gdnr-test2",
+						"project":   "pa2gdnrp-test",
 						"namespace": "platform",
 					}),
 				),
@@ -544,19 +541,19 @@ func TestAccParalusResourceProject_Add2GroupsDifferentProjectRoles(t *testing.T)
 				Config: testAccProviderValidResource(`
 				resource "paralus_group" "test1" {
 					provider = paralus.valid_resource
-					name = "test1"
+					name = "pa2gdpr-test1"
 					description = "test 1 group"
 				}
 
 				resource "paralus_group" "test2" {
 					provider = paralus.valid_resource
-					name = "test2"
+					name = "pa2gdpr-test2"
 					description = "test 2 group"
 				}
 
 				resource "paralus_project" "add_to_group" {
 					provider = paralus.valid_resource
-					name = "test"
+					name = "pa2gdprp-test"
 					description = "test project"
 					project_roles {
 						role = "PROJECT_READ_ONLY"
@@ -571,20 +568,20 @@ func TestAccParalusResourceProject_Add2GroupsDifferentProjectRoles(t *testing.T)
 					testAccCheckResourceProjectExists(projectRsName),
 					testAccCheckResourceProjectTypeAttribute(projectRsName, "test project"),
 					resource.TestCheckResourceAttr(projectRsName, "description", "test project"),
-					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"project": "test"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"project": "pa2gdprp-test"}),
 					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"role": "PROJECT_READ_ONLY"}),
-					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"group": "test1"}),
-					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"project": "test"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"group": "pa2gdpr-test1"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"project": "pa2gdprp-test"}),
 					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"role": "PROJECT_ADMIN"}),
-					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"group": "test2"}),
+					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"group": "pa2gdpr-test2"}),
 
 					testAccCheckResourceGroupExists(groupRsName1),
 					testAccCheckResourceGroupTypeAttribute(groupRsName1, "test 1 group"),
 					resource.TestCheckResourceAttr(groupRsName1, "description", "test 1 group"),
 					testAccCheckResourceGroupProjectRoleMap(groupRsName1, map[string]string{
 						"role":    "PROJECT_READ_ONLY",
-						"group":   "test1",
-						"project": "test",
+						"group":   "pa2gdpr-test1",
+						"project": "pa2gdprp-test",
 					}),
 
 					testAccCheckResourceGroupExists(groupRsName2),
@@ -592,8 +589,8 @@ func TestAccParalusResourceProject_Add2GroupsDifferentProjectRoles(t *testing.T)
 					resource.TestCheckResourceAttr(groupRsName2, "description", "test 2 group"),
 					testAccCheckResourceGroupProjectRoleMap(groupRsName2, map[string]string{
 						"role":    "PROJECT_ADMIN",
-						"group":   "test2",
-						"project": "test",
+						"group":   "pa2gdpr-test2",
+						"project": "pa2gdprp-test",
 					}),
 				),
 			},
@@ -628,19 +625,19 @@ func TestAccParalusResourceProject_Add2GroupsSameNamespaceRoles(t *testing.T) {
 				Config: testAccProviderValidResource(`
 				resource "paralus_group" "test1" {
 					provider = paralus.valid_resource
-					name = "test1"
+					name = "pa2gsnr-test1"
 					description = "test group1"
 				}
 
 				resource "paralus_group" "test2" {
 					provider = paralus.valid_resource
-					name = "test2"
+					name = "pa2gsnr-test2"
 					description = "test group2"
 				}
 
 				resource "paralus_project" "add_to_group" {
 					provider = paralus.valid_resource
-					name = "test"
+					name = "pa2gsnrp-test"
 					description = "test project"
 					project_roles {
 						namespace = "platform"
@@ -671,19 +668,19 @@ func TestAccParalusResourceProject_Add2GroupsSameProjectRoles(t *testing.T) {
 				Config: testAccProviderValidResource(`
 				resource "paralus_group" "test1" {
 					provider = paralus.valid_resource
-					name = "test1"
+					name = "pa2gspr-test1"
 					description = "test group1"
 				}
 
 				resource "paralus_group" "test2" {
 					provider = paralus.valid_resource
-					name = "test2"
+					name = "pa2gspr-test2"
 					description = "test group2"
 				}
 
 				resource "paralus_project" "add_to_group" {
 					provider = paralus.valid_resource
-					name = "test"
+					name = "pa2gsprp-test"
 					description = "test project"
 					project_roles {
 						role = "PROJECT_READ_ONLY"
@@ -716,7 +713,7 @@ func TestAccParalusResourceProject_Add2UserRoles(t *testing.T) {
 				Config: testAccProviderValidResource(`
 				resource "paralus_project" "add_to_user" {
 					provider = paralus.valid_resource
-					name = "test"
+					name = "pa2ur-test"
 					description = "test project"
 					user_roles {
 						role = "NAMESPACE_READ_ONLY"

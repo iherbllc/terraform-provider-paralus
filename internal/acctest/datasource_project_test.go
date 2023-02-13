@@ -78,7 +78,7 @@ func TestAccParalusNoProject_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccDataSourceProjectConfig("blah"),
-				ExpectError: regexp.MustCompile(".*no rows in result set.*"),
+				ExpectError: regexp.MustCompile(".*resource does not exist.*"),
 			},
 		},
 	})

@@ -198,11 +198,12 @@ func resourceProjectRead(ctx context.Context, d *schema.ResourceData, m interfac
 	})
 
 	projectStruct, err := utils.GetProjectByName(projectId)
-	if projectStruct == nil {
-		// error should be "no rows in result set" but add it to TRACE in case it isn't.
-		tflog.Trace(ctx, fmt.Sprintf("error retrieving project info: %s", err))
+	if err == utils.ErrResourceNotExists {
 		d.SetId("")
 		return diags
+	}
+	if err != nil {
+		return diag.FromErr(errors.Wrapf(err, "Error retrieving info for project %s", projectId))
 	}
 
 	// Update resource information from updated cluster
@@ -254,14 +255,16 @@ func resourceProjectDelete(ctx context.Context, d *schema.ResourceData, m interf
 	})
 
 	// verify project exists before attempting delete
-	projectStruct, _ := utils.GetProjectByName(projectId)
-	if projectStruct != nil {
-		err := utils.DeleteProject(projectId)
-		if err != nil {
-			return diag.FromErr(errors.Wrapf(err, "failed to delete project %s",
-				projectId))
-		}
+	_, err := utils.GetProjectByName(projectId)
+	if err != nil && err != utils.ErrResourceNotExists {
+		return diag.FromErr(errors.Wrapf(err, "failed to retrieve project %s",
+			projectId))
+	}
 
+	err = utils.DeleteProject(projectId)
+	if err != nil {
+		return diag.FromErr(errors.Wrapf(err, "failed to delete project %s",
+			projectId))
 	}
 
 	d.SetId("")

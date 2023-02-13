@@ -19,7 +19,7 @@ func TestAccParalusNoGroup_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccDataSourceGroupConfig("blah"),
-				ExpectError: regexp.MustCompile(".*no rows in result set.*"),
+				ExpectError: regexp.MustCompile(".*resource does not exist.*"),
 			},
 		},
 	})
