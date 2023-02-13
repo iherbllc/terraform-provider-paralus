@@ -121,7 +121,7 @@ func resourceProjectCreate(ctx context.Context, d *schema.ResourceData, m interf
 		}
 	}
 	auth := cfg.GetAppAuthProfile()
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(cfg)))
+	tflog.Debug(ctx, fmt.Sprintf("resourceProjectCreate provider config used: %s", utils.GetConfigAsMap(cfg)))
 	diags := createOrUpdateProject(ctx, d, "POST", auth)
 
 	if diags.HasError() {
@@ -145,7 +145,7 @@ func resourceProjectUpdate(ctx context.Context, d *schema.ResourceData, m interf
 		}
 	}
 	auth := cfg.GetAppAuthProfile()
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(cfg)))
+	tflog.Debug(ctx, fmt.Sprintf("resourceProjectUpdate provider config used: %s", utils.GetConfigAsMap(cfg)))
 
 	return createOrUpdateProject(ctx, d, "PUT", auth)
 }
@@ -215,7 +215,7 @@ func resourceProjectRead(ctx context.Context, d *schema.ResourceData, m interfac
 		}
 	}
 	auth := cfg.GetAppAuthProfile()
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(cfg)))
+	tflog.Debug(ctx, fmt.Sprintf("resourceProjectRead provider config used: %s", utils.GetConfigAsMap(cfg)))
 
 	projectId := d.Get("name").(string)
 
@@ -258,7 +258,7 @@ func resourceProjectImport(ctx context.Context, d *schema.ResourceData, m interf
 		}
 	}
 	auth := cfg.GetAppAuthProfile()
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(cfg)))
+	tflog.Debug(ctx, fmt.Sprintf("resourceProjectImport provider config used: %s", utils.GetConfigAsMap(cfg)))
 
 	tflog.Trace(ctx, "Retrieving project info", map[string]interface{}{
 		"project": projectId,
@@ -292,7 +292,7 @@ func resourceProjectDelete(ctx context.Context, d *schema.ResourceData, m interf
 		}
 	}
 	auth := cfg.GetAppAuthProfile()
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(cfg)))
+	tflog.Debug(ctx, fmt.Sprintf("resourceProjectDelete provider config used: %s", utils.GetConfigAsMap(cfg)))
 
 	projectId := d.Get("name").(string)
 

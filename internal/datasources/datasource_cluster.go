@@ -158,7 +158,7 @@ func datasourceClusterRead(ctx context.Context, d *schema.ResourceData, m interf
 		}
 	}
 	auth := cfg.GetAppAuthProfile()
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(cfg)))
+	tflog.Debug(ctx, fmt.Sprintf("datasourceClusterRead provider config used: %s", utils.GetConfigAsMap(cfg)))
 
 	clusterStruct, err := utils.GetCluster(clusterId, projectId, auth)
 

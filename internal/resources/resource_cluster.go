@@ -163,7 +163,7 @@ func resourceClusterCreate(ctx context.Context, d *schema.ResourceData, m interf
 		}
 	}
 	auth := cfg.GetAppAuthProfile()
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(cfg)))
+	tflog.Debug(ctx, fmt.Sprintf("resourceClusterCreate provider Config Used: %s", utils.GetConfigAsMap(cfg)))
 
 	diags := createOrUpdateCluster(ctx, d, "POST", auth)
 	if diags.HasError() {
@@ -188,7 +188,7 @@ func resourceClusterUpdate(ctx context.Context, d *schema.ResourceData, m interf
 		}
 	}
 	auth := cfg.GetAppAuthProfile()
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(cfg)))
+	tflog.Debug(ctx, fmt.Sprintf("resourceClusterUpdate provider Config Used: %s", utils.GetConfigAsMap(cfg)))
 
 	return createOrUpdateCluster(ctx, d, "PUT", auth)
 }
@@ -274,7 +274,7 @@ func resourceClusterRead(ctx context.Context, d *schema.ResourceData, m interfac
 		}
 	}
 	auth := cfg.GetAppAuthProfile()
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(cfg)))
+	tflog.Debug(ctx, fmt.Sprintf("resourceClusterRead provider Config Used: %s", utils.GetConfigAsMap(cfg)))
 
 	projectId := d.Get("project").(string)
 	clusterId := d.Get("name").(string)
@@ -330,7 +330,7 @@ func resourceClusterImport(ctx context.Context, d *schema.ResourceData, m interf
 		}
 	}
 	auth := cfg.GetAppAuthProfile()
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(cfg)))
+	tflog.Debug(ctx, fmt.Sprintf("resourceClusterImport provider Config Used: %s", utils.GetConfigAsMap(cfg)))
 
 	clusterProjectId := strings.Split(d.Id(), ":")
 
@@ -381,7 +381,7 @@ func resourceClusterDelete(ctx context.Context, d *schema.ResourceData, m interf
 		}
 	}
 	auth := cfg.GetAppAuthProfile()
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(cfg)))
+	tflog.Debug(ctx, fmt.Sprintf("resourceClusterDelete provider config used: %s", utils.GetConfigAsMap(cfg)))
 
 	projectId := d.Get("project").(string)
 	clusterId := d.Get("name").(string)

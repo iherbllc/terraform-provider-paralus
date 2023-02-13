@@ -104,7 +104,7 @@ func datasourceGroupRead(ctx context.Context, d *schema.ResourceData, m interfac
 		}
 	}
 	auth := cfg.GetAppAuthProfile()
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(cfg)))
+	tflog.Debug(ctx, fmt.Sprintf("datasourceGroupRead provider config used: %s", utils.GetConfigAsMap(cfg)))
 
 	group, err := utils.GetGroupByName(groupId, auth)
 	if err != nil {
