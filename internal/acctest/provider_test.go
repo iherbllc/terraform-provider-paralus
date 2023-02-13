@@ -160,11 +160,26 @@ func TestAccProviderAttr_setInvalidEndpoint(t *testing.T) {
 	})
 }
 
+// Test missing provider API endpoint
+func TestAccProviderAttr_setEmptyEndpoint(t *testing.T) {
+
+	resource.Test(t, resource.TestCase{
+		// PreCheck:  func() { testAccConfigPreCheck(t) },
+		Providers: testAccProviders,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccProvider_setRestEndpoint(""),
+				ExpectError: regexp.MustCompile(".*expected not empty string.*"),
+			},
+		},
+	})
+}
+
 // Test overriding config json with a bad path
 func TestAccProviderCreds_BadConfigJsonPath(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccConfigPreCheck(t) },
+		// PreCheck:  func() { testAccConfigPreCheck(t) },
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{

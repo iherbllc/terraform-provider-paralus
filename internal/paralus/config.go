@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
 	"github.com/paralus/cli/pkg/config"
 	"github.com/pkg/errors"
 )
@@ -28,7 +29,17 @@ func NewConfig(ctx context.Context, d *schema.ResourceData) (*config.Config, dia
 
 		err = config.GetConfig().MiniCheck()
 		if err != nil {
-			return nil, diag.FromErr(errors.Wrap(err, "invalid loaded config"))
+			return nil, diag.FromErr(errors.Wrap(err, fmt.Sprintf("invalid loaded config %s", configJson)))
+		}
+
+		diags = utils.AssertStringNotEmpty(fmt.Sprintf("rest endpoint from config json %s", configJson), newConfig.RESTEndpoint)
+		if diags.HasError() {
+			return nil, diags
+		}
+
+		diags = utils.AssertStringNotEmpty(fmt.Sprintf("pctl_ops_endpoint from provider input %s", configJson), newConfig.OPSEndpoint)
+		if diags.HasError() {
+			return nil, diags
 		}
 
 		return newConfig, diags
@@ -57,6 +68,15 @@ func NewConfig(ctx context.Context, d *schema.ResourceData) (*config.Config, dia
 	err := config.GetConfig().MiniCheck()
 	if err != nil {
 		return nil, diag.FromErr(errors.Wrap(err, "error assigning config values"))
+	}
+	diags = utils.AssertStringNotEmpty("pctl_rest_endpoint from provider input", newConfig.RESTEndpoint)
+	if diags.HasError() {
+		return nil, diags
+	}
+
+	diags = utils.AssertStringNotEmpty("pctl_ops_endpoint from provider input", newConfig.OPSEndpoint)
+	if diags.HasError() {
+		return nil, diags
 	}
 
 	return config.GetConfig(), diags
