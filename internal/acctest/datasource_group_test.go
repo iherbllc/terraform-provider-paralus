@@ -70,7 +70,7 @@ func testAccCheckDataSourceGroupExists(resourceName string) func(s *terraform.St
 
 		groupStr := rs.Primary.Attributes["name"]
 
-		_, err := utils.GetGroupByName(groupStr)
+		_, err := utils.GetGroupByName(groupStr, nil)
 
 		if err != nil {
 			return err

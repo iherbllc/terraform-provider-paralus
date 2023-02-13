@@ -94,8 +94,19 @@ func datasourceGroupRead(ctx context.Context, d *schema.ResourceData, m interfac
 		"group": groupId,
 	})
 
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(config.GetConfig())))
-	group, err := utils.GetGroupByName(groupId)
+	var cfg *config.Config
+	if m == nil {
+		cfg = config.GetConfig()
+	} else {
+		cfg = m.(*config.Config)
+		if cfg == nil {
+			cfg = config.GetConfig()
+		}
+	}
+	auth := cfg.GetAppAuthProfile()
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(cfg)))
+
+	group, err := utils.GetGroupByName(groupId, auth)
 	if err != nil {
 		return diag.FromErr(errors.Wrapf(err, "error locating group %s",
 			groupId))

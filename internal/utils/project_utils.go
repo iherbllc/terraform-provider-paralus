@@ -14,6 +14,7 @@ import (
 	"github.com/jpillora/backoff"
 	"github.com/pkg/errors"
 
+	"github.com/paralus/cli/pkg/authprofile"
 	"github.com/paralus/cli/pkg/config"
 	commonv3 "github.com/paralus/paralus/proto/types/commonpb/v3"
 	systemv3 "github.com/paralus/paralus/proto/types/systempb/v3"
@@ -113,7 +114,7 @@ func AssertUniqueRoles(pnrStruct []*userv3.ProjectNamespaceRole) diag.Diagnostic
 }
 
 // Check projects specified in the ProjectNamespaceRoles struct exist in Paralus
-func CheckProjectsFromPNRStructExist(pnrStruct []*userv3.ProjectNamespaceRole) diag.Diagnostics {
+func CheckProjectsFromPNRStructExist(pnrStruct []*userv3.ProjectNamespaceRole, auth *authprofile.Profile) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	if len(pnrStruct) > 0 {
@@ -128,7 +129,7 @@ func CheckProjectsFromPNRStructExist(pnrStruct []*userv3.ProjectNamespaceRole) d
 					}
 					continue
 				}
-				_, err := GetProjectByName(*projectName)
+				_, err := GetProjectByName(*projectName, auth)
 				if err == ErrResourceNotExists {
 					return diag.FromErr(fmt.Errorf("project '%s' does not exist", *projectName))
 				}
@@ -157,10 +158,10 @@ func CheckAllowEmptyProject(role string) diag.Diagnostics {
 }
 
 // Get project by name
-func GetProjectByName(projectName string) (*systemv3.Project, error) {
+func GetProjectByName(projectName string, auth *authprofile.Profile) (*systemv3.Project, error) {
 	cfg := config.GetConfig()
 	uri := fmt.Sprintf("/auth/v3/partner/%s/organization/%s/project/%s", cfg.Partner, cfg.Organization, projectName)
-	resp, err := makeRestCall(uri, "GET", nil)
+	resp, err := makeRestCall(uri, "GET", nil, auth)
 	if err != nil {
 		return nil, err
 	}
@@ -174,13 +175,13 @@ func GetProjectByName(projectName string) (*systemv3.Project, error) {
 }
 
 // Apply project takes the project details and sends it to the core
-func ApplyProject(proj *systemv3.Project) error {
+func ApplyProject(proj *systemv3.Project, auth *authprofile.Profile) error {
 	cfg := config.GetConfig()
-	projExisting, err := GetProjectByName(proj.Metadata.Name)
+	projExisting, err := GetProjectByName(proj.Metadata.Name, auth)
 	if projExisting != nil {
 		tflog.Debug(context.Background(), fmt.Sprintf("updating project: %s", proj.Metadata.Name))
 		uri := fmt.Sprintf("/auth/v3/partner/%s/organization/%s/project/%s", cfg.Partner, cfg.Organization, proj.Metadata.Name)
-		_, err := makeRestCall(uri, "PUT", proj)
+		_, err := makeRestCall(uri, "PUT", proj, auth)
 		if err != nil {
 			return err
 		}
@@ -190,7 +191,7 @@ func ApplyProject(proj *systemv3.Project) error {
 		}
 		tflog.Debug(context.Background(), fmt.Sprintf("creating project: %s", proj.Metadata.Name))
 		uri := fmt.Sprintf("/auth/v3/partner/%s/organization/%s/project", cfg.Partner, cfg.Organization)
-		_, err := makeRestCall(uri, "POST", proj)
+		_, err := makeRestCall(uri, "POST", proj, auth)
 		if err != nil {
 			return err
 		}
@@ -199,7 +200,7 @@ func ApplyProject(proj *systemv3.Project) error {
 }
 
 // Delete project
-func DeleteProject(project string) error {
+func DeleteProject(project string, auth *authprofile.Profile) error {
 	cfg := config.GetConfig()
 
 	// Need to add delay to cluster list check due to the circumstances
@@ -214,10 +215,10 @@ func DeleteProject(project string) error {
 
 	for {
 		// Before delete, let's make sure the project is empty
-		clusters, err := ListAllClusters(project)
+		clusters, err := ListAllClusters(project, auth)
 		if len(clusters) == 0 || err == ErrResourceNotExists {
 			uri := fmt.Sprintf("/auth/v3/partner/%s/organization/%s/project/%s", cfg.Partner, cfg.Organization, project)
-			_, err := makeRestCall(uri, "DELETE", nil)
+			_, err := makeRestCall(uri, "DELETE", nil, auth)
 			return err
 		}
 		if err != nil && err != ErrResourceNotExists {

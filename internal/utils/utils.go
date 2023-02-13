@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/levigross/grequests"
+	"github.com/paralus/cli/pkg/authprofile"
 	"github.com/paralus/cli/pkg/config"
 	commonv3 "github.com/paralus/paralus/proto/types/commonpb/v3"
 	"github.com/valyala/fasthttp"
@@ -68,8 +69,12 @@ var (
 )
 
 // Makes the desired REST call
-func makeRestCall(uri string, method string, payload interface{}) (string, error) {
-	auth := config.GetConfig().GetAppAuthProfile()
+func makeRestCall(uri string, method string, payload interface{}, auth *authprofile.Profile) (string, error) {
+
+	if auth == nil {
+		auth = config.GetConfig().GetAppAuthProfile()
+	}
+
 	s := getSession(auth.SkipServerCertValid)
 	sub := auth.SubProfile()
 	headers, err := sub.Auth(s)

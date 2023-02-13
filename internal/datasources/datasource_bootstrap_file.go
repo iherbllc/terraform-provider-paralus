@@ -89,16 +89,27 @@ func datasourceBootstrapFileRead(ctx context.Context, d *schema.ResourceData, m 
 		"project": projectId,
 	})
 
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(config.GetConfig())))
+	var cfg *config.Config
+	if m == nil {
+		cfg = config.GetConfig()
+	} else {
+		cfg = m.(*config.Config)
+		if cfg == nil {
+			cfg = config.GetConfig()
+		}
+	}
 
-	clusterStruct, err := utils.GetCluster(clusterId, projectId)
+	auth := cfg.GetAppAuthProfile()
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(cfg)))
+
+	clusterStruct, err := utils.GetCluster(clusterId, projectId, auth)
 
 	if err != nil {
 		d.SetId("")
 		return diag.FromErr(errors.Wrapf(err, "error locating cluster %s in project %s",
 			clusterId, projectId))
 	}
-	err = utils.SetBootstrapFileAndRelays(ctx, d)
+	err = utils.SetBootstrapFileAndRelays(ctx, d, auth)
 	if err != nil {
 		return diag.FromErr(err)
 	}
