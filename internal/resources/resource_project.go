@@ -8,6 +8,7 @@ import (
 	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
 	"github.com/pkg/errors"
 
+	"github.com/paralus/cli/pkg/authprofile"
 	"github.com/paralus/cli/pkg/config"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -110,9 +111,18 @@ func resourceProjectCreate(ctx context.Context, d *schema.ResourceData, m interf
 
 	projectId := d.Get("name").(string)
 
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(config.GetConfig())))
-
-	diags := createOrUpdateProject(ctx, d, "POST")
+	var cfg *config.Config
+	if m == nil {
+		cfg = config.GetConfig()
+	} else {
+		cfg = m.(*config.Config)
+		if cfg == nil {
+			cfg = config.GetConfig()
+		}
+	}
+	auth := cfg.GetAppAuthProfile()
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(cfg)))
+	diags := createOrUpdateProject(ctx, d, "POST", auth)
 
 	if diags.HasError() {
 		return diags
@@ -125,12 +135,23 @@ func resourceProjectCreate(ctx context.Context, d *schema.ResourceData, m interf
 
 func resourceProjectUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(config.GetConfig())))
-	return createOrUpdateProject(ctx, d, "PUT")
+	var cfg *config.Config
+	if m == nil {
+		cfg = config.GetConfig()
+	} else {
+		cfg = m.(*config.Config)
+		if cfg == nil {
+			cfg = config.GetConfig()
+		}
+	}
+	auth := cfg.GetAppAuthProfile()
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(cfg)))
+
+	return createOrUpdateProject(ctx, d, "PUT", auth)
 }
 
 // Creates a new project or updates an existing one
-func createOrUpdateProject(ctx context.Context, d *schema.ResourceData, requestType string) diag.Diagnostics {
+func createOrUpdateProject(ctx context.Context, d *schema.ResourceData, requestType string, auth *authprofile.Profile) diag.Diagnostics {
 
 	projectId := d.Get("name").(string)
 
@@ -151,13 +172,13 @@ func createOrUpdateProject(ctx context.Context, d *schema.ResourceData, requestT
 	projectStruct := utils.BuildProjectStructFromResource(d)
 
 	// before creating the project, verify that requested group exists
-	diags = utils.CheckGroupsFromPNRStructExist(projectStruct.Spec.GetProjectNamespaceRoles())
+	diags = utils.CheckGroupsFromPNRStructExist(projectStruct.Spec.GetProjectNamespaceRoles(), auth)
 	if diags.HasError() {
 		return diags
 	}
 
 	// before creating the project, verify that users in question exist
-	diags = utils.CheckUserRoleUsersExist(projectStruct.Spec.GetUserRoles())
+	diags = utils.CheckUserRoleUsersExist(projectStruct.Spec.GetUserRoles(), auth)
 	if diags.HasError() {
 		return diags
 	}
@@ -170,7 +191,7 @@ func createOrUpdateProject(ctx context.Context, d *schema.ResourceData, requestT
 		return diags
 	}
 
-	err := utils.ApplyProject(projectStruct)
+	err := utils.ApplyProject(projectStruct, auth)
 	if err != nil {
 		return diag.FromErr(errors.Wrapf(err,
 			"failed to %s project %s", howFail,
@@ -184,7 +205,17 @@ func createOrUpdateProject(ctx context.Context, d *schema.ResourceData, requestT
 func resourceProjectRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(config.GetConfig())))
+	var cfg *config.Config
+	if m == nil {
+		cfg = config.GetConfig()
+	} else {
+		cfg = m.(*config.Config)
+		if cfg == nil {
+			cfg = config.GetConfig()
+		}
+	}
+	auth := cfg.GetAppAuthProfile()
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(cfg)))
 
 	projectId := d.Get("name").(string)
 
@@ -197,7 +228,7 @@ func resourceProjectRead(ctx context.Context, d *schema.ResourceData, m interfac
 		"project": projectId,
 	})
 
-	projectStruct, err := utils.GetProjectByName(projectId)
+	projectStruct, err := utils.GetProjectByName(projectId, auth)
 	if err == utils.ErrResourceNotExists {
 		d.SetId("")
 		return diags
@@ -217,13 +248,23 @@ func resourceProjectImport(ctx context.Context, d *schema.ResourceData, m interf
 
 	projectId := d.Id()
 
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(config.GetConfig())))
+	var cfg *config.Config
+	if m == nil {
+		cfg = config.GetConfig()
+	} else {
+		cfg = m.(*config.Config)
+		if cfg == nil {
+			cfg = config.GetConfig()
+		}
+	}
+	auth := cfg.GetAppAuthProfile()
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(cfg)))
 
 	tflog.Trace(ctx, "Retrieving project info", map[string]interface{}{
 		"project": projectId,
 	})
 
-	projectStruct, err := utils.GetProjectByName(projectId)
+	projectStruct, err := utils.GetProjectByName(projectId, auth)
 	// unlike others, fail and stop the import if we fail to get project info
 	if err != nil {
 		return nil, errors.Wrapf(err, "project %s does not exist", projectId)
@@ -241,7 +282,17 @@ func resourceProjectImport(ctx context.Context, d *schema.ResourceData, m interf
 func resourceProjectDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(config.GetConfig())))
+	var cfg *config.Config
+	if m == nil {
+		cfg = config.GetConfig()
+	} else {
+		cfg = m.(*config.Config)
+		if cfg == nil {
+			cfg = config.GetConfig()
+		}
+	}
+	auth := cfg.GetAppAuthProfile()
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(cfg)))
 
 	projectId := d.Get("name").(string)
 
@@ -255,13 +306,13 @@ func resourceProjectDelete(ctx context.Context, d *schema.ResourceData, m interf
 	})
 
 	// verify project exists before attempting delete
-	_, err := utils.GetProjectByName(projectId)
+	_, err := utils.GetProjectByName(projectId, auth)
 	if err != nil && err != utils.ErrResourceNotExists {
 		return diag.FromErr(errors.Wrapf(err, "failed to retrieve project %s",
 			projectId))
 	}
 
-	err = utils.DeleteProject(projectId)
+	err = utils.DeleteProject(projectId, auth)
 	if err != nil {
 		return diag.FromErr(errors.Wrapf(err, "failed to delete project %s",
 			projectId))

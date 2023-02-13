@@ -6,15 +6,16 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/paralus/cli/pkg/authprofile"
 	userv3 "github.com/paralus/paralus/proto/types/userpb/v3"
 )
 
 // Check users from a list exist in paralus
-func CheckUsersExist(users []string) diag.Diagnostics {
+func CheckUsersExist(users []string, auth *authprofile.Profile) diag.Diagnostics {
 	var diags diag.Diagnostics
 	if len(users) > 0 {
 		for _, usr := range users {
-			_, err := GetUserByName(usr)
+			_, err := GetUserByName(usr, auth)
 			if err == ErrResourceNotExists {
 				return diag.FromErr(fmt.Errorf("user '%s' does not exist", usr))
 			}
@@ -24,11 +25,11 @@ func CheckUsersExist(users []string) diag.Diagnostics {
 }
 
 // Check users from a UserRole structs exist in paralus
-func CheckUserRoleUsersExist(userRoles []*userv3.UserRole) diag.Diagnostics {
+func CheckUserRoleUsersExist(userRoles []*userv3.UserRole, auth *authprofile.Profile) diag.Diagnostics {
 	var diags diag.Diagnostics
 	if len(userRoles) > 0 {
 		for _, userRole := range userRoles {
-			_, err := GetUserByName(userRole.User)
+			_, err := GetUserByName(userRole.User, auth)
 			if err == ErrResourceNotExists {
 				return diag.FromErr(fmt.Errorf("user '%s' does not exist", userRole.User))
 			}
@@ -38,9 +39,9 @@ func CheckUserRoleUsersExist(userRoles []*userv3.UserRole) diag.Diagnostics {
 }
 
 // Get user by name
-func GetUserByName(userName string) (*userv3.User, error) {
+func GetUserByName(userName string, auth *authprofile.Profile) (*userv3.User, error) {
 	uri := fmt.Sprintf("/auth/v3/user/%s", userName)
-	resp, err := makeRestCall(uri, "GET", nil)
+	resp, err := makeRestCall(uri, "GET", nil, auth)
 	if err != nil {
 		return nil, err
 	}

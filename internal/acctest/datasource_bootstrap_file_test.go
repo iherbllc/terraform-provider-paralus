@@ -74,7 +74,7 @@ func testAccCheckHasBootstrap(resourceName string) func(s *terraform.State) erro
 		project := rs.Primary.Attributes["project"]
 		clusterName := rs.Primary.Attributes["name"]
 
-		_, err := utils.GetBootstrapFile(clusterName, project)
+		_, err := utils.GetBootstrapFile(clusterName, project, nil)
 
 		if err != nil {
 			return err

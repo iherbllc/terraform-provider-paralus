@@ -150,13 +150,13 @@ func TestAccParalusResourceProjectCluster_full(t *testing.T) {
 				Config: testAccProviderValidResource(`
 				resource "paralus_project" "testproject" {
 					provider = paralus.valid_resource
-					name = "projectresource3"
+					name = "projectresource4"
 					description = "from acct test"
 				}
 		
 				resource "paralus_cluster" "testcluster" {
 					provider = paralus.valid_resource
-					name = "clusterresource3"
+					name = "clusterresource4"
 					project = paralus_project.testproject.name
 					cluster_type = "imported"
 					params {
@@ -174,7 +174,7 @@ func TestAccParalusResourceProjectCluster_full(t *testing.T) {
 					testAccCheckResourceClusterTypeAttribute(clusterRsName, "imported"),
 					testAccCheckResourceAttributeSet(clusterRsName, "relays"),
 					resource.TestCheckResourceAttr(projectRsName, "description", "from acct test"),
-					resource.TestCheckResourceAttr(clusterRsName, "project", "projectresource3"),
+					resource.TestCheckResourceAttr(clusterRsName, "project", "projectresource4"),
 					resource.TestCheckTypeSetElemAttr(clusterRsName, "bootstrap_files.*", "12"),
 				),
 			},
@@ -386,10 +386,10 @@ func testAccCheckClusterResourceDestroy(t *testing.T) func(s *terraform.State) e
 			project := rs.Primary.Attributes["project"]
 			clusterName := rs.Primary.Attributes["name"]
 
-			_, err := utils.GetCluster(clusterName, project)
+			_, err := utils.GetCluster(clusterName, project, nil)
 
 			if err == nil || err != utils.ErrResourceNotExists {
-				return utils.DeleteCluster(clusterName, project)
+				return utils.DeleteCluster(clusterName, project, nil)
 			}
 		}
 
@@ -415,7 +415,7 @@ func testAccCheckResourceClusterExists(resourceName string) func(s *terraform.St
 		project := rs.Primary.Attributes["project"]
 		clusterName := rs.Primary.Attributes["name"]
 
-		_, err := utils.GetCluster(clusterName, project)
+		_, err := utils.GetCluster(clusterName, project, nil)
 
 		if err != nil {
 			return err

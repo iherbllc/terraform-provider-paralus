@@ -16,6 +16,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	k8Scheme "k8s.io/client-go/kubernetes/scheme"
 
+	"github.com/paralus/cli/pkg/authprofile"
 	commonv3 "github.com/paralus/paralus/proto/types/commonpb/v3"
 	infrav3 "github.com/paralus/paralus/proto/types/infrapb/v3"
 )
@@ -158,7 +159,7 @@ func getBootstrapRelays(bootstrapFiles []string) (string, error) {
 // Also retrieve the relays from  the data of the relay-agent configMap YAML
 // Due to the parallel nature of testing, it might be that the cluster would be created
 // before the relay was effectively populated. So let's do a increased delay check
-func SetBootstrapFileAndRelays(ctx context.Context, d *schema.ResourceData) error {
+func SetBootstrapFileAndRelays(ctx context.Context, d *schema.ResourceData, auth *authprofile.Profile) error {
 
 	projectId := d.Get("project").(string)
 	clusterId := d.Get("name").(string)
@@ -176,7 +177,7 @@ func SetBootstrapFileAndRelays(ctx context.Context, d *schema.ResourceData) erro
 
 	for {
 		// already checked earlier for cluster to exist, so don't have to check again.
-		bootstrapFile, err = GetBootstrapFile(clusterId, projectId)
+		bootstrapFile, err = GetBootstrapFile(clusterId, projectId, auth)
 
 		if err != nil {
 			return errors.Wrapf(err, "Error retrieving bootstrap file for cluster %s in project %s",
@@ -214,16 +215,16 @@ func SetBootstrapFileAndRelays(ctx context.Context, d *schema.ResourceData) erro
 }
 
 // Will retrieve the bootstrap file for imported clusters
-func GetBootstrapFile(name, project string) (string, error) {
+func GetBootstrapFile(name, project string, auth *authprofile.Profile) (string, error) {
 	uri := fmt.Sprintf("/infra/v3/project/%s/cluster/%s/download", project, name)
-	return makeRestCall(uri, "GET", nil)
+	return makeRestCall(uri, "GET", nil, auth)
 
 }
 
 // Retrieves cluster info
-func GetCluster(name, project string) (*infrav3.Cluster, error) {
+func GetCluster(name, project string, auth *authprofile.Profile) (*infrav3.Cluster, error) {
 	uri := fmt.Sprintf("/infra/v3/project/%s/cluster/%s", project, name)
-	resp, err := makeRestCall(uri, "GET", nil)
+	resp, err := makeRestCall(uri, "GET", nil, auth)
 	if err != nil {
 		return nil, err
 	}
@@ -235,9 +236,9 @@ func GetCluster(name, project string) (*infrav3.Cluster, error) {
 }
 
 // Delete the cluster
-func DeleteCluster(name, project string) error {
+func DeleteCluster(name, project string, auth *authprofile.Profile) error {
 	// get cluster
-	_, err := GetCluster(name, project)
+	_, err := GetCluster(name, project, auth)
 
 	if err == ErrResourceNotExists {
 		return nil
@@ -248,7 +249,7 @@ func DeleteCluster(name, project string) error {
 	}
 
 	uri := fmt.Sprintf("/infra/v3/project/%s/cluster/%s", project, name)
-	_, err = makeRestCall(uri, "DELETE", nil)
+	_, err = makeRestCall(uri, "DELETE", nil, auth)
 	if err != nil {
 		return err
 	}
@@ -257,9 +258,9 @@ func DeleteCluster(name, project string) error {
 }
 
 // Update cluster takes the updated cluster details and sends it to the core
-func CreateCluster(cluster *infrav3.Cluster) error {
+func CreateCluster(cluster *infrav3.Cluster, auth *authprofile.Profile) error {
 	uri := fmt.Sprintf("/infra/v3/project/%s/cluster", cluster.Metadata.Project)
-	_, err := makeRestCall(uri, "POST", cluster)
+	_, err := makeRestCall(uri, "POST", cluster, auth)
 	if err != nil {
 		return err
 	}
@@ -267,9 +268,9 @@ func CreateCluster(cluster *infrav3.Cluster) error {
 }
 
 // Update cluster takes the updated cluster details and sends it to the core
-func UpdateCluster(cluster *infrav3.Cluster) error {
+func UpdateCluster(cluster *infrav3.Cluster, auth *authprofile.Profile) error {
 	uri := fmt.Sprintf("/infra/v3/project/%s/cluster/%s", cluster.Metadata.Project, cluster.Metadata.Name)
-	_, err := makeRestCall(uri, "PUT", cluster)
+	_, err := makeRestCall(uri, "PUT", cluster, auth)
 	if err != nil {
 		return err
 	}
@@ -277,10 +278,10 @@ func UpdateCluster(cluster *infrav3.Cluster) error {
 }
 
 // ListAllClusters uses the lower level func ListClusters to retrieve a list of all clusters
-func ListAllClusters(projectId string) ([]*infrav3.Cluster, error) {
+func ListAllClusters(projectId string, auth *authprofile.Profile) ([]*infrav3.Cluster, error) {
 	var clusters []*infrav3.Cluster
 	limit := 10000
-	c, count, err := listClusters(projectId, limit, 0)
+	c, count, err := listClusters(projectId, limit, 0, auth)
 	if err != nil {
 		return nil, err
 	}
@@ -288,7 +289,7 @@ func ListAllClusters(projectId string) ([]*infrav3.Cluster, error) {
 	for count > limit {
 		offset := limit
 		limit = count
-		c, _, err = listClusters(projectId, limit, offset)
+		c, _, err = listClusters(projectId, limit, offset, auth)
 		if err != nil {
 			return clusters, err
 		}
@@ -300,13 +301,13 @@ func ListAllClusters(projectId string) ([]*infrav3.Cluster, error) {
 /*
 ListClusters paginates through a list of clusters
 */
-func listClusters(project string, limit, offset int) ([]*infrav3.Cluster, int, error) {
+func listClusters(project string, limit, offset int, auth *authprofile.Profile) ([]*infrav3.Cluster, int, error) {
 	// check to make sure the limit or offset is not negative
 	if limit < 0 || offset < 0 {
 		return nil, 0, fmt.Errorf("provided limit (%d) or offset (%d) cannot be negative", limit, offset)
 	}
 	uri := fmt.Sprintf("/infra/v3/project/%s/cluster?limit=%d&offset=%d", project, limit, offset)
-	resp, err := makeRestCall(uri, "GET", nil)
+	resp, err := makeRestCall(uri, "GET", nil, auth)
 	if err != nil {
 		return nil, 0, err
 	}

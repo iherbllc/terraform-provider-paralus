@@ -107,8 +107,19 @@ func datasourceProjectRead(ctx context.Context, d *schema.ResourceData, m interf
 		"project": projectId,
 	})
 
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(config.GetConfig())))
-	project, err := utils.GetProjectByName(projectId)
+	var cfg *config.Config
+	if m == nil {
+		cfg = config.GetConfig()
+	} else {
+		cfg = m.(*config.Config)
+		if cfg == nil {
+			cfg = config.GetConfig()
+		}
+	}
+	auth := cfg.GetAppAuthProfile()
+	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(cfg)))
+
+	project, err := utils.GetProjectByName(projectId, auth)
 	if err != nil {
 		return diag.FromErr(errors.Wrapf(err, "error locating project %s",
 			projectId))

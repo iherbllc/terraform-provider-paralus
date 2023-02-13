@@ -129,7 +129,7 @@ func testAccCheckDataSourceProjectExists(resourceName string) func(s *terraform.
 
 		projectStr := rs.Primary.Attributes["name"]
 
-		_, err := utils.GetProjectByName(projectStr)
+		_, err := utils.GetProjectByName(projectStr, nil)
 
 		if err != nil {
 			return err
