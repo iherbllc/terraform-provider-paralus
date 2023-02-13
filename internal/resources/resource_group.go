@@ -105,7 +105,7 @@ func resourceGroupCreate(ctx context.Context, d *schema.ResourceData, m interfac
 		}
 	}
 	auth := cfg.GetAppAuthProfile()
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(cfg)))
+	tflog.Debug(ctx, fmt.Sprintf("resourceGroupCreate provider config used: %s", utils.GetConfigAsMap(cfg)))
 
 	diags := createOrUpdateGroup(ctx, d, "POST", auth)
 
@@ -130,7 +130,7 @@ func resourceGroupUpdate(ctx context.Context, d *schema.ResourceData, m interfac
 		}
 	}
 	auth := cfg.GetAppAuthProfile()
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(cfg)))
+	tflog.Debug(ctx, fmt.Sprintf("resourceGroupUpdate provider config used: %s", utils.GetConfigAsMap(cfg)))
 
 	return createOrUpdateGroup(ctx, d, "PUT", auth)
 }
@@ -191,7 +191,7 @@ func resourceGroupRead(ctx context.Context, d *schema.ResourceData, m interface{
 		}
 	}
 	auth := cfg.GetAppAuthProfile()
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(cfg)))
+	tflog.Debug(ctx, fmt.Sprintf("resourceGroupRead provider config used: %s", utils.GetConfigAsMap(cfg)))
 
 	groupId := d.Get("name").(string)
 
@@ -234,7 +234,7 @@ func resourceGroupImport(ctx context.Context, d *schema.ResourceData, m interfac
 		}
 	}
 	auth := cfg.GetAppAuthProfile()
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(cfg)))
+	tflog.Debug(ctx, fmt.Sprintf("resourceGroupImport provider config used: %s", utils.GetConfigAsMap(cfg)))
 
 	tflog.Trace(ctx, "Retrieving group info", map[string]interface{}{
 		"group": groupId,
@@ -268,7 +268,7 @@ func resourceGroupDelete(ctx context.Context, d *schema.ResourceData, m interfac
 		}
 	}
 	auth := cfg.GetAppAuthProfile()
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(cfg)))
+	tflog.Debug(ctx, fmt.Sprintf("resourceGroupDelete provider config used: %s", utils.GetConfigAsMap(cfg)))
 	groupId := d.Get("name").(string)
 
 	diags = utils.AssertStringNotEmpty("group name", groupId)

@@ -117,7 +117,7 @@ func datasourceProjectRead(ctx context.Context, d *schema.ResourceData, m interf
 		}
 	}
 	auth := cfg.GetAppAuthProfile()
-	tflog.Debug(ctx, fmt.Sprintf("Provider Config Used: %s", utils.GetConfigAsMap(cfg)))
+	tflog.Debug(ctx, fmt.Sprintf("datasourceProjectRead provider config used: %s", utils.GetConfigAsMap(cfg)))
 
 	project, err := utils.GetProjectByName(projectId, auth)
 	if err != nil {
