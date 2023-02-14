@@ -139,7 +139,7 @@ func TestAccProviderAttr_setMissingAPIKey(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccProvider_setMissingAPIKey(),
-				ExpectError: regexp.MustCompile(".*invalid credentials.*"),
+				ExpectError: regexp.MustCompile(".*api key not defined.*"),
 			},
 		},
 	})
@@ -169,7 +169,7 @@ func TestAccProviderAttr_setEmptyEndpoint(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccProvider_setRestEndpoint(""),
-				ExpectError: regexp.MustCompile(".*expected not empty string.*"),
+				ExpectError: regexp.MustCompile(".*rest endpoint not defined.*"),
 			},
 		},
 	})

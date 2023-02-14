@@ -8,7 +8,6 @@ import (
 	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
 	"github.com/pkg/errors"
 
-	"github.com/paralus/cli/pkg/authprofile"
 	"github.com/paralus/cli/pkg/config"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -95,19 +94,10 @@ func resourceGroupCreate(ctx context.Context, d *schema.ResourceData, m interfac
 
 	groupId := d.Get("name").(string)
 
-	var cfg *config.Config
-	if m == nil {
-		cfg = config.GetConfig()
-	} else {
-		cfg = m.(*config.Config)
-		if cfg == nil {
-			cfg = config.GetConfig()
-		}
-	}
-	auth := cfg.GetAppAuthProfile()
+	cfg := m.(*config.Config)
 	tflog.Debug(ctx, fmt.Sprintf("resourceGroupCreate provider config used: %s", utils.GetConfigAsMap(cfg)))
 
-	diags := createOrUpdateGroup(ctx, d, "POST", auth)
+	diags := createOrUpdateGroup(ctx, d, "POST", m)
 
 	if diags.HasError() {
 		return diags
@@ -120,26 +110,18 @@ func resourceGroupCreate(ctx context.Context, d *schema.ResourceData, m interfac
 
 func resourceGroupUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 
-	var cfg *config.Config
-	if m == nil {
-		cfg = config.GetConfig()
-	} else {
-		cfg = m.(*config.Config)
-		if cfg == nil {
-			cfg = config.GetConfig()
-		}
-	}
-	auth := cfg.GetAppAuthProfile()
+	cfg := m.(*config.Config)
 	tflog.Debug(ctx, fmt.Sprintf("resourceGroupUpdate provider config used: %s", utils.GetConfigAsMap(cfg)))
 
-	return createOrUpdateGroup(ctx, d, "PUT", auth)
+	return createOrUpdateGroup(ctx, d, "PUT", m)
 }
 
 // Creates a new group or updates an existing one
-func createOrUpdateGroup(ctx context.Context, d *schema.ResourceData, requestType string, auth *authprofile.Profile) diag.Diagnostics {
+func createOrUpdateGroup(ctx context.Context, d *schema.ResourceData, requestType string, m interface{}) diag.Diagnostics {
 
 	groupId := d.Get("name").(string)
 
+	auth := m.(*config.Config).GetAppAuthProfile()
 	diags := utils.AssertStringNotEmpty("group name", groupId)
 	if diags.HasError() {
 		return diags
@@ -174,22 +156,14 @@ func createOrUpdateGroup(ctx context.Context, d *schema.ResourceData, requestTyp
 			groupId))
 	}
 
-	return resourceGroupRead(ctx, d, nil)
+	return resourceGroupRead(ctx, d, m)
 }
 
 // Retreive group info
 func resourceGroupRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	var cfg *config.Config
-	if m == nil {
-		cfg = config.GetConfig()
-	} else {
-		cfg = m.(*config.Config)
-		if cfg == nil {
-			cfg = config.GetConfig()
-		}
-	}
+	cfg := m.(*config.Config)
 	auth := cfg.GetAppAuthProfile()
 	tflog.Debug(ctx, fmt.Sprintf("resourceGroupRead provider config used: %s", utils.GetConfigAsMap(cfg)))
 
@@ -224,15 +198,7 @@ func resourceGroupImport(ctx context.Context, d *schema.ResourceData, m interfac
 
 	groupId := d.Id()
 
-	var cfg *config.Config
-	if m == nil {
-		cfg = config.GetConfig()
-	} else {
-		cfg = m.(*config.Config)
-		if cfg == nil {
-			cfg = config.GetConfig()
-		}
-	}
+	cfg := m.(*config.Config)
 	auth := cfg.GetAppAuthProfile()
 	tflog.Debug(ctx, fmt.Sprintf("resourceGroupImport provider config used: %s", utils.GetConfigAsMap(cfg)))
 
@@ -258,15 +224,7 @@ func resourceGroupImport(ctx context.Context, d *schema.ResourceData, m interfac
 func resourceGroupDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	var cfg *config.Config
-	if m == nil {
-		cfg = config.GetConfig()
-	} else {
-		cfg = m.(*config.Config)
-		if cfg == nil {
-			cfg = config.GetConfig()
-		}
-	}
+	cfg := m.(*config.Config)
 	auth := cfg.GetAppAuthProfile()
 	tflog.Debug(ctx, fmt.Sprintf("resourceGroupDelete provider config used: %s", utils.GetConfigAsMap(cfg)))
 	groupId := d.Get("name").(string)
