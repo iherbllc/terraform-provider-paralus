@@ -14,7 +14,6 @@ import (
 // Test group not found
 func TestAccParalusNoGroup_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccConfigPreCheck(t) },
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{
@@ -29,7 +28,6 @@ func TestAccParalusNoGroup_basic(t *testing.T) {
 func TestAccParalusDataSourceGroup_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccConfigPreCheck(t) },
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{

@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"testing"
 
+	_ "github.com/joho/godotenv/autoload"
+
 	"github.com/iherbllc/terraform-provider-paralus/internal/paralus"
 	"github.com/iherbllc/terraform-provider-paralus/internal/provider"
 	"github.com/paralus/cli/pkg/config"
@@ -104,7 +106,6 @@ func testAccConfigPreCheck(t *testing.T) {
 func TestAccProviderAttr_setInvalidAPISecret(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		// PreCheck:  func() { testAccConfigPreCheck(t) },
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{
@@ -119,7 +120,6 @@ func TestAccProviderAttr_setInvalidAPISecret(t *testing.T) {
 func TestAccProviderAttr_setInvalidAPIKey(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccConfigPreCheck(t) },
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{
@@ -134,7 +134,6 @@ func TestAccProviderAttr_setInvalidAPIKey(t *testing.T) {
 func TestAccProviderAttr_setMissingAPIKey(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		// PreCheck:  func() { testAccConfigPreCheck(t) },
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{
@@ -149,7 +148,6 @@ func TestAccProviderAttr_setMissingAPIKey(t *testing.T) {
 func TestAccProviderAttr_setInvalidEndpoint(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccConfigPreCheck(t) },
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{
@@ -164,7 +162,6 @@ func TestAccProviderAttr_setInvalidEndpoint(t *testing.T) {
 func TestAccProviderAttr_setEmptyEndpoint(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		// PreCheck:  func() { testAccConfigPreCheck(t) },
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{
@@ -179,7 +176,6 @@ func TestAccProviderAttr_setEmptyEndpoint(t *testing.T) {
 func TestAccProviderCreds_BadConfigJsonPath(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		// PreCheck:  func() { testAccConfigPreCheck(t) },
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{

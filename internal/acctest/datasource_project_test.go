@@ -15,7 +15,6 @@ import (
 func TestAccParalusDataSourceMissingProject_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccConfigPreCheck(t) },
 		Providers: testAccProviders,
 		// CheckDestroy: testAccCheckProjectDataSourceDestroy(t),
 		Steps: []resource.TestStep{
@@ -44,7 +43,6 @@ func testAccProjectDataSourceConfigMissingProject() string {
 func TestAccParalusDataSourceEmptyProject_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccConfigPreCheck(t) },
 		Providers: testAccProviders,
 		// CheckDestroy: testAccCheckProjectDataSourceDestroy(t),
 		Steps: []resource.TestStep{
@@ -73,7 +71,6 @@ func testAccProjectDataSourceConfigEmptyProject() string {
 // Test project not found
 func TestAccParalusNoProject_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccConfigPreCheck(t) },
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{
@@ -88,7 +85,6 @@ func TestAccParalusNoProject_basic(t *testing.T) {
 func TestAccParalusDataSourceProject_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccConfigPreCheck(t) },
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{

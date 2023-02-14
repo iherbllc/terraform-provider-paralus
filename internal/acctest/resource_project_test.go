@@ -15,7 +15,6 @@ import (
 func TestAccParalusResourceMissingProject_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccConfigPreCheck(t) },
 		Providers: testAccProviders,
 		// CheckDestroy: testAccCheckProjectResourceDestroy(t),
 		Steps: []resource.TestStep{
@@ -44,7 +43,6 @@ func testAccProjectResourceConfigMissingProject() string {
 func TestAccParalusResourceEmptyProject_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccConfigPreCheck(t) },
 		Providers: testAccProviders,
 		// CheckDestroy: testAccCheckProjectResourceDestroy(t),
 		Steps: []resource.TestStep{
@@ -74,7 +72,6 @@ func testAccProjectResourceConfigEmptyProject() string {
 func TestAccParalusResourceProjectBadOrg_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccConfigPreCheck(t) },
 		Providers: testAccProviders,
 		// CheckDestroy: testAccCheckProjectResourceDestroy(t),
 		Steps: []resource.TestStep{
