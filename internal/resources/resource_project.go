@@ -8,7 +8,6 @@ import (
 	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
 	"github.com/pkg/errors"
 
-	"github.com/paralus/cli/pkg/authprofile"
 	"github.com/paralus/cli/pkg/config"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -111,18 +110,9 @@ func resourceProjectCreate(ctx context.Context, d *schema.ResourceData, m interf
 
 	projectId := d.Get("name").(string)
 
-	var cfg *config.Config
-	if m == nil {
-		cfg = config.GetConfig()
-	} else {
-		cfg = m.(*config.Config)
-		if cfg == nil {
-			cfg = config.GetConfig()
-		}
-	}
-	auth := cfg.GetAppAuthProfile()
+	cfg := m.(*config.Config)
 	tflog.Debug(ctx, fmt.Sprintf("resourceProjectCreate provider config used: %s", utils.GetConfigAsMap(cfg)))
-	diags := createOrUpdateProject(ctx, d, "POST", auth)
+	diags := createOrUpdateProject(ctx, d, "POST", m)
 
 	if diags.HasError() {
 		return diags
@@ -135,26 +125,18 @@ func resourceProjectCreate(ctx context.Context, d *schema.ResourceData, m interf
 
 func resourceProjectUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 
-	var cfg *config.Config
-	if m == nil {
-		cfg = config.GetConfig()
-	} else {
-		cfg = m.(*config.Config)
-		if cfg == nil {
-			cfg = config.GetConfig()
-		}
-	}
-	auth := cfg.GetAppAuthProfile()
+	cfg := m.(*config.Config)
 	tflog.Debug(ctx, fmt.Sprintf("resourceProjectUpdate provider config used: %s", utils.GetConfigAsMap(cfg)))
 
-	return createOrUpdateProject(ctx, d, "PUT", auth)
+	return createOrUpdateProject(ctx, d, "PUT", m)
 }
 
 // Creates a new project or updates an existing one
-func createOrUpdateProject(ctx context.Context, d *schema.ResourceData, requestType string, auth *authprofile.Profile) diag.Diagnostics {
+func createOrUpdateProject(ctx context.Context, d *schema.ResourceData, requestType string, m interface{}) diag.Diagnostics {
 
 	projectId := d.Get("name").(string)
 
+	auth := m.(*config.Config).GetAppAuthProfile()
 	diags := utils.AssertStringNotEmpty("project name", projectId)
 	if diags.HasError() {
 		return diags
@@ -198,22 +180,14 @@ func createOrUpdateProject(ctx context.Context, d *schema.ResourceData, requestT
 			projectId))
 	}
 
-	return resourceProjectRead(ctx, d, nil)
+	return resourceProjectRead(ctx, d, m)
 }
 
 // Retreive project info
 func resourceProjectRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	var cfg *config.Config
-	if m == nil {
-		cfg = config.GetConfig()
-	} else {
-		cfg = m.(*config.Config)
-		if cfg == nil {
-			cfg = config.GetConfig()
-		}
-	}
+	cfg := m.(*config.Config)
 	auth := cfg.GetAppAuthProfile()
 	tflog.Debug(ctx, fmt.Sprintf("resourceProjectRead provider config used: %s", utils.GetConfigAsMap(cfg)))
 
@@ -248,15 +222,7 @@ func resourceProjectImport(ctx context.Context, d *schema.ResourceData, m interf
 
 	projectId := d.Id()
 
-	var cfg *config.Config
-	if m == nil {
-		cfg = config.GetConfig()
-	} else {
-		cfg = m.(*config.Config)
-		if cfg == nil {
-			cfg = config.GetConfig()
-		}
-	}
+	cfg := m.(*config.Config)
 	auth := cfg.GetAppAuthProfile()
 	tflog.Debug(ctx, fmt.Sprintf("resourceProjectImport provider config used: %s", utils.GetConfigAsMap(cfg)))
 
@@ -282,15 +248,7 @@ func resourceProjectImport(ctx context.Context, d *schema.ResourceData, m interf
 func resourceProjectDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	var cfg *config.Config
-	if m == nil {
-		cfg = config.GetConfig()
-	} else {
-		cfg = m.(*config.Config)
-		if cfg == nil {
-			cfg = config.GetConfig()
-		}
-	}
+	cfg := m.(*config.Config)
 	auth := cfg.GetAppAuthProfile()
 	tflog.Debug(ctx, fmt.Sprintf("resourceProjectDelete provider config used: %s", utils.GetConfigAsMap(cfg)))
 

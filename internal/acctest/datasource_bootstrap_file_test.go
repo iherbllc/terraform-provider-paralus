@@ -15,7 +15,6 @@ import (
 // Test cluster not found
 func TestAccParalusBootstrapNotFound_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccConfigPreCheck(t) },
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{
@@ -30,7 +29,6 @@ func TestAccParalusBootstrapNotFound_basic(t *testing.T) {
 func TestAccParalusDataSourceBootstrap_basic(t *testing.T) {
 	dsResourceName := "data.paralus_bootstrap_file.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccConfigPreCheck(t) },
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{

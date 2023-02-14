@@ -16,7 +16,6 @@ import (
 func TestAccParalusResourceMissingGroup_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccConfigPreCheck(t) },
 		Providers: testAccProviders,
 		// CheckDestroy: testAccCheckGroupResourceDestroy(t),
 		Steps: []resource.TestStep{
@@ -45,7 +44,6 @@ func testAccGroupResourceConfigMissingGroup() string {
 func TestAccParalusResourceEmptyGroup_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccConfigPreCheck(t) },
 		Providers: testAccProviders,
 		// CheckDestroy: testAccCheckGroupResourceDestroy(t),
 		Steps: []resource.TestStep{
@@ -75,7 +73,6 @@ func testAccGroupResourceConfigEmptyGroup() string {
 func TestAccParalusResourceGroupBadOrg_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccConfigPreCheck(t) },
 		Providers: testAccProviders,
 		// CheckDestroy: testAccCheckGroupResourceDestroy(t),
 		Steps: []resource.TestStep{

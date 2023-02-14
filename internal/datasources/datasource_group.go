@@ -94,15 +94,7 @@ func datasourceGroupRead(ctx context.Context, d *schema.ResourceData, m interfac
 		"group": groupId,
 	})
 
-	var cfg *config.Config
-	if m == nil {
-		cfg = config.GetConfig()
-	} else {
-		cfg = m.(*config.Config)
-		if cfg == nil {
-			cfg = config.GetConfig()
-		}
-	}
+	cfg := m.(*config.Config)
 	auth := cfg.GetAppAuthProfile()
 	tflog.Debug(ctx, fmt.Sprintf("datasourceGroupRead provider config used: %s", utils.GetConfigAsMap(cfg)))
 

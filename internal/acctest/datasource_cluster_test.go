@@ -14,7 +14,6 @@ import (
 // Test cluster not found
 func TestAccParalusClusterNotFound_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccConfigPreCheck(t) },
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{
@@ -29,7 +28,6 @@ func TestAccParalusClusterNotFound_basic(t *testing.T) {
 func TestAccParalusDataSourceCluster_basic(t *testing.T) {
 	dsResourceName := "data.paralus_cluster.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccConfigPreCheck(t) },
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{
@@ -105,7 +103,6 @@ func TestAccParalusDataSourceCluster_Full(t *testing.T) {
 	dsResourceClusterName := "data.paralus_cluster.test"
 	dsResourceProjectName := "data.paralus_project.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccConfigPreCheck(t) },
 		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			{

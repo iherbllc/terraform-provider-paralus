@@ -27,59 +27,30 @@ func NewConfig(ctx context.Context, d *schema.ResourceData) (*config.Config, dia
 				"error parsing config_json file %s", configJson))
 		}
 
-		err = config.GetConfig().MiniCheck()
+		err = utils.AssertConfigNotEmpty(newConfig)
 		if err != nil {
 			return nil, diag.FromErr(errors.Wrap(err, fmt.Sprintf("invalid loaded config %s", configJson)))
 		}
 
-		diags = utils.AssertStringNotEmpty(fmt.Sprintf("rest endpoint from config json %s", configJson), newConfig.RESTEndpoint)
-		if diags.HasError() {
-			return nil, diags
-		}
-
-		diags = utils.AssertStringNotEmpty(fmt.Sprintf("pctl_ops_endpoint from provider input %s", configJson), newConfig.OPSEndpoint)
-		if diags.HasError() {
-			return nil, diags
-		}
-
 		return newConfig, diags
-	}
-
-	apiKey, ok := d.GetOk("pctl_api_key")
-	if !ok {
-		return nil, diag.FromErr(errors.Wrap(nil, "pctl_api_key must be set if config_json is not"))
-	}
-
-	apiSecret, ok := d.GetOk("pctl_api_secret")
-	if !ok {
-		return nil, diag.FromErr(errors.Wrap(nil, "pctl_api_secret must be set if config_json is not"))
 	}
 
 	newConfig := config.GetConfig()
 	newConfig.Profile = d.Get("pctl_profile").(string)
 	newConfig.RESTEndpoint = d.Get("pctl_rest_endpoint").(string)
 	newConfig.OPSEndpoint = d.Get("pctl_ops_endpoint").(string)
-	newConfig.APIKey = apiKey.(string)
-	newConfig.APISecret = apiSecret.(string)
+	newConfig.APIKey = d.Get("pctl_api_key").(string)
+	newConfig.APISecret = d.Get("pctl_api_secret").(string)
 	newConfig.SkipServerCertValid = d.Get("pctl_skip_server_cert_valid").(string)
 	newConfig.Partner = d.Get("pctl_partner").(string)
 	newConfig.Organization = d.Get("pctl_organization").(string)
 
-	err := config.GetConfig().MiniCheck()
+	err := utils.AssertConfigNotEmpty(newConfig)
 	if err != nil {
 		return nil, diag.FromErr(errors.Wrap(err, "error assigning config values"))
 	}
-	diags = utils.AssertStringNotEmpty("pctl_rest_endpoint from provider input", newConfig.RESTEndpoint)
-	if diags.HasError() {
-		return nil, diags
-	}
 
-	diags = utils.AssertStringNotEmpty("pctl_ops_endpoint from provider input", newConfig.OPSEndpoint)
-	if diags.HasError() {
-		return nil, diags
-	}
-
-	return config.GetConfig(), diags
+	return newConfig, diags
 }
 
 // Generate a new PCTL Config from a json path

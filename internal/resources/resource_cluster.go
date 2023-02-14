@@ -8,7 +8,6 @@ import (
 
 	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
 
-	"github.com/paralus/cli/pkg/authprofile"
 	"github.com/paralus/cli/pkg/config"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -153,19 +152,10 @@ func ResourceCluster() *schema.Resource {
 // Create a new cluster in Paralus
 func resourceClusterCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 
-	var cfg *config.Config
-	if m == nil {
-		cfg = config.GetConfig()
-	} else {
-		cfg = m.(*config.Config)
-		if cfg == nil {
-			cfg = config.GetConfig()
-		}
-	}
-	auth := cfg.GetAppAuthProfile()
+	cfg := m.(*config.Config)
 	tflog.Debug(ctx, fmt.Sprintf("resourceClusterCreate provider Config Used: %s", utils.GetConfigAsMap(cfg)))
 
-	diags := createOrUpdateCluster(ctx, d, "POST", auth)
+	diags := createOrUpdateCluster(ctx, d, "POST", m)
 	if diags.HasError() {
 		return diags
 	}
@@ -178,27 +168,19 @@ func resourceClusterCreate(ctx context.Context, d *schema.ResourceData, m interf
 // Updating existing cluster
 func resourceClusterUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 
-	var cfg *config.Config
-	if m == nil {
-		cfg = config.GetConfig()
-	} else {
-		cfg = m.(*config.Config)
-		if cfg == nil {
-			cfg = config.GetConfig()
-		}
-	}
-	auth := cfg.GetAppAuthProfile()
+	cfg := m.(*config.Config)
 	tflog.Debug(ctx, fmt.Sprintf("resourceClusterUpdate provider Config Used: %s", utils.GetConfigAsMap(cfg)))
 
-	return createOrUpdateCluster(ctx, d, "PUT", auth)
+	return createOrUpdateCluster(ctx, d, "PUT", m)
 }
 
 // Creates a new cluster or updates an existing one
-func createOrUpdateCluster(ctx context.Context, d *schema.ResourceData, requestType string, auth *authprofile.Profile) diag.Diagnostics {
+func createOrUpdateCluster(ctx context.Context, d *schema.ResourceData, requestType string, m interface{}) diag.Diagnostics {
 
 	projectId := d.Get("project").(string)
 	clusterId := d.Get("name").(string)
 
+	auth := m.(*config.Config).GetAppAuthProfile()
 	diags := utils.AssertStringNotEmpty("cluster project", projectId)
 	if diags.HasError() {
 		return diags
@@ -257,22 +239,14 @@ func createOrUpdateCluster(ctx context.Context, d *schema.ResourceData, requestT
 			"unknown request type %s", requestType))
 	}
 
-	return resourceClusterRead(ctx, d, nil)
+	return resourceClusterRead(ctx, d, m)
 }
 
 // Retreive cluster info
 func resourceClusterRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	var cfg *config.Config
-	if m == nil {
-		cfg = config.GetConfig()
-	} else {
-		cfg = m.(*config.Config)
-		if cfg == nil {
-			cfg = config.GetConfig()
-		}
-	}
+	cfg := m.(*config.Config)
 	auth := cfg.GetAppAuthProfile()
 	tflog.Debug(ctx, fmt.Sprintf("resourceClusterRead provider Config Used: %s", utils.GetConfigAsMap(cfg)))
 
@@ -320,15 +294,7 @@ func resourceClusterRead(ctx context.Context, d *schema.ResourceData, m interfac
 // Import cluster info into TF
 func resourceClusterImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
 
-	var cfg *config.Config
-	if m == nil {
-		cfg = config.GetConfig()
-	} else {
-		cfg = m.(*config.Config)
-		if cfg == nil {
-			cfg = config.GetConfig()
-		}
-	}
+	cfg := m.(*config.Config)
 	auth := cfg.GetAppAuthProfile()
 	tflog.Debug(ctx, fmt.Sprintf("resourceClusterImport provider Config Used: %s", utils.GetConfigAsMap(cfg)))
 
@@ -371,15 +337,7 @@ func resourceClusterImport(ctx context.Context, d *schema.ResourceData, m interf
 func resourceClusterDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	var cfg *config.Config
-	if m == nil {
-		cfg = config.GetConfig()
-	} else {
-		cfg = m.(*config.Config)
-		if cfg == nil {
-			cfg = config.GetConfig()
-		}
-	}
+	cfg := m.(*config.Config)
 	auth := cfg.GetAppAuthProfile()
 	tflog.Debug(ctx, fmt.Sprintf("resourceClusterDelete provider config used: %s", utils.GetConfigAsMap(cfg)))
 

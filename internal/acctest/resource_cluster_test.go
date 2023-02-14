@@ -16,7 +16,6 @@ import (
 func TestAccParalusResourceMissingCluster_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccConfigPreCheck(t) },
 		Providers: testAccProviders,
 		// CheckDestroy: testAccCheckClusterResourceDestroy(t),
 		Steps: []resource.TestStep{
@@ -45,7 +44,6 @@ func testAccClusterResourceConfigMissingCluster() string {
 func TestAccParalusResourceClusterMissingProject_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccConfigPreCheck(t) },
 		Providers: testAccProviders,
 		// CheckDestroy: testAccCheckClusterResourceDestroy(t),
 		Steps: []resource.TestStep{
@@ -75,7 +73,6 @@ func testAccClusterResourceConfigMissingProject() string {
 func TestAccParalusResourceClusterEmptyProject_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccConfigPreCheck(t) },
 		Providers: testAccProviders,
 		// CheckDestroy: testAccCheckClusterResourceDestroy(t),
 		Steps: []resource.TestStep{
@@ -107,7 +104,6 @@ func testAccClusterResourceConfiEmptyProject() string {
 func TestAccParalusResourceEmptyCluster_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccConfigPreCheck(t) },
 		Providers: testAccProviders,
 		// CheckDestroy: testAccCheckClusterResourceDestroy(t),
 		Steps: []resource.TestStep{
