@@ -119,7 +119,8 @@ func TestAccParalusResourceGroup_basic(t *testing.T) {
 				}`),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckResourceGroupExists(groupRsName),
-					testAccCheckResourceGroupTypeAttribute(groupRsName, "test group"),
+					testAccCheckResourceGroupDescriptionAttribute(groupRsName, "test group"),
+					testAccCheckResourceGroupTypeAttribute(groupRsName, "SYSTEM"),
 					resource.TestCheckResourceAttr(groupRsName, "description", "test group"),
 				),
 			},
@@ -184,7 +185,7 @@ func testAccCheckResourceGroupExists(resourceName string) func(s *terraform.Stat
 }
 
 // Verifies group attribute is set correctly by Terraform
-func testAccCheckResourceGroupTypeAttribute(resourceName string, description string) func(s *terraform.State) error {
+func testAccCheckResourceGroupDescriptionAttribute(resourceName string, description string) func(s *terraform.State) error {
 
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[resourceName]
@@ -193,6 +194,22 @@ func testAccCheckResourceGroupTypeAttribute(resourceName string, description str
 		}
 		if rs.Primary.Attributes["description"] != description {
 			return fmt.Errorf("Invalid description")
+		}
+
+		return nil
+	}
+}
+
+// Verifies group type attribute is set correctly by Terraform
+func testAccCheckResourceGroupTypeAttribute(resourceName string, typeStr string) func(s *terraform.State) error {
+
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return fmt.Errorf("not found: %s", resourceName)
+		}
+		if rs.Primary.Attributes["type"] != typeStr {
+			return fmt.Errorf("Invalid type")
 		}
 
 		return nil
@@ -221,7 +238,8 @@ func TestAccParalusResourceGroup_Project(t *testing.T) {
 				}`),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckResourceGroupExists(groupRsName),
-					testAccCheckResourceGroupTypeAttribute(groupRsName, "test group"),
+					testAccCheckResourceGroupDescriptionAttribute(groupRsName, "test group"),
+					testAccCheckResourceGroupTypeAttribute(groupRsName, "SYSTEM"),
 					testAccCheckResourceGroupProjectRoleMap(groupRsName, map[string]string{
 						"role":  "ADMIN",
 						"group": "gp-test",
@@ -299,14 +317,16 @@ func TestAccParalusResourceGroups_AddToProject(t *testing.T) {
 				}`),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckResourceGroupExists(groupRsName1),
-					testAccCheckResourceGroupTypeAttribute(groupRsName1, "test 1 group"),
+					testAccCheckResourceGroupDescriptionAttribute(groupRsName1, "test 1 group"),
+					testAccCheckResourceGroupTypeAttribute(groupRsName1, "SYSTEM"),
 					resource.TestCheckResourceAttr(groupRsName1, "description", "test 1 group"),
 					resource.TestCheckTypeSetElemNestedAttrs(groupRsName1, "project_roles.*", map[string]string{"project": "tempproject"}),
 					resource.TestCheckTypeSetElemNestedAttrs(groupRsName1, "project_roles.*", map[string]string{"role": "PROJECT_ADMIN"}),
 					resource.TestCheckTypeSetElemNestedAttrs(groupRsName1, "project_roles.*", map[string]string{"group": "ga2p-test1"}),
 
 					testAccCheckResourceGroupExists(groupRsName2),
-					testAccCheckResourceGroupTypeAttribute(groupRsName2, "test 2 group"),
+					testAccCheckResourceGroupDescriptionAttribute(groupRsName2, "test 2 group"),
+					testAccCheckResourceGroupTypeAttribute(groupRsName2, "SYSTEM"),
 					resource.TestCheckResourceAttr(groupRsName2, "description", "test 2 group"),
 					resource.TestCheckTypeSetElemNestedAttrs(groupRsName2, "project_roles.*", map[string]string{"project": "tempproject"}),
 					resource.TestCheckTypeSetElemNestedAttrs(groupRsName2, "project_roles.*", map[string]string{"role": "PROJECT_ADMIN"}),
@@ -365,7 +385,7 @@ func TestAccParalusResourceGroup_AddUser(t *testing.T) {
 				}`),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckResourceGroupExists(groupRsName1),
-					testAccCheckResourceGroupTypeAttribute(groupRsName1, "test 1 group"),
+					testAccCheckResourceGroupDescriptionAttribute(groupRsName1, "test 1 group"),
 					testAccCheckResourceGroupCheckUserList(groupRsName1, "acctest-user@example.com"),
 					resource.TestCheckResourceAttr(groupRsName1, "description", "test 1 group"),
 					resource.TestCheckResourceAttr(groupRsName1, "users.0", "acctest-user@example.com"),

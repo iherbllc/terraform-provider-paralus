@@ -302,7 +302,7 @@ func TestAccParalusResourceProject_AddToGroup(t *testing.T) {
 				}`),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckResourceGroupExists(groupRsName),
-					testAccCheckResourceGroupTypeAttribute(groupRsName, "test group"),
+					testAccCheckResourceGroupDescriptionAttribute(groupRsName, "test group"),
 					resource.TestCheckResourceAttr(groupRsName, "description", "test group"),
 					testAccCheckResourceProjectExists(projectRsName),
 					testAccCheckResourceProjectTypeAttribute(projectRsName, "test project"),
@@ -386,7 +386,7 @@ func TestAccParalusResourceProject_Add2GroupsNamespaceAndProjectRoles(t *testing
 					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"group": "pa2gnapr-test2"}),
 
 					testAccCheckResourceGroupExists(groupRsName1),
-					testAccCheckResourceGroupTypeAttribute(groupRsName1, "test 1 group"),
+					testAccCheckResourceGroupDescriptionAttribute(groupRsName1, "test 1 group"),
 					resource.TestCheckResourceAttr(groupRsName1, "description", "test 1 group"),
 					testAccCheckResourceGroupProjectRoleMap(groupRsName1, map[string]string{
 						"role":      "NAMESPACE_READ_ONLY",
@@ -396,7 +396,7 @@ func TestAccParalusResourceProject_Add2GroupsNamespaceAndProjectRoles(t *testing
 					}),
 
 					testAccCheckResourceGroupExists(groupRsName2),
-					testAccCheckResourceGroupTypeAttribute(groupRsName2, "test 2 group"),
+					testAccCheckResourceGroupDescriptionAttribute(groupRsName2, "test 2 group"),
 					resource.TestCheckResourceAttr(groupRsName2, "description", "test 2 group"),
 					testAccCheckResourceGroupProjectRoleMap(groupRsName2, map[string]string{
 						"role":    "PROJECT_ADMIN",
@@ -481,7 +481,7 @@ func TestAccParalusResourceProject_Add2GroupsDifferentNamespaceRoles(t *testing.
 					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"group": "pa2gdnr-test2"}),
 
 					testAccCheckResourceGroupExists(groupRsName1),
-					testAccCheckResourceGroupTypeAttribute(groupRsName1, "test 1 group"),
+					testAccCheckResourceGroupDescriptionAttribute(groupRsName1, "test 1 group"),
 					resource.TestCheckResourceAttr(groupRsName1, "description", "test 1 group"),
 					testAccCheckResourceGroupProjectRoleMap(groupRsName1, map[string]string{
 						"role":      "NAMESPACE_READ_ONLY",
@@ -491,7 +491,7 @@ func TestAccParalusResourceProject_Add2GroupsDifferentNamespaceRoles(t *testing.
 					}),
 
 					testAccCheckResourceGroupExists(groupRsName2),
-					testAccCheckResourceGroupTypeAttribute(groupRsName2, "test 2 group"),
+					testAccCheckResourceGroupDescriptionAttribute(groupRsName2, "test 2 group"),
 					resource.TestCheckResourceAttr(groupRsName2, "description", "test 2 group"),
 					testAccCheckResourceGroupProjectRoleMap(groupRsName2, map[string]string{
 						"role":      "NAMESPACE_ADMIN",
@@ -573,7 +573,7 @@ func TestAccParalusResourceProject_Add2GroupsDifferentProjectRoles(t *testing.T)
 					resource.TestCheckTypeSetElemNestedAttrs(projectRsName, "project_roles.*", map[string]string{"group": "pa2gdpr-test2"}),
 
 					testAccCheckResourceGroupExists(groupRsName1),
-					testAccCheckResourceGroupTypeAttribute(groupRsName1, "test 1 group"),
+					testAccCheckResourceGroupDescriptionAttribute(groupRsName1, "test 1 group"),
 					resource.TestCheckResourceAttr(groupRsName1, "description", "test 1 group"),
 					testAccCheckResourceGroupProjectRoleMap(groupRsName1, map[string]string{
 						"role":    "PROJECT_READ_ONLY",
@@ -582,7 +582,7 @@ func TestAccParalusResourceProject_Add2GroupsDifferentProjectRoles(t *testing.T)
 					}),
 
 					testAccCheckResourceGroupExists(groupRsName2),
-					testAccCheckResourceGroupTypeAttribute(groupRsName2, "test 2 group"),
+					testAccCheckResourceGroupDescriptionAttribute(groupRsName2, "test 2 group"),
 					resource.TestCheckResourceAttr(groupRsName2, "description", "test 2 group"),
 					testAccCheckResourceGroupProjectRoleMap(groupRsName2, map[string]string{
 						"role":    "PROJECT_ADMIN",

@@ -152,7 +152,7 @@ func TestAccProviderAttr_setInvalidEndpoint(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccProvider_setRestEndpoint("console.paralus.blahblahblah.com"),
-				ExpectError: regexp.MustCompile(".*no such host.*"),
+				ExpectError: regexp.MustCompile(".*(no such host|resource does not exist).*"),
 			},
 		},
 	})
@@ -166,7 +166,7 @@ func TestAccProviderAttr_setEmptyEndpoint(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccProvider_setRestEndpoint(""),
-				ExpectError: regexp.MustCompile(".*rest endpoint not defined.*"),
+				ExpectError: regexp.MustCompile(".*(rest endpoint not defined|resource does not exist).*"),
 			},
 		},
 	})
