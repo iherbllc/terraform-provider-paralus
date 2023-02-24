@@ -83,7 +83,8 @@ func ResourceGroup() *schema.Resource {
 			"type": {
 				Type:        schema.TypeString,
 				Description: "Type of group",
-				Computed:    true,
+				Optional:    true,
+				Default:     "SYSTEM",
 			},
 		},
 	}
