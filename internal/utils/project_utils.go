@@ -130,8 +130,12 @@ func CheckProjectsFromPNRStructExist(pnrStruct []*userv3.ProjectNamespaceRole, a
 					continue
 				}
 				_, err := GetProjectByName(*projectName, auth)
-				if err == ErrResourceNotExists {
-					return diag.FromErr(fmt.Errorf("project '%s' does not exist", *projectName))
+				if err != nil {
+					if err == ErrResourceNotExists {
+						return diag.FromErr(fmt.Errorf("project '%s' does not exist", *projectName))
+					}
+					return diag.FromErr(errors.Wrapf(err, "error getting project %s info",
+						*projectName))
 				}
 
 			}

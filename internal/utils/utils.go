@@ -141,6 +141,10 @@ func makeRestCall(uri string, method string, payload interface{}, auth *authprof
 		return "", errors.New(string(respBody))
 	}
 
+	if len(respBody) <= 0 {
+		return "", nil
+	}
+
 	f := &commonv3.HttpBody{}
 	err = json.Unmarshal([]byte(respBody), f)
 	if err != nil {

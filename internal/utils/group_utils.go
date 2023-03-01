@@ -4,7 +4,6 @@ package utils
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -15,6 +14,7 @@ import (
 	"github.com/paralus/cli/pkg/config"
 	commonv3 "github.com/paralus/paralus/proto/types/commonpb/v3"
 	groupv3 "github.com/paralus/paralus/proto/types/userpb/v3"
+	"github.com/pkg/errors"
 )
 
 // Build the group struct from a schema resource
@@ -93,8 +93,12 @@ func CheckGroupsFromPNRStructExist(pnrStruct []*groupv3.ProjectNamespaceRole, au
 					return diag.FromErr(errors.New("group name cannot be empty"))
 				}
 				_, err := GetGroupByName(*groupName, auth)
-				if err == ErrResourceNotExists {
-					return diag.FromErr(fmt.Errorf("group '%s' does not exist", *groupName))
+				if err != nil {
+					if err == ErrResourceNotExists {
+						return diag.FromErr(fmt.Errorf("group '%s' does not exist", *groupName))
+					}
+					return diag.FromErr(errors.Wrapf(err, "error getting group %s info",
+						*groupName))
 				}
 
 			}
