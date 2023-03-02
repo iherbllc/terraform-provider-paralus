@@ -2,6 +2,7 @@
 package utils
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/levigross/grequests"
 	"github.com/paralus/cli/pkg/authprofile"
@@ -69,7 +71,7 @@ var (
 )
 
 // Makes the desired REST call
-func makeRestCall(uri string, method string, payload interface{}, auth *authprofile.Profile) (string, error) {
+func makeRestCall(ctx context.Context, uri string, method string, payload interface{}, auth *authprofile.Profile) (string, error) {
 
 	if auth == nil {
 		auth = config.GetConfig().GetAppAuthProfile()
@@ -96,10 +98,11 @@ func makeRestCall(uri string, method string, payload interface{}, auth *authprof
 	req.Header.SetMethod(method)
 
 	if payload != nil {
-		body, err := json.Marshal(payload)
+		body, err := json.MarshalIndent(payload, "", "\t")
 		if err != nil {
 			return "", err
 		}
+		tflog.Debug(ctx, fmt.Sprintf("payload body: %s", body))
 		req.SetBodyRaw(body)
 	}
 

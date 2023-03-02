@@ -81,7 +81,7 @@ func BuildResourceFromGroupStruct(group *groupv3.Group, d *schema.ResourceData) 
 }
 
 // Check groups specified in the ProjectNamespaceRoles struct exist in Paralus
-func CheckGroupsFromPNRStructExist(pnrStruct []*groupv3.ProjectNamespaceRole, auth *authprofile.Profile) diag.Diagnostics {
+func CheckGroupsFromPNRStructExist(ctx context.Context, pnrStruct []*groupv3.ProjectNamespaceRole, auth *authprofile.Profile) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	if len(pnrStruct) > 0 {
@@ -92,7 +92,7 @@ func CheckGroupsFromPNRStructExist(pnrStruct []*groupv3.ProjectNamespaceRole, au
 				if *groupName == "" {
 					return diag.FromErr(errors.New("group name cannot be empty"))
 				}
-				_, err := GetGroupByName(*groupName, auth)
+				_, err := GetGroupByName(ctx, *groupName, auth)
 				if err != nil {
 					if err == ErrResourceNotExists {
 						return diag.FromErr(fmt.Errorf("group '%s' does not exist", *groupName))
@@ -109,10 +109,10 @@ func CheckGroupsFromPNRStructExist(pnrStruct []*groupv3.ProjectNamespaceRole, au
 }
 
 // Get group by name
-func GetGroupByName(groupName string, auth *authprofile.Profile) (*groupv3.Group, error) {
+func GetGroupByName(ctx context.Context, groupName string, auth *authprofile.Profile) (*groupv3.Group, error) {
 	cfg := config.GetConfig()
 	uri := fmt.Sprintf("/auth/v3/partner/%s/organization/%s/group/%s", cfg.Partner, cfg.Organization, groupName)
-	resp, err := makeRestCall(uri, "GET", nil, auth)
+	resp, err := makeRestCall(ctx, uri, "GET", nil, auth)
 	if err != nil {
 		return nil, err
 	}
@@ -126,13 +126,13 @@ func GetGroupByName(groupName string, auth *authprofile.Profile) (*groupv3.Group
 }
 
 // Apply group takes the group details and sends it to the core
-func ApplyGroup(grp *groupv3.Group, auth *authprofile.Profile) error {
+func ApplyGroup(ctx context.Context, grp *groupv3.Group, auth *authprofile.Profile) error {
 	cfg := config.GetConfig()
-	grpExisting, err := GetGroupByName(grp.Metadata.Name, auth)
+	grpExisting, err := GetGroupByName(ctx, grp.Metadata.Name, auth)
 	if grpExisting != nil {
-		tflog.Debug(context.Background(), fmt.Sprintf("updating group: %s", grp.Metadata.Name))
+		tflog.Debug(ctx, fmt.Sprintf("updating group: %s", grp.Metadata.Name))
 		uri := fmt.Sprintf("/auth/v3/partner/%s/organization/%s/group/%s", cfg.Partner, cfg.Organization, grp.Metadata.Name)
-		_, err := makeRestCall(uri, "PUT", grp, auth)
+		_, err := makeRestCall(ctx, uri, "PUT", grp, auth)
 		if err != nil {
 			return err
 		}
@@ -142,9 +142,9 @@ func ApplyGroup(grp *groupv3.Group, auth *authprofile.Profile) error {
 			return err
 		}
 
-		tflog.Debug(context.Background(), fmt.Sprintf("creating group: %s", grp.Metadata.Name))
+		tflog.Debug(ctx, fmt.Sprintf("creating group: %s", grp.Metadata.Name))
 		uri := fmt.Sprintf("/auth/v3/partner/%s/organization/%s/groups", cfg.Partner, cfg.Organization)
-		_, err := makeRestCall(uri, "POST", grp, auth)
+		_, err := makeRestCall(ctx, uri, "POST", grp, auth)
 		if err != nil {
 			return err
 		}
@@ -153,8 +153,8 @@ func ApplyGroup(grp *groupv3.Group, auth *authprofile.Profile) error {
 }
 
 // Delete group
-func DeleteGroup(groupName string, auth *authprofile.Profile) error {
-	_, err := GetGroupByName(groupName, auth)
+func DeleteGroup(ctx context.Context, groupName string, auth *authprofile.Profile) error {
+	_, err := GetGroupByName(ctx, groupName, auth)
 	if err == ErrResourceNotExists {
 		return nil
 	}
@@ -165,6 +165,6 @@ func DeleteGroup(groupName string, auth *authprofile.Profile) error {
 
 	cfg := config.GetConfig()
 	uri := fmt.Sprintf("/auth/v3/partner/%s/organization/%s/group/%s", cfg.Partner, cfg.Organization, groupName)
-	_, err = makeRestCall(uri, "DELETE", nil, auth)
+	_, err = makeRestCall(ctx, uri, "DELETE", nil, auth)
 	return err
 }

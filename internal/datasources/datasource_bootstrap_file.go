@@ -102,7 +102,7 @@ func datasourceBootstrapFileRead(ctx context.Context, d *schema.ResourceData, m 
 	auth := cfg.GetAppAuthProfile()
 	tflog.Debug(ctx, fmt.Sprintf("datasourceBootstrapFileRead provider config used: %s", utils.GetConfigAsMap(cfg)))
 
-	clusterStruct, err := utils.GetCluster(clusterId, projectId, auth)
+	clusterStruct, err := utils.GetCluster(ctx, clusterId, projectId, auth)
 
 	if err != nil {
 		d.SetId("")

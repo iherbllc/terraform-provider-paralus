@@ -111,7 +111,7 @@ func datasourceProjectRead(ctx context.Context, d *schema.ResourceData, m interf
 	auth := cfg.GetAppAuthProfile()
 	tflog.Debug(ctx, fmt.Sprintf("datasourceProjectRead provider config used: %s", utils.GetConfigAsMap(cfg)))
 
-	project, err := utils.GetProjectByName(projectId, auth)
+	project, err := utils.GetProjectByName(ctx, projectId, auth)
 	if err != nil {
 		return diag.FromErr(errors.Wrapf(err, "error locating project %s",
 			projectId))

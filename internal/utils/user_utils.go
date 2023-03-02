@@ -2,6 +2,7 @@
 package utils
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -12,11 +13,11 @@ import (
 )
 
 // Check users from a list exist in paralus
-func CheckUsersExist(users []string, auth *authprofile.Profile) diag.Diagnostics {
+func CheckUsersExist(ctx context.Context, users []string, auth *authprofile.Profile) diag.Diagnostics {
 	var diags diag.Diagnostics
 	if len(users) > 0 {
 		for _, usr := range users {
-			_, err := GetUserByName(usr, auth)
+			_, err := GetUserByName(ctx, usr, auth)
 			if err != nil {
 				if err == ErrResourceNotExists {
 					return diag.FromErr(fmt.Errorf("user '%s' does not exist", usr))
@@ -29,11 +30,11 @@ func CheckUsersExist(users []string, auth *authprofile.Profile) diag.Diagnostics
 }
 
 // Check users from a UserRole structs exist in paralus
-func CheckUserRoleUsersExist(userRoles []*userv3.UserRole, auth *authprofile.Profile) diag.Diagnostics {
+func CheckUserRoleUsersExist(ctx context.Context, userRoles []*userv3.UserRole, auth *authprofile.Profile) diag.Diagnostics {
 	var diags diag.Diagnostics
 	if len(userRoles) > 0 {
 		for _, userRole := range userRoles {
-			_, err := GetUserByName(userRole.User, auth)
+			_, err := GetUserByName(ctx, userRole.User, auth)
 			if err != nil {
 				if err == ErrResourceNotExists {
 					return diag.FromErr(fmt.Errorf("user '%s' does not exist", userRole.User))
@@ -46,9 +47,9 @@ func CheckUserRoleUsersExist(userRoles []*userv3.UserRole, auth *authprofile.Pro
 }
 
 // Get user by name
-func GetUserByName(userName string, auth *authprofile.Profile) (*userv3.User, error) {
+func GetUserByName(ctx context.Context, userName string, auth *authprofile.Profile) (*userv3.User, error) {
 	uri := fmt.Sprintf("/auth/v3/user/%s", userName)
-	resp, err := makeRestCall(uri, "GET", nil, auth)
+	resp, err := makeRestCall(ctx, uri, "GET", nil, auth)
 	if err != nil {
 		return nil, err
 	}

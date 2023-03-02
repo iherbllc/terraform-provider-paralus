@@ -113,8 +113,26 @@ func AssertUniqueRoles(pnrStruct []*userv3.ProjectNamespaceRole) diag.Diagnostic
 	return diags
 }
 
+// Assures that the combination of project, role, namespace, and group are all unique
+func AssertUniquePRNStruct(pnrStruct []*userv3.ProjectNamespaceRole) diag.Diagnostics {
+	var diags diag.Diagnostics
+	if len(pnrStruct) >= 2 {
+		pnrStructMap := make(map[string]string)
+		for _, role := range pnrStruct {
+			pnrkey := fmt.Sprintf("%s,%s,%s,%s", *role.Group, *role.Namespace, *role.Project, role.Role)
+			if _, exists := pnrStructMap[pnrkey]; exists {
+				return diag.FromErr(fmt.Errorf("group, namespace, project, and role entry already found: '%s'. must have a unique combination", pnrkey))
+			}
+			pnrStructMap[pnrkey] = "unique"
+		}
+
+	}
+
+	return diags
+}
+
 // Check projects specified in the ProjectNamespaceRoles struct exist in Paralus
-func CheckProjectsFromPNRStructExist(pnrStruct []*userv3.ProjectNamespaceRole, auth *authprofile.Profile) diag.Diagnostics {
+func CheckProjectsFromPNRStructExist(ctx context.Context, pnrStruct []*userv3.ProjectNamespaceRole, auth *authprofile.Profile) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	if len(pnrStruct) > 0 {
@@ -129,7 +147,7 @@ func CheckProjectsFromPNRStructExist(pnrStruct []*userv3.ProjectNamespaceRole, a
 					}
 					continue
 				}
-				_, err := GetProjectByName(*projectName, auth)
+				_, err := GetProjectByName(ctx, *projectName, auth)
 				if err != nil {
 					if err == ErrResourceNotExists {
 						return diag.FromErr(fmt.Errorf("project '%s' does not exist", *projectName))
@@ -162,10 +180,10 @@ func CheckAllowEmptyProject(role string) diag.Diagnostics {
 }
 
 // Get project by name
-func GetProjectByName(projectName string, auth *authprofile.Profile) (*systemv3.Project, error) {
+func GetProjectByName(ctx context.Context, projectName string, auth *authprofile.Profile) (*systemv3.Project, error) {
 	cfg := config.GetConfig()
 	uri := fmt.Sprintf("/auth/v3/partner/%s/organization/%s/project/%s", cfg.Partner, cfg.Organization, projectName)
-	resp, err := makeRestCall(uri, "GET", nil, auth)
+	resp, err := makeRestCall(ctx, uri, "GET", nil, auth)
 	if err != nil {
 		return nil, err
 	}
@@ -179,13 +197,13 @@ func GetProjectByName(projectName string, auth *authprofile.Profile) (*systemv3.
 }
 
 // Apply project takes the project details and sends it to the core
-func ApplyProject(proj *systemv3.Project, auth *authprofile.Profile) error {
+func ApplyProject(ctx context.Context, proj *systemv3.Project, auth *authprofile.Profile) error {
 	cfg := config.GetConfig()
-	projExisting, err := GetProjectByName(proj.Metadata.Name, auth)
+	projExisting, err := GetProjectByName(ctx, proj.Metadata.Name, auth)
 	if projExisting != nil {
 		tflog.Debug(context.Background(), fmt.Sprintf("updating project: %s", proj.Metadata.Name))
 		uri := fmt.Sprintf("/auth/v3/partner/%s/organization/%s/project/%s", cfg.Partner, cfg.Organization, proj.Metadata.Name)
-		_, err := makeRestCall(uri, "PUT", proj, auth)
+		_, err := makeRestCall(ctx, uri, "PUT", proj, auth)
 		if err != nil {
 			return err
 		}
@@ -195,7 +213,7 @@ func ApplyProject(proj *systemv3.Project, auth *authprofile.Profile) error {
 		}
 		tflog.Debug(context.Background(), fmt.Sprintf("creating project: %s", proj.Metadata.Name))
 		uri := fmt.Sprintf("/auth/v3/partner/%s/organization/%s/project", cfg.Partner, cfg.Organization)
-		_, err := makeRestCall(uri, "POST", proj, auth)
+		_, err := makeRestCall(ctx, uri, "POST", proj, auth)
 		if err != nil {
 			return err
 		}
@@ -204,7 +222,7 @@ func ApplyProject(proj *systemv3.Project, auth *authprofile.Profile) error {
 }
 
 // Delete project
-func DeleteProject(project string, auth *authprofile.Profile) error {
+func DeleteProject(ctx context.Context, project string, auth *authprofile.Profile) error {
 	cfg := config.GetConfig()
 
 	// Need to add delay to cluster list check due to the circumstances
@@ -219,10 +237,10 @@ func DeleteProject(project string, auth *authprofile.Profile) error {
 
 	for {
 		// Before delete, let's make sure the project is empty
-		clusters, err := ListAllClusters(project, auth)
+		clusters, err := ListAllClusters(ctx, project, auth)
 		if len(clusters) == 0 || err == ErrResourceNotExists {
 			uri := fmt.Sprintf("/auth/v3/partner/%s/organization/%s/project/%s", cfg.Partner, cfg.Organization, project)
-			_, err := makeRestCall(uri, "DELETE", nil, auth)
+			_, err := makeRestCall(ctx, uri, "DELETE", nil, auth)
 			return err
 		}
 		if err != nil && err != ErrResourceNotExists {

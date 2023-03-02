@@ -2,6 +2,7 @@
 package acctest
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"testing"
@@ -125,7 +126,7 @@ func testAccCheckDataSourceProjectExists(resourceName string) func(s *terraform.
 
 		projectStr := rs.Primary.Attributes["name"]
 
-		_, err := utils.GetProjectByName(projectStr, nil)
+		_, err := utils.GetProjectByName(context.Background(), projectStr, nil)
 
 		if err != nil {
 			return err

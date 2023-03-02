@@ -2,6 +2,7 @@
 package acctest
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"testing"
@@ -144,7 +145,7 @@ func testAccCheckProjectResourceDestroy(t *testing.T) func(s *terraform.State) e
 
 			projectStr := rs.Primary.Attributes["name"]
 
-			_, err := utils.GetProjectByName(projectStr, nil)
+			_, err := utils.GetProjectByName(context.Background(), projectStr, nil)
 
 			if err == nil || err != utils.ErrResourceNotExists {
 				return fmt.Errorf("project %s still exists", projectStr)
@@ -172,7 +173,7 @@ func testAccCheckResourceProjectExists(resourceName string) func(s *terraform.St
 
 		projectStr := rs.Primary.Attributes["name"]
 
-		_, err := utils.GetProjectByName(projectStr, nil)
+		_, err := utils.GetProjectByName(context.Background(), projectStr, nil)
 
 		if err != nil {
 			return err
@@ -762,7 +763,7 @@ func testAccCheckResourceProjectProjectRoleMap(resourceName string, projectRoles
 
 		projectStr := rs.Primary.Attributes["name"]
 
-		projectStruct, err := utils.GetProjectByName(projectStr, nil)
+		projectStruct, err := utils.GetProjectByName(context.Background(), projectStr, nil)
 
 		if err != nil {
 			return err
@@ -783,7 +784,7 @@ func testAccCheckResourceProjectUserRoleMap(resourceName string, userRoles map[s
 
 		projectStr := rs.Primary.Attributes["name"]
 
-		projectStruct, err := utils.GetProjectByName(projectStr, nil)
+		projectStruct, err := utils.GetProjectByName(context.Background(), projectStr, nil)
 
 		if err != nil {
 			return err

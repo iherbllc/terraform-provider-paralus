@@ -139,18 +139,24 @@ func createOrUpdateGroup(ctx context.Context, d *schema.ResourceData, requestTyp
 	groupStruct := utils.BuildGroupStructFromResource(d)
 
 	// before creating the group, verify that projects in PNR structs exist
-	diags = utils.CheckProjectsFromPNRStructExist(groupStruct.Spec.GetProjectNamespaceRoles(), auth)
+	diags = utils.CheckProjectsFromPNRStructExist(ctx, groupStruct.Spec.GetProjectNamespaceRoles(), auth)
+	if diags.HasError() {
+		return diags
+	}
+
+	// need to make sure the combination of namespace, group, project, and role are all unique per entry
+	diags = utils.AssertUniquePRNStruct(groupStruct.Spec.GetProjectNamespaceRoles())
 	if diags.HasError() {
 		return diags
 	}
 
 	// before creating the group, verify that users in question exist
-	diags = utils.CheckUsersExist(groupStruct.Spec.Users, auth)
+	diags = utils.CheckUsersExist(ctx, groupStruct.Spec.Users, auth)
 	if diags.HasError() {
 		return diags
 	}
 
-	err := utils.ApplyGroup(groupStruct, auth)
+	err := utils.ApplyGroup(ctx, groupStruct, auth)
 	if err != nil {
 		return diag.FromErr(errors.Wrapf(err,
 			"failed to %s group %s", howFail,
@@ -179,7 +185,7 @@ func resourceGroupRead(ctx context.Context, d *schema.ResourceData, m interface{
 		"group": groupId,
 	})
 
-	groupStruct, err := utils.GetGroupByName(groupId, auth)
+	groupStruct, err := utils.GetGroupByName(ctx, groupId, auth)
 	if err == utils.ErrResourceNotExists {
 		d.SetId("")
 		return diags
@@ -207,7 +213,7 @@ func resourceGroupImport(ctx context.Context, d *schema.ResourceData, m interfac
 		"group": groupId,
 	})
 
-	groupStruct, err := utils.GetGroupByName(groupId, auth)
+	groupStruct, err := utils.GetGroupByName(ctx, groupId, auth)
 	// unlike others, fail and stop the import if we fail to get group info
 	if err != nil {
 		return nil, errors.Wrapf(err, "group %s does not exist", groupId)
@@ -240,13 +246,13 @@ func resourceGroupDelete(ctx context.Context, d *schema.ResourceData, m interfac
 	})
 
 	// verify group exists before attempting delete
-	_, err := utils.GetGroupByName(groupId, auth)
+	_, err := utils.GetGroupByName(ctx, groupId, auth)
 	if err != nil && err != utils.ErrResourceNotExists {
 		return diag.FromErr(errors.Wrapf(err, "failed to retrieve group %s",
 			groupId))
 	}
 
-	err = utils.DeleteGroup(groupId, auth)
+	err = utils.DeleteGroup(ctx, groupId, auth)
 	if err != nil {
 		return diag.FromErr(errors.Wrapf(err, "failed to delete group %s",
 			groupId))

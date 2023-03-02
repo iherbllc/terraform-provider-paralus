@@ -193,7 +193,7 @@ func createOrUpdateCluster(ctx context.Context, d *schema.ResourceData, requestT
 
 	tflog.Trace(ctx, fmt.Sprintf("Checking for project %s existance", projectId))
 
-	projectStruct, err := utils.GetProjectByName(projectId, auth)
+	projectStruct, err := utils.GetProjectByName(ctx, projectId, auth)
 	if projectStruct == nil {
 		return diag.FromErr(errors.Wrapf(err, "project %s does not exist", projectId))
 	}
@@ -211,7 +211,7 @@ func createOrUpdateCluster(ctx context.Context, d *schema.ResourceData, requestT
 	})
 
 	if requestType == "POST" {
-		lookupStruct, err := utils.GetCluster(clusterId, projectId, auth)
+		lookupStruct, err := utils.GetCluster(ctx, clusterId, projectId, auth)
 		if lookupStruct != nil {
 			return diag.FromErr(errors.Errorf("cluster %s in project %s already exists", clusterId, projectId))
 		}
@@ -221,14 +221,14 @@ func createOrUpdateCluster(ctx context.Context, d *schema.ResourceData, requestT
 				clusterId, projectId))
 		}
 
-		err = utils.CreateCluster(clusterStruct, auth)
+		err = utils.CreateCluster(ctx, clusterStruct, auth)
 		if err != nil {
 			return diag.FromErr(errors.Wrapf(err,
 				"failed to %s cluster %s in project %s", howFail,
 				clusterId, projectId))
 		}
 	} else if requestType == "PUT" {
-		err := utils.UpdateCluster(clusterStruct, auth)
+		err := utils.UpdateCluster(ctx, clusterStruct, auth)
 		if err != nil {
 			return diag.FromErr(errors.Wrapf(err,
 				"failed to %s cluster %s in project %s", howFail,
@@ -268,7 +268,7 @@ func resourceClusterRead(ctx context.Context, d *schema.ResourceData, m interfac
 		"project": projectId,
 	})
 
-	clusterStruct, err := utils.GetCluster(clusterId, projectId, auth)
+	clusterStruct, err := utils.GetCluster(ctx, clusterId, projectId, auth)
 
 	tflog.Trace(ctx, fmt.Sprintf("ClusterStruct from GetCluster: %v", clusterStruct))
 	tflog.Trace(ctx, fmt.Sprintf("Error from GetCluster: %s", err))
@@ -311,7 +311,7 @@ func resourceClusterImport(ctx context.Context, d *schema.ResourceData, m interf
 		"cluster": clusterProjectId[1],
 	})
 
-	clusterStruct, err := utils.GetCluster(clusterProjectId[1], clusterProjectId[0], auth)
+	clusterStruct, err := utils.GetCluster(ctx, clusterProjectId[1], clusterProjectId[0], auth)
 
 	if err != nil {
 		d.SetId("")
@@ -359,13 +359,13 @@ func resourceClusterDelete(ctx context.Context, d *schema.ResourceData, m interf
 		"project": projectId,
 	})
 
-	_, err := utils.GetCluster(clusterId, projectId, auth)
+	_, err := utils.GetCluster(ctx, clusterId, projectId, auth)
 	if err != nil && err != utils.ErrResourceNotExists {
 		return diag.FromErr(errors.Wrapf(err, "failed to get cluster %s in project %s",
 			clusterId, projectId))
 	}
 
-	err = utils.DeleteCluster(clusterId, projectId, auth)
+	err = utils.DeleteCluster(ctx, clusterId, projectId, auth)
 
 	if err != nil {
 		return diag.FromErr(errors.Wrapf(err, "failed to delete cluster %s in project %s",

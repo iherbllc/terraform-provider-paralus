@@ -2,8 +2,8 @@
 package acctest
 
 import (
+	"context"
 	"fmt"
-	"log"
 	"regexp"
 	"testing"
 
@@ -146,7 +146,7 @@ func testAccCheckGroupResourceDestroy(t *testing.T) func(s *terraform.State) err
 
 			groupStr := rs.Primary.Attributes["name"]
 
-			_, err := utils.GetGroupByName(groupStr, nil)
+			_, err := utils.GetGroupByName(context.Background(), groupStr, nil)
 
 			if err == nil || err != utils.ErrResourceNotExists {
 				return fmt.Errorf("group %s still exists", groupStr)
@@ -174,12 +174,12 @@ func testAccCheckResourceGroupExists(resourceName string) func(s *terraform.Stat
 
 		groupStr := rs.Primary.Attributes["name"]
 
-		group, err := utils.GetGroupByName(groupStr, nil)
+		_, err := utils.GetGroupByName(context.Background(), groupStr, nil)
 
 		if err != nil {
 			return err
 		}
-		log.Printf("group info %s", group)
+		// log.Printf("group info %s", group)
 		return nil
 	}
 }
@@ -269,7 +269,7 @@ func testAccCheckResourceGroupProjectRoleMap(resourceName string, projectRoles m
 
 		groupStr := rs.Primary.Attributes["name"]
 
-		group, err := utils.GetGroupByName(groupStr, nil)
+		group, err := utils.GetGroupByName(context.Background(), groupStr, nil)
 
 		if err != nil {
 			return err
@@ -479,7 +479,7 @@ func testAccCheckResourceGroupCheckUserList(resourceName string, user string) fu
 
 		groupStr := rs.Primary.Attributes["name"]
 
-		group, err := utils.GetGroupByName(groupStr, nil)
+		group, err := utils.GetGroupByName(context.Background(), groupStr, nil)
 
 		if err != nil {
 			return err
@@ -495,4 +495,55 @@ func testAccCheckResourceGroupCheckUserList(resourceName string, user string) fu
 
 		return nil
 	}
+}
+
+// Test multinamespace groups with same namespace
+func TestAccParalusNamespaceGroups_Multi(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccConfigPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckGroupResourceDestroy(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderValidResource(`
+				resource "paralus_group" "namespace_read" {
+					provider = paralus.valid_resource
+					description = "catalog namespace read group"
+					name        = "Catalog Namespace Read"
+					type        = "SYSTEM"
+					users       = [
+						"acctest2-user@example.com",
+						"acctest-user@example.com",
+					  ]
+			  
+					project_roles {
+						namespace = "catalog"
+						project   = "acctest-donotdelete"
+						role      = "NAMESPACE_READ_ONLY"
+					  }
+					project_roles {
+						namespace = "garden"
+						project   = "acctest-donotdelete"
+						role      = "NAMESPACE_READ_ONLY"
+					  }
+					project_roles {
+						namespace = "telemetry"
+						project   = "acctest-donotdelete"
+						role      = "NAMESPACE_READ_ONLY"
+					  }
+					project_roles {
+						namespace = "garden"
+						project   = "acctest-donotdelete"
+						role      = "NAMESPACE_READ_ONLY"
+					  }
+					project_roles {
+						namespace = "web"
+						project   = "acctest-donotdelete"
+						role      = "NAMESPACE_READ_ONLY"
+					  }
+					}`),
+				ExpectError: regexp.MustCompile(".*must have a unique combination.*"),
+			},
+		},
+	})
 }

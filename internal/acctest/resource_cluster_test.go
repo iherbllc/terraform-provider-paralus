@@ -2,6 +2,7 @@
 package acctest
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"regexp"
@@ -382,10 +383,10 @@ func testAccCheckClusterResourceDestroy(t *testing.T) func(s *terraform.State) e
 			project := rs.Primary.Attributes["project"]
 			clusterName := rs.Primary.Attributes["name"]
 
-			_, err := utils.GetCluster(clusterName, project, nil)
+			_, err := utils.GetCluster(context.Background(), clusterName, project, nil)
 
 			if err == nil || err != utils.ErrResourceNotExists {
-				return utils.DeleteCluster(clusterName, project, nil)
+				return utils.DeleteCluster(context.Background(), clusterName, project, nil)
 			}
 		}
 
@@ -411,7 +412,7 @@ func testAccCheckResourceClusterExists(resourceName string) func(s *terraform.St
 		project := rs.Primary.Attributes["project"]
 		clusterName := rs.Primary.Attributes["name"]
 
-		_, err := utils.GetCluster(clusterName, project, nil)
+		_, err := utils.GetCluster(context.Background(), clusterName, project, nil)
 
 		if err != nil {
 			return err

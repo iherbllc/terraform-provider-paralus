@@ -2,6 +2,7 @@
 package acctest
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"testing"
@@ -73,7 +74,7 @@ func testAccCheckDataSourceClusterExists(resourceName string) func(s *terraform.
 		project := rs.Primary.Attributes["project"]
 		clusterName := rs.Primary.Attributes["name"]
 
-		_, err := utils.GetCluster(clusterName, project, nil)
+		_, err := utils.GetCluster(context.Background(), clusterName, project, nil)
 
 		if err != nil {
 			return err
