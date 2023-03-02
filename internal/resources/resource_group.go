@@ -144,6 +144,12 @@ func createOrUpdateGroup(ctx context.Context, d *schema.ResourceData, requestTyp
 		return diags
 	}
 
+	// need to make sure the combination of namespace, group, project, and role are all unique per entry
+	diags = utils.AssertUniquePRNStruct(groupStruct.Spec.GetProjectNamespaceRoles())
+	if diags.HasError() {
+		return diags
+	}
+
 	// before creating the group, verify that users in question exist
 	diags = utils.CheckUsersExist(groupStruct.Spec.Users, auth)
 	if diags.HasError() {

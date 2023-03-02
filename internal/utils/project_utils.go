@@ -113,6 +113,24 @@ func AssertUniqueRoles(pnrStruct []*userv3.ProjectNamespaceRole) diag.Diagnostic
 	return diags
 }
 
+// Assures that the combination of project, role, namespace, and group are all unique
+func AssertUniquePRNStruct(pnrStruct []*userv3.ProjectNamespaceRole) diag.Diagnostics {
+	var diags diag.Diagnostics
+	if len(pnrStruct) >= 2 {
+		pnrStructMap := make(map[string]string)
+		for _, role := range pnrStruct {
+			pnrkey := fmt.Sprintf("%s,%s,%s,%s", *role.Group, *role.Namespace, *role.Project, role.Role)
+			if _, exists := pnrStructMap[pnrkey]; exists {
+				return diag.FromErr(fmt.Errorf("group, namespace, project, and role entry already found: '%s'. must have a unique combination", pnrkey))
+			}
+			pnrStructMap[pnrkey] = "unique"
+		}
+
+	}
+
+	return diags
+}
+
 // Check projects specified in the ProjectNamespaceRoles struct exist in Paralus
 func CheckProjectsFromPNRStructExist(pnrStruct []*userv3.ProjectNamespaceRole, auth *authprofile.Profile) diag.Diagnostics {
 	var diags diag.Diagnostics
