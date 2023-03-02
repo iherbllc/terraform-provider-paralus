@@ -154,13 +154,13 @@ func createOrUpdateProject(ctx context.Context, d *schema.ResourceData, requestT
 	projectStruct := utils.BuildProjectStructFromResource(d)
 
 	// before creating the project, verify that requested group exists
-	diags = utils.CheckGroupsFromPNRStructExist(projectStruct.Spec.GetProjectNamespaceRoles(), auth)
+	diags = utils.CheckGroupsFromPNRStructExist(ctx, projectStruct.Spec.GetProjectNamespaceRoles(), auth)
 	if diags.HasError() {
 		return diags
 	}
 
 	// before creating the project, verify that users in question exist
-	diags = utils.CheckUserRoleUsersExist(projectStruct.Spec.GetUserRoles(), auth)
+	diags = utils.CheckUserRoleUsersExist(ctx, projectStruct.Spec.GetUserRoles(), auth)
 	if diags.HasError() {
 		return diags
 	}
@@ -173,7 +173,7 @@ func createOrUpdateProject(ctx context.Context, d *schema.ResourceData, requestT
 		return diags
 	}
 
-	err := utils.ApplyProject(projectStruct, auth)
+	err := utils.ApplyProject(ctx, projectStruct, auth)
 	if err != nil {
 		return diag.FromErr(errors.Wrapf(err,
 			"failed to %s project %s", howFail,
@@ -202,7 +202,7 @@ func resourceProjectRead(ctx context.Context, d *schema.ResourceData, m interfac
 		"project": projectId,
 	})
 
-	projectStruct, err := utils.GetProjectByName(projectId, auth)
+	projectStruct, err := utils.GetProjectByName(ctx, projectId, auth)
 	if err == utils.ErrResourceNotExists {
 		d.SetId("")
 		return diags
@@ -230,7 +230,7 @@ func resourceProjectImport(ctx context.Context, d *schema.ResourceData, m interf
 		"project": projectId,
 	})
 
-	projectStruct, err := utils.GetProjectByName(projectId, auth)
+	projectStruct, err := utils.GetProjectByName(ctx, projectId, auth)
 	// unlike others, fail and stop the import if we fail to get project info
 	if err != nil {
 		return nil, errors.Wrapf(err, "project %s does not exist", projectId)
@@ -264,13 +264,13 @@ func resourceProjectDelete(ctx context.Context, d *schema.ResourceData, m interf
 	})
 
 	// verify project exists before attempting delete
-	_, err := utils.GetProjectByName(projectId, auth)
+	_, err := utils.GetProjectByName(ctx, projectId, auth)
 	if err != nil && err != utils.ErrResourceNotExists {
 		return diag.FromErr(errors.Wrapf(err, "failed to retrieve project %s",
 			projectId))
 	}
 
-	err = utils.DeleteProject(projectId, auth)
+	err = utils.DeleteProject(ctx, projectId, auth)
 	if err != nil {
 		return diag.FromErr(errors.Wrapf(err, "failed to delete project %s",
 			projectId))

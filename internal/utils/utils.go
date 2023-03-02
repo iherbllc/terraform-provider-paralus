@@ -71,7 +71,7 @@ var (
 )
 
 // Makes the desired REST call
-func makeRestCall(uri string, method string, payload interface{}, auth *authprofile.Profile) (string, error) {
+func makeRestCall(ctx context.Context, uri string, method string, payload interface{}, auth *authprofile.Profile) (string, error) {
 
 	if auth == nil {
 		auth = config.GetConfig().GetAppAuthProfile()
@@ -102,7 +102,7 @@ func makeRestCall(uri string, method string, payload interface{}, auth *authprof
 		if err != nil {
 			return "", err
 		}
-		tflog.Error(context.Background(), fmt.Sprintf("payload body: %s", body))
+		tflog.Debug(ctx, fmt.Sprintf("payload body: %s", body))
 		req.SetBodyRaw(body)
 	}
 

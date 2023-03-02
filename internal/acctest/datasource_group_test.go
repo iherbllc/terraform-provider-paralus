@@ -2,6 +2,7 @@
 package acctest
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"testing"
@@ -68,7 +69,7 @@ func testAccCheckDataSourceGroupExists(resourceName string) func(s *terraform.St
 
 		groupStr := rs.Primary.Attributes["name"]
 
-		_, err := utils.GetGroupByName(groupStr, nil)
+		_, err := utils.GetGroupByName(context.Background(), groupStr, nil)
 
 		if err != nil {
 			return err

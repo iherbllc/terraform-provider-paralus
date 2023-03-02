@@ -2,8 +2,8 @@
 package acctest
 
 import (
+	"context"
 	"fmt"
-	"log"
 	"regexp"
 	"testing"
 
@@ -146,7 +146,7 @@ func testAccCheckGroupResourceDestroy(t *testing.T) func(s *terraform.State) err
 
 			groupStr := rs.Primary.Attributes["name"]
 
-			_, err := utils.GetGroupByName(groupStr, nil)
+			_, err := utils.GetGroupByName(context.Background(), groupStr, nil)
 
 			if err == nil || err != utils.ErrResourceNotExists {
 				return fmt.Errorf("group %s still exists", groupStr)
@@ -174,12 +174,12 @@ func testAccCheckResourceGroupExists(resourceName string) func(s *terraform.Stat
 
 		groupStr := rs.Primary.Attributes["name"]
 
-		group, err := utils.GetGroupByName(groupStr, nil)
+		_, err := utils.GetGroupByName(context.Background(), groupStr, nil)
 
 		if err != nil {
 			return err
 		}
-		log.Printf("group info %s", group)
+		// log.Printf("group info %s", group)
 		return nil
 	}
 }
@@ -269,7 +269,7 @@ func testAccCheckResourceGroupProjectRoleMap(resourceName string, projectRoles m
 
 		groupStr := rs.Primary.Attributes["name"]
 
-		group, err := utils.GetGroupByName(groupStr, nil)
+		group, err := utils.GetGroupByName(context.Background(), groupStr, nil)
 
 		if err != nil {
 			return err
@@ -479,7 +479,7 @@ func testAccCheckResourceGroupCheckUserList(resourceName string, user string) fu
 
 		groupStr := rs.Primary.Attributes["name"]
 
-		group, err := utils.GetGroupByName(groupStr, nil)
+		group, err := utils.GetGroupByName(context.Background(), groupStr, nil)
 
 		if err != nil {
 			return err

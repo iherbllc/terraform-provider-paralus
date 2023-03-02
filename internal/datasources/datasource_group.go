@@ -98,7 +98,7 @@ func datasourceGroupRead(ctx context.Context, d *schema.ResourceData, m interfac
 	auth := cfg.GetAppAuthProfile()
 	tflog.Debug(ctx, fmt.Sprintf("datasourceGroupRead provider config used: %s", utils.GetConfigAsMap(cfg)))
 
-	group, err := utils.GetGroupByName(groupId, auth)
+	group, err := utils.GetGroupByName(ctx, groupId, auth)
 	if err != nil {
 		return diag.FromErr(errors.Wrapf(err, "error locating group %s",
 			groupId))
