@@ -71,7 +71,13 @@ var (
 )
 
 // Makes the desired REST call
-func makeRestCall(ctx context.Context, uri string, method string, payload interface{}, auth *authprofile.Profile) (string, error) {
+func makeRestCall(ctx context.Context, uri string, method string, payload interface{}, auth *authprofile.Profile) (resp string, err error) {
+
+	resp = ""
+
+	defer func() {
+		err = handleRestPanic(uri, method, payload, err)
+	}()
 
 	if auth == nil {
 		auth = config.GetConfig().GetAppAuthProfile()
@@ -110,16 +116,16 @@ func makeRestCall(ctx context.Context, uri string, method string, payload interf
 		req.Header.Add(k, v)
 	}
 
-	resp := fasthttp.AcquireResponse()
-	err = client.Do(req, resp)
+	fastResp := fasthttp.AcquireResponse()
+	err = client.Do(req, fastResp)
 	if err != nil {
 		return "", fmt.Errorf("connection error: %v", err)
 	}
 	fasthttp.ReleaseRequest(req)
 
-	statusCode := resp.StatusCode()
-	respBody := resp.Body()
-	fasthttp.ReleaseResponse(resp)
+	statusCode := fastResp.StatusCode()
+	respBody := fastResp.Body()
+	fasthttp.ReleaseResponse(fastResp)
 	if statusCode != http.StatusOK {
 		// check if error type is permission issue
 		if strings.Contains(string(respBody), "no or invalid credentials") {
@@ -169,4 +175,24 @@ func getSession(skipServerCertCheck bool) *grequests.Session {
 		}
 	}
 	return grequests.NewSession(sessionRequestOption)
+}
+
+// recover from panic while making rest call
+func handleRestPanic(uri string, method string, payload interface{}, err error) error {
+
+	if a := recover(); a != nil {
+		if payload != nil {
+			body, err := json.MarshalIndent(payload, "", "\t")
+			if err != nil {
+				return fmt.Errorf("error converting payload %v: %v",
+					payload, err)
+			}
+			return fmt.Errorf("panic while making %s rest call against %s with payload %v: %v",
+				uri, method, body, a)
+		} else {
+			return fmt.Errorf("panic while making %s rest call against %s: %v",
+				uri, method, a)
+		}
+	}
+	return err
 }
