@@ -56,7 +56,7 @@ Either manually create them within the dashboard, or install the [Paralus CLI](h
 
 1. `pctl config download http://<SERVER_URL> --to-file paralus.local.json` # Optional if you downloaded it manually earlier.
     *Note*: If you are using a local environment, you will need to change the config.json URLs to be the same as the <SERVER_URL> value above and also change the `project` value in the config file to `acctest-donotdelete`
-2. `pctl create project acctest-donotdelete --desc "Project used for acceptance testing" -c ./paralus.local.json`
+2. `pctl create project acctest-donotdelete --desc 'Project used for acceptance testing' -c ./paralus.local.json`
 3. `pctl create cluster imported man-acctest -c ./conparalus.localfig.json`
 4. `pctl create group acctest-group --desc "For acceptance testing" -c ./paralus.local.json`
 5. `pctl create user acctest-user@example.com --groups acctest-group -c ./paralus.local.json`
@@ -117,8 +117,8 @@ If you wish to run a specific acceptance test, do the following:
         ```
 
 2. Go into the individual test case within your go file and highlight the func name
-3. Go to `Run and Debug` on the left and select `Launch a test function` from the top
-4. Look at the `DEBUG_CONSOLE` window to see the result
+3. Go to the `Run and Debug` on the far left and select `Launch a test function` from the top (the green button)
+4. Look at the `DEBUG CONSOLE` window to see the result
 
 #### All Tests
 

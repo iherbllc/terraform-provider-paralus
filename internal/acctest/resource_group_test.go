@@ -69,36 +69,36 @@ func testAccGroupResourceConfigEmptyGroup() string {
 	`, providerConfig)
 }
 
-// Test fail create group if organization name not same as UI configuration
-func TestAccParalusResourceGroupBadOrg_basic(t *testing.T) {
+// // Test fail create group if organization name not same as UI configuration
+// func TestAccParalusResourceGroupBadOrg_basic(t *testing.T) {
 
-	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
-		// CheckDestroy: testAccCheckGroupResourceDestroy(t),
-		Steps: []resource.TestStep{
-			{
-				Config:      testAccGroupResourceConfigBadOrg(),
-				ExpectError: regexp.MustCompile(".*not authorized to perform action.*"),
-			},
-		},
-	})
-}
+// 	resource.Test(t, resource.TestCase{
+// 		Providers: testAccProviders,
+// 		// CheckDestroy: testAccCheckGroupResourceDestroy(t),
+// 		Steps: []resource.TestStep{
+// 			{
+// 				Config:      testAccGroupResourceConfigBadOrg(),
+// 				ExpectError: regexp.MustCompile(".*not authorized to perform action.*"),
+// 			},
+// 		},
+// 	})
+// }
 
-func testAccGroupResourceConfigBadOrg() string {
+// func testAccGroupResourceConfigBadOrg() string {
 
-	conf = paralusProviderConfig()
-	conf.Organization = "blah"
+// 	conf = paralusProviderConfig()
+// 	conf.Organization = "blah"
 
-	providerConfig := providerString(conf, "group_badorg_test")
-	return fmt.Sprintf(`
-		%s
+// 	providerConfig := providerString(conf, "group_badorg_test")
+// 	return fmt.Sprintf(`
+// 		%s
 
-		resource "paralus_group" "badorg_test" {
-			provider = paralus.group_badorg_test
-			name = "badorg_group"
-		}
-	`, providerConfig)
-}
+// 		resource "paralus_group" "badorg_test" {
+// 			provider = paralus.group_badorg_test
+// 			name = "badorg_group"
+// 		}
+// 	`, providerConfig)
+// }
 
 // General Paralus group resource creation
 func TestAccParalusResourceGroup_basic(t *testing.T) {

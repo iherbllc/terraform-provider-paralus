@@ -23,7 +23,7 @@ func DataSourceKubeConfig() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
-				Description: "User's name",
+				Description: "Name of user to retrieve kubeconfig of. Note: User must have already generate a kubeconfig file at least once through the UI to be able to retrieve it",
 				Required:    true,
 			},
 			"namespace": {

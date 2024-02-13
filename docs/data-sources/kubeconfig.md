@@ -17,7 +17,7 @@ Retrieves a user's kubeconfig information. Uses the [pctl](https://github.com/pa
 
 ### Required
 
-- `name` (String) User's name
+- `name` (String) Name of user to retrieve kubeconfig of. Note: User must have already generate a kubeconfig file at least once through the UI to be able to retrieve it
 
 ### Optional
 
