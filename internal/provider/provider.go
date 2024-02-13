@@ -83,6 +83,7 @@ func Provider() *schema.Provider {
 			"paralus_cluster":        datasources.DataSourceCluster(),
 			"paralus_project":        datasources.DataSourceProject(),
 			"paralus_group":          datasources.DataSourceGroup(),
+			"paralus_kubeconfig":     datasources.DataSourceKubeConfig(),
 		},
 		ConfigureContextFunc: providerConfigure,
 	}

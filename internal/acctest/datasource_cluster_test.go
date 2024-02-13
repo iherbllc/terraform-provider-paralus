@@ -35,7 +35,7 @@ func TestAccParalusDataSourceCluster_basic(t *testing.T) {
 				Config: testAccDataSourceClusterConfig("man-acctest"),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckDataSourceClusterExists(dsResourceName),
-					testAccCheckDataSourceClusterTypeAttribute(dsResourceName, "man-acctest"),
+					testAccCheckDataSourceClusterTypeAttribute(dsResourceName, "acctest-donotdelete"),
 					testAccCheckResourceAttributeSet(dsResourceName, "relays"),
 					testAccCheckResourceAttributeSet(dsResourceName, "uuid"),
 					resource.TestCheckResourceAttr(dsResourceName, "project", "acctest-donotdelete"),
@@ -84,15 +84,15 @@ func testAccCheckDataSourceClusterExists(resourceName string) func(s *terraform.
 }
 
 // Verifies project attribute is set correctly by Terraform
-func testAccCheckDataSourceClusterTypeAttribute(resourceName string, description string) func(s *terraform.State) error {
+func testAccCheckDataSourceClusterTypeAttribute(resourceName string, project string) func(s *terraform.State) error {
 
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[resourceName]
 		if !ok {
 			return fmt.Errorf("not found: %s", resourceName)
 		}
-		if rs.Primary.Attributes["description"] != description {
-			return fmt.Errorf("invalid description")
+		if rs.Primary.Attributes["project"] != project {
+			return fmt.Errorf("invalid project")
 		}
 
 		return nil

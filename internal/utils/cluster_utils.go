@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"strings"
 	"time"
 
@@ -168,7 +167,6 @@ func SetBootstrapFileAndRelays(ctx context.Context, d *schema.ResourceData, auth
 		Jitter: true,
 		Max:    5 * time.Minute,
 	}
-	rand.Seed(42)
 
 	var bootstrapFile string
 	var bootstrapFiles []string
