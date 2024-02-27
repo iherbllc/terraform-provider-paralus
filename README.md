@@ -125,3 +125,7 @@ If you wish to run a specific acceptance test, do the following:
 To run all acceptance tests, use the make command by running the command `make testacc`
 
 Note: This will run all acceptance tests in the `internal/acctest` directory
+
+### Important Note
+
+If when running your tests you find that you keep getting 404 errors, try removing the port from the REST_ENDPOINT and OPS_ENDPOINT.

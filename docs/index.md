@@ -27,8 +27,8 @@ Use the navigation to the left to read about the available resources.
 
 provider "paralus" {
     pctl_profile = "test"
-    pctl_rest_endpoint = "https://paralus.example.com:443"
-    pctl_ops_endpoint = "https://paralus.example.com:443"
+    pctl_rest_endpoint = "paralus.example.com:443"
+    pctl_ops_endpoint = "paralus.example.com:443"
     pctl_api_key = "1111111"
     pctl_api_secret = "222222222"
     pctl_partner = "Howdy"
@@ -69,3 +69,5 @@ The actual calls to paralus are through fasthttp to the [Paralus API](https://gi
 See [Paralus API Swagger](https://paralus.github.io/paralus/) for a list of the various APIs. The calls to the APIs rely on the
 `X-API-KEYID` and `X-API-TOKEN` headers sent to the API and handled by the CLI. These values are marked as secret and will not be
 returned in the provider call
+
+If you keep getting 404 errors when attempting to make a call to the provider, try removing the port from the OPS_ENDPOINT and REST_ENDPOINT values or config json entries.
