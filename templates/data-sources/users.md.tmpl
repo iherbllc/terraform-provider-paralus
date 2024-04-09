@@ -1,0 +1,32 @@
+---
+page_title: "{{.Type}} - {{.Name}}"
+subcategory: ""
+description: |-
+  {{.Description}}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{.Description}}
+
+## Example Usage
+
+### The first 10 Users' Information
+
+{{ tffile "examples/data-sources/paralus_users/first_10.tf" }}
+
+### All Users' Information
+
+{{ tffile "examples/data-sources/paralus_users/all.tf" }}
+
+### Users 10-20 Information
+
+{{ tffile "examples/data-sources/paralus_users/10_through_20.tf" }}
+
+### Filtered User's Information (by email)
+
+{{ tffile "examples/data-sources/paralus_users/filter_by_email.tf" }}
+
+Note: A similar request can be made with `first_name` and `last_name`. However, only one of the three can be used to filter. Project, Role, and Group can be included. For example,
+
+{{ tffile "examples/data-sources/paralus_users/filter_by_first_name_and_project.tf" }}

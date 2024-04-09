@@ -38,3 +38,5 @@ The actual calls to paralus are through fasthttp to the [Paralus API](https://gi
 See [Paralus API Swagger](https://paralus.github.io/paralus/) for a list of the various APIs. The calls to the APIs rely on the
 `X-API-KEYID` and `X-API-TOKEN` headers sent to the API and handled by the CLI. These values are marked as secret and will not be
 returned in the provider call
+
+If you keep getting 404 errors when attempting to make a call to the provider, try removing the port from the OPS_ENDPOINT and REST_ENDPOINT values or config json entries.

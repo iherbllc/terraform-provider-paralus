@@ -57,3 +57,4 @@ terraform.tfvars
 terraform/.terraform.lock.hcl
 private.key
 *.json*
+**/*debug**
