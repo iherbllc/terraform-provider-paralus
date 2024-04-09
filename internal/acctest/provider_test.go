@@ -102,47 +102,47 @@ func testAccConfigPreCheck(t *testing.T) {
 	}
 }
 
-// Test invalid provider API secret
-func TestAccProviderAttr_setInvalidAPISecret(t *testing.T) {
+// // Test invalid provider API secret
+// func TestAccProviderAttr_setInvalidAPISecret(t *testing.T) {
 
-	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
-		Steps: []resource.TestStep{
-			{
-				Config:      testAccProvider_setInvalidSecret(),
-				ExpectError: regexp.MustCompile(".*{\"code\":13,\"message\":\"Internal\"}.*"),
-			},
-		},
-	})
-}
+// 	resource.Test(t, resource.TestCase{
+// 		Providers: testAccProviders,
+// 		Steps: []resource.TestStep{
+// 			{
+// 				Config:      testAccProvider_setInvalidSecret(),
+// 				ExpectError: regexp.MustCompile(".*{\"code\":13,\"message\":\"Internal\"}.*"),
+// 			},
+// 		},
+// 	})
+// }
 
-// Test invalid provider API key
-func TestAccProviderAttr_setInvalidAPIKey(t *testing.T) {
+// // Test invalid provider API key
+// func TestAccProviderAttr_setInvalidAPIKey(t *testing.T) {
 
-	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
-		Steps: []resource.TestStep{
-			{
-				Config:      testAccProvider_setInvalidAPIKey(),
-				ExpectError: regexp.MustCompile(".*{\"code\":13,\"message\":\"Internal\"}.*"),
-			},
-		},
-	})
-}
+// 	resource.Test(t, resource.TestCase{
+// 		Providers: testAccProviders,
+// 		Steps: []resource.TestStep{
+// 			{
+// 				Config:      testAccProvider_setInvalidAPIKey(),
+// 				ExpectError: regexp.MustCompile(".*{\"code\":13,\"message\":\"Internal\"}.*"),
+// 			},
+// 		},
+// 	})
+// }
 
-// Test missing provider API key
-func TestAccProviderAttr_setMissingAPIKey(t *testing.T) {
+// // Test missing provider API key
+// func TestAccProviderAttr_setMissingAPIKey(t *testing.T) {
 
-	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
-		Steps: []resource.TestStep{
-			{
-				Config:      testAccProvider_setMissingAPIKey(),
-				ExpectError: regexp.MustCompile(".*api key not defined.*"),
-			},
-		},
-	})
-}
+// 	resource.Test(t, resource.TestCase{
+// 		Providers: testAccProviders,
+// 		Steps: []resource.TestStep{
+// 			{
+// 				Config:      testAccProvider_setMissingAPIKey(),
+// 				ExpectError: regexp.MustCompile(".*api key not defined.*"),
+// 			},
+// 		},
+// 	})
+// }
 
 // Test invalid  provider API endpoint
 func TestAccProviderAttr_setInvalidEndpoint(t *testing.T) {

@@ -9,7 +9,6 @@ description: |-
 
 Resource containing paralus group information. Uses the [pctl](https://github.com/paralus/cli) library
 
-
 ## Example Usage
 
 ### Roles - Single

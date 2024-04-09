@@ -27,13 +27,13 @@ func DataSourceUsers() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"limit": {
 				Type:        schema.TypeInt,
-				Description: "Number of users to return. Specify -1 for all",
+				Description: "Number of users to return. Specify -1 for all (Default: 10)",
 				Optional:    true,
 				Default:     10,
 			},
 			"offset": {
 				Type:        schema.TypeInt,
-				Description: "Where to begin the return based on the total number of users",
+				Description: "Where to begin the return based on the total number of users (Default: 0)",
 				Optional:    true,
 				Default:     0,
 			},
@@ -110,20 +110,24 @@ func DataSourceUsers() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"project": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Description: "Name of a project to filter against, as defined under spec.projectNamespaceRoles.project",
+							Optional:    true,
 						},
 						"role": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Description: "Name of a role to filter against, as defined under spec.projectNamespaceRoles.role",
+							Optional:    true,
 						},
 						"group": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Description: "Name of one of the groups to filter against, as defined within the spec.groups list",
+							Optional:    true,
 						},
 						"email": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Description: "Filter by the user's email address, as defined under metadata.name",
+							Optional:    true,
 							ValidateFunc: func(val any, key string) (warns []string, errs []error) {
 								v := val.(string)
 								if !regexp.MustCompile(`^.*@.*$`).MatchString(v) {
@@ -133,22 +137,26 @@ func DataSourceUsers() *schema.Resource {
 							},
 						},
 						"first_name": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Description: "Filter by the user's first name, as defined under spec.firstName",
+							Optional:    true,
 						},
 						"last_name": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Description: "Filter by the user's last name, as defined under spec.lastName",
+							Optional:    true,
 						},
 						"case_sensitive": {
-							Type:     schema.TypeBool,
-							Optional: true,
-							Default:  false,
+							Type:        schema.TypeBool,
+							Description: "Whether to make the filter on first_name, last_name, or email address case-sensitive. (Default: false)",
+							Optional:    true,
+							Default:     false,
 						},
 						"allow_more_than_one": {
-							Type:     schema.TypeBool,
-							Optional: true,
-							Default:  false,
+							Type:        schema.TypeBool,
+							Description: "Whether to allow more than one record to return when filtering. (Default: false)",
+							Optional:    true,
+							Default:     false,
 						},
 					},
 				},

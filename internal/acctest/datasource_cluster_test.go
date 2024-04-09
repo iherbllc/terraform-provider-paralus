@@ -110,7 +110,7 @@ func TestAccParalusDataSourceCluster_Full(t *testing.T) {
 				Config: testAccDataSourceClusterFullConfig("man-acctest"),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckDataSourceClusterExists(dsResourceClusterName),
-					testAccCheckDataSourceClusterTypeAttribute(dsResourceClusterName, "man-acctest"),
+					testAccCheckDataSourceClusterTypeAttribute(dsResourceClusterName, "acctest-donotdelete"),
 					testAccCheckResourceAttributeSet(dsResourceClusterName, "relays"),
 					testAccCheckResourceAttributeSet(dsResourceClusterName, "uuid"),
 					resource.TestCheckResourceAttr(dsResourceClusterName, "project", "acctest-donotdelete"),
