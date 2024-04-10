@@ -22,7 +22,7 @@ import (
 // Paralus DataSource Users
 func DataSourceUsers() *schema.Resource {
 	return &schema.Resource{
-		Description: "Retrieves all/filtered users information. Uses the [pctl](https://github.com/paralus/cli) library",
+		Description: "Retrieves information on all paralus users or a filtered few. Uses the [pctl](https://github.com/paralus/cli) library",
 		ReadContext: datasourceUsersRead,
 		Schema: map[string]*schema.Schema{
 			"limit": {

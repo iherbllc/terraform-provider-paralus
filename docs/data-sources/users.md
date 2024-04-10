@@ -2,12 +2,12 @@
 page_title: "Data Source - paralus_users"
 subcategory: ""
 description: |-
-  Retrieves all/filtered users information. Uses the [pctl](https://github.com/paralus/cli) library
+  Retrieves information on all paralus users or a filtered few. Uses the [pctl](https://github.com/paralus/cli) library
 ---
 
 # paralus_users (Data Source)
 
-Retrieves all/filtered users information. Uses the [pctl](https://github.com/paralus/cli) library
+Retrieves information on all paralus users or a filtered few. Uses the [pctl](https://github.com/paralus/cli) library
 
 ## Example Usage
 
