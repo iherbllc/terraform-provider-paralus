@@ -8,8 +8,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/iherbllc/terraform-provider-paralus/internal/structs"
 	"github.com/jpillora/backoff"
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
@@ -21,84 +24,101 @@ import (
 )
 
 // Build the cluster struct from a schema resource
-func BuildClusterStructFromResource(d *schema.ResourceData) *infrav3.Cluster {
+func BuildClusterStructFromResource(ctx context.Context, data *structs.Cluster) (*infrav3.Cluster, diag.Diagnostics) {
 
 	clusterStruct := &infrav3.Cluster{
 		Kind: "Cluster",
 		Metadata: &commonv3.Metadata{
-			Name:        d.Get("name").(string),
-			Description: d.Get("description").(string),
-			Project:     d.Get("project").(string),
-			Id:          d.Get("uuid").(string),
+			Name:        data.Name.ValueString(),
+			Description: data.Description.ValueString(),
+			Project:     data.Project.ValueString(),
+			Id:          data.Uuid.ValueString(),
 		},
 		Spec: &infrav3.ClusterSpec{
 			Metro:       &infrav3.Metro{},
-			ClusterType: d.Get("cluster_type").(string),
+			ClusterType: data.ClusterType.ValueString(),
 		},
 	}
 
 	// If we have params, let's add them into the struct
-	if params, ok := d.GetOk("params"); ok {
-		clusterSet := params.(*schema.Set).List()
-		for _, cluster := range clusterSet {
-			cluster_params, ok := cluster.(map[string]interface{})
-			if ok {
-				provisionParams := &infrav3.ProvisionParams{
-					EnvironmentProvider:  cluster_params["environment_provider"].(string),
-					KubernetesProvider:   cluster_params["kubernetes_provider"].(string),
-					ProvisionEnvironment: cluster_params["provision_environment"].(string),
-					ProvisionPackageType: cluster_params["provision_package_type"].(string),
-					ProvisionType:        cluster_params["provision_type"].(string),
-					State:                cluster_params["state"].(string),
-				}
-
-				clusterStruct.Spec.Params = provisionParams
-			}
+	if !data.Params.IsNull() {
+		var params structs.Params
+		diags := data.Params.As(ctx, &params, basetypes.ObjectAsOptions{})
+		if diags.HasError() {
+			return nil, diags
 		}
+		provisionParams := &infrav3.ProvisionParams{
+			EnvironmentProvider:  params.EnvironmentProvider.ValueString(),
+			KubernetesProvider:   params.KubernetesProvider.ValueString(),
+			ProvisionEnvironment: params.ProvisionEnvironment.ValueString(),
+			ProvisionPackageType: params.ProvisionPackageType.ValueString(),
+			ProvisionType:        params.ProvisionType.ValueString(),
+			State:                params.State.ValueString(),
+		}
+
+		clusterStruct.Spec.Params = provisionParams
 	}
 
-	if labels, ok := d.GetOk("labels"); ok {
+	if !data.Labels.IsNull() {
 		if clusterStruct.Metadata.Labels == nil {
 			clusterStruct.Metadata.Labels = make(map[string]string)
 		}
-		for k, v := range labels.(map[string]interface{}) {
-			clusterStruct.Metadata.Labels[k] = v.(string)
+		labels := make(map[string]types.String, len(data.Labels.Elements()))
+		diags := data.Labels.ElementsAs(ctx, &labels, false)
+		if diags.HasError() {
+			return nil, diags
+		}
+		for k, v := range labels {
+			clusterStruct.Metadata.Labels[k] = v.ValueString()
 		}
 	}
 
-	if annotations, ok := d.GetOk("annotations"); ok {
+	if !data.Annotations.IsNull() {
 		if clusterStruct.Metadata.Annotations == nil {
 			clusterStruct.Metadata.Annotations = make(map[string]string)
 		}
-		for k, v := range annotations.(map[string]interface{}) {
-			clusterStruct.Metadata.Annotations[k] = v.(string)
+		annotations := make(map[string]types.String, len(data.Annotations.Elements()))
+		diags := data.Annotations.ElementsAs(ctx, &annotations, false)
+		if diags.HasError() {
+			return nil, diags
+		}
+		for k, v := range annotations {
+			clusterStruct.Metadata.Annotations[k] = v.ValueString()
 		}
 	}
 
-	return clusterStruct
+	return clusterStruct, nil
 }
 
 // Build the schema resource from Cluster Struct
-func BuildResourceFromClusterStruct(cluster *infrav3.Cluster, d *schema.ResourceData) {
-	d.Set("name", cluster.Metadata.Name)
-	d.Set("description", cluster.Metadata.Description)
-	d.Set("project", cluster.Metadata.Project)
-	d.Set("cluster_type", cluster.Spec.ClusterType)
-	d.Set("uuid", cluster.Metadata.Id)
+func BuildResourceFromClusterStruct(ctx context.Context, cluster *infrav3.Cluster, data *structs.Cluster) diag.Diagnostics {
+	var diagsReturn diag.Diagnostics
+	var diags diag.Diagnostics
+	data.Name = types.StringValue(cluster.Metadata.Name)
+	data.Description = types.StringValue(cluster.Metadata.Description)
+	data.Project = types.StringValue(cluster.Metadata.Project)
+	data.ClusterType = types.StringValue(cluster.Spec.ClusterType)
+	data.Uuid = types.StringValue(cluster.Metadata.Id)
 	if cluster.Spec.Params != nil {
-		params := d.Get("params").(*schema.Set)
-		params.Add(map[string]interface{}{
-			"environment_provider":   cluster.Spec.Params.EnvironmentProvider,
-			"kubernetes_provider":    cluster.Spec.Params.KubernetesProvider,
-			"provision_environment":  cluster.Spec.Params.ProvisionEnvironment,
-			"provision_package_type": cluster.Spec.Params.ProvisionPackageType,
-			"provision_type":         cluster.Spec.Params.ProvisionType,
-			"state":                  cluster.Spec.Params.State,
-		})
-		d.Set("params", params)
+
+		params := structs.Params{
+			EnvironmentProvider:  types.StringValue(cluster.Spec.Params.EnvironmentProvider),
+			KubernetesProvider:   types.StringValue(cluster.Spec.Params.KubernetesProvider),
+			ProvisionEnvironment: types.StringValue(cluster.Spec.Params.ProvisionEnvironment),
+			ProvisionPackageType: types.StringValue(cluster.Spec.Params.ProvisionPackageType),
+			ProvisionType:        types.StringValue(cluster.Spec.Params.ProvisionType),
+			State:                types.StringValue(cluster.Spec.Params.State),
+		}
+		data.Params, diags = types.ObjectValueFrom(ctx, params.AttributeTypes(), params)
+		diagsReturn.Append(diags...)
+
 	}
-	d.Set("labels", cluster.Metadata.Labels)
-	d.Set("annotations", cluster.Metadata.Annotations)
+
+	data.Labels, diags = types.MapValueFrom(ctx, types.StringType, cluster.Metadata.Labels)
+	diagsReturn.Append(diags...)
+	data.Annotations, diags = types.MapValueFrom(ctx, types.StringType, cluster.Metadata.Annotations)
+	diagsReturn.Append(diags...)
+	return diagsReturn
 }
 
 // Splits a single YAML file containing multiple YAML entries into a list of string
@@ -158,10 +178,8 @@ func getBootstrapRelays(bootstrapFiles []string) (string, error) {
 // Also retrieve the relays from  the data of the relay-agent configMap YAML
 // Due to the parallel nature of testing, it might be that the cluster would be created
 // before the relay was effectively populated. So let's do a increased delay check
-func SetBootstrapFileAndRelays(ctx context.Context, d *schema.ResourceData, auth *authprofile.Profile) error {
-
-	projectId := d.Get("project").(string)
-	clusterId := d.Get("name").(string)
+func SetBootstrapFileAndRelays(ctx context.Context, projectId, clusterId string,
+	auth *authprofile.Profile) (error, string, []string, string) {
 
 	b := &backoff.Backoff{
 		Jitter: true,
@@ -179,13 +197,13 @@ func SetBootstrapFileAndRelays(ctx context.Context, d *schema.ResourceData, auth
 
 		if err != nil {
 			return errors.Wrapf(err, "Error retrieving bootstrap file for cluster %s in project %s",
-				clusterId, projectId)
+				clusterId, projectId), "", nil, ""
 		}
 
 		bootstrapFiles = splitSingleYAMLIntoList(bootstrapFile)
 		relay_or_resp, err = getBootstrapRelays(bootstrapFiles)
 		if err != nil {
-			return errors.Wrapf(err, "Error while decoding YAML object %s", relay_or_resp)
+			return errors.Wrapf(err, "Error while decoding YAML object %s", relay_or_resp), "", nil, ""
 		}
 
 		d := b.Duration()
@@ -201,15 +219,12 @@ func SetBootstrapFileAndRelays(ctx context.Context, d *schema.ResourceData, auth
 	}
 
 	if relay_or_resp == "" {
-		return errors.Errorf("Unable to retrieve relay info from created cluster within %s", b.Duration())
+		return errors.Errorf("Unable to retrieve relay info from created cluster within %s", b.Duration()), "", nil, ""
 	}
 
 	b.Reset()
-	d.Set("relays", relay_or_resp)
-	d.Set("bootstrap_files", bootstrapFiles)
-	d.Set("bootstrap_files_combined", bootstrapFile)
 
-	return nil
+	return nil, relay_or_resp, bootstrapFiles, bootstrapFile
 }
 
 // Will retrieve the bootstrap file for imported clusters

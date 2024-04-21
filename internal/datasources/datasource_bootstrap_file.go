@@ -5,59 +5,54 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
-
-	"github.com/paralus/cli/pkg/config"
-
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/pkg/errors"
+	"github.com/iherbllc/terraform-provider-paralus/internal/structs"
+	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
+	"github.com/paralus/cli/pkg/config"
 )
 
-// Paralus DataSource Bootstrap File
-func DataSourceBootstrapFile() *schema.Resource {
-	return &schema.Resource{
+type dsBSFile struct {
+}
+
+func (d *dsBSFile) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_bootstrap_file"
+}
+
+func (d *dsBSFile) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+	resp.Schema = schema.Schema{
 		Description: "Retrieves the bootstrap file generated after a cluster is imported. Uses the [pctl](https://github.com/paralus/cli) library",
-		ReadContext: datasourceBootstrapFileRead,
-		Schema: map[string]*schema.Schema{
-			"id": {
-				Type:        schema.TypeString,
+		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
 				Description: "Cluster ID in the format \"PROJECT_NAME:CLUSTER_NAME\"",
 				Computed:    true,
 			},
-			"name": {
-				Type:        schema.TypeString,
+			"name": schema.StringAttribute{
 				Description: "Cluster name",
 				Required:    true,
 			},
-			"uuid": {
-				Type:        schema.TypeString,
+			"uuid": schema.StringAttribute{
 				Description: "Cluster UUID",
 				Computed:    true,
 			},
-			"project": {
-				Type:        schema.TypeString,
+			"project": schema.StringAttribute{
 				Description: "Project containing cluster",
 				Required:    true,
 			},
 			// Will only ever be updated by provider
-			"bootstrap_files_combined": {
-				Type:        schema.TypeString,
+			"bootstrap_files_combined": schema.StringAttribute{
 				Description: "YAML files used to deploy paralus agent to the cluster stored as a single massive file",
 				Computed:    true,
 			},
 			// Will only ever be updated by provider
-			"bootstrap_files": {
-				Type:        schema.TypeList,
+			"bootstrap_files": schema.ListAttribute{
 				Description: "YAML files used to deploy paralus agent to the cluster stored as a list",
 				Computed:    true,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
+				ElementType: types.StringType,
 			},
-			"relays": {
-				Type:        schema.TypeString,
+			"relays": schema.StringAttribute{
 				Description: "Relays information",
 				Computed:    true,
 			},
@@ -66,23 +61,25 @@ func DataSourceBootstrapFile() *schema.Resource {
 }
 
 // Retreive cluster bootstrap file
-func datasourceBootstrapFileRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	var diags diag.Diagnostics
+func (d *dsBSFile) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var data *structs.BootstrapFileData
 
-	clusterId := d.Get("name").(string)
-	projectId := d.Get("project").(string)
+	diags := req.Config.Get(ctx, &data)
+	resp.Diagnostics.Append(diags...)
+
+	projectId := data.Project.ValueString()
+	clusterId := data.Name.ValueString()
 
 	diags = utils.AssertStringNotEmpty("cluster project", projectId)
-	if diags.HasError() {
-		return diags
-	}
-
+	resp.Diagnostics.Append(diags...)
 	diags = utils.AssertStringNotEmpty("cluster name", clusterId)
-	if diags.HasError() {
-		return diags
+	resp.Diagnostics.Append(diags...)
+
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
-	d.SetId(clusterId + ":" + projectId)
+	data.Id = types.StringValue(clusterId + ":" + projectId)
 
 	tflog.Trace(ctx, "Retrieving bootstrap info", map[string]interface{}{
 		"cluster": clusterId,
@@ -90,32 +87,40 @@ func datasourceBootstrapFileRead(ctx context.Context, d *schema.ResourceData, m 
 	})
 
 	var cfg *config.Config
-	if m == nil {
-		cfg = config.GetConfig()
-	} else {
-		cfg = m.(*config.Config)
-		if cfg == nil {
-			cfg = config.GetConfig()
-		}
+	diags = req.Config.Get(ctx, &cfg)
+	resp.Diagnostics.Append(diags...)
+
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	auth := cfg.GetAppAuthProfile()
-	tflog.Debug(ctx, fmt.Sprintf("datasourceBootstrapFileRead provider config used: %s", utils.GetConfigAsMap(cfg)))
+	tflog.Debug(ctx, fmt.Sprintf("Read provider config used: %s", utils.GetConfigAsMap(cfg)))
 
 	clusterStruct, err := utils.GetCluster(ctx, clusterId, projectId, auth)
 
 	if err != nil {
-		d.SetId("")
-		return diag.FromErr(errors.Wrapf(err, "error locating cluster %s in project %s",
-			clusterId, projectId))
+		resp.State.RemoveResource(ctx)
+		resp.Diagnostics.AddError(fmt.Sprintf("error locating cluster %s in project %s",
+			clusterId, projectId), err.Error())
+		return
 	}
-	err = utils.SetBootstrapFileAndRelays(ctx, d, auth)
+
+	err, relays, bsfiles, bsfile := utils.SetBootstrapFileAndRelays(ctx, projectId, clusterId, auth)
 	if err != nil {
-		return diag.FromErr(err)
+		resp.Diagnostics.AddError("Setting bootstrap file and relays failed", err.Error())
+		return
+	}
+	data.Relays = types.StringValue(relays)
+	data.BSFiles, diags = types.ListValueFrom(ctx, types.StringType, bsfiles)
+	resp.Diagnostics.Append(diags...)
+	data.BSFileCombined = types.StringValue(bsfile)
+	data.Uuid = types.StringValue(clusterStruct.Metadata.Id)
+
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
-	d.Set("uuid", clusterStruct.Metadata.Id)
-
-	return diags
-
+	diags = resp.State.Set(ctx, &data)
+	resp.Diagnostics.Append(diags...)
 }

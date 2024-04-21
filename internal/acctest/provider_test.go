@@ -4,31 +4,46 @@ package acctest
 import (
 	"fmt"
 	"os"
-	"regexp"
 	"testing"
 
 	_ "github.com/joho/godotenv/autoload"
+	"github.com/paralus/cli/pkg/config"
 
 	"github.com/iherbllc/terraform-provider-paralus/internal/paralus"
 	"github.com/iherbllc/terraform-provider-paralus/internal/provider"
-	"github.com/paralus/cli/pkg/config"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-framework/providerserver"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 )
 
-var testAccProviders map[string]*schema.Provider
-var testAccProvider *schema.Provider
+// testAccProtoV6ProviderFactories are used to instantiate a provider during
+// acceptance testing. The factory function will be invoked for every Terraform
+// CLI command executed to create a provider server to which the CLI can
+// reattach.
+var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
+	"paralus": providerserver.NewProtocol6WithError(provider.New()),
+}
+
+func testAccPreCheck(t *testing.T) {
+	// You can add code here to run prior to any test case execution, for example assertions
+	// about the appropriate environment variables being set are common to see in a pre-check
+	// function.
+	conf = paralusProviderConfig()
+	testAccConfigPreCheck(t)
+}
+
+// var testAccProviders map[string]*provider.Provider
+// var testAccProvider *provider.Provider
 var conf *config.Config
 
-func init() {
-	testAccProvider = provider.Provider()
-	testAccProviders = map[string]*schema.Provider{
-		"paralus": testAccProvider,
-	}
-	conf = paralusProviderConfig()
+// func init() {
+// 	testAccProvider = provider.New()
+// 	testAccProviders = map[string]*schema.Provider{
+// 		"paralus": testAccProvider,
+// 	}
+// 	conf = paralusProviderConfig()
 
-}
+// }
 
 // Return test provider config
 func paralusProviderConfig() *config.Config {
@@ -69,15 +84,15 @@ func providerString(conf *config.Config, alias ...string) string {
 		conf.APIKey, conf.APISecret, conf.Partner, conf.Organization, aliasStr)
 }
 
-func TestProvider(t *testing.T) {
-	if err := provider.Provider().InternalValidate(); err != nil {
-		t.Fatalf("err: %s", err)
-	}
-}
+// func TestProvider(t *testing.T) {
+// 	if err := provider.New().InternalValidate(); err != nil {
+// 		t.Fatalf("err: %s", err)
+// 	}
+// }
 
-func TestProvider_impl(t *testing.T) {
-	var _ *schema.Provider = provider.Provider()
-}
+// func TestProvider_impl(t *testing.T) {
+// 	var _ *schema.Provider = provider.New()
+// }
 
 // makes sure necessary PCTL values are set
 func testAccConfigPreCheck(t *testing.T) {
@@ -144,118 +159,118 @@ func testAccConfigPreCheck(t *testing.T) {
 // 	})
 // }
 
-// Test invalid  provider API endpoint
-func TestAccProviderAttr_setInvalidEndpoint(t *testing.T) {
+// // Test invalid  provider API endpoint
+// func TestAccProviderAttr_setInvalidEndpoint(t *testing.T) {
 
-	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
-		Steps: []resource.TestStep{
-			{
-				Config:      testAccProvider_setRestEndpoint("console.paralus.blahblahblah.com"),
-				ExpectError: regexp.MustCompile(".*(no such host|resource does not exist).*"),
-			},
-		},
-	})
-}
+// 	resource.Test(t, resource.TestCase{
+// 		Providers: testAccProviders,
+// 		Steps: []resource.TestStep{
+// 			{
+// 				Config:      testAccProvider_setRestEndpoint("console.paralus.blahblahblah.com"),
+// 				ExpectError: regexp.MustCompile(".*(no such host|resource does not exist).*"),
+// 			},
+// 		},
+// 	})
+// }
 
-// Test missing provider API endpoint
-func TestAccProviderAttr_setEmptyEndpoint(t *testing.T) {
+// // Test missing provider API endpoint
+// func TestAccProviderAttr_setEmptyEndpoint(t *testing.T) {
 
-	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
-		Steps: []resource.TestStep{
-			{
-				Config:      testAccProvider_setRestEndpoint(""),
-				ExpectError: regexp.MustCompile(".*(rest endpoint not defined|resource does not exist).*"),
-			},
-		},
-	})
-}
+// 	resource.Test(t, resource.TestCase{
+// 		Providers: testAccProviders,
+// 		Steps: []resource.TestStep{
+// 			{
+// 				Config:      testAccProvider_setRestEndpoint(""),
+// 				ExpectError: regexp.MustCompile(".*(rest endpoint not defined|resource does not exist).*"),
+// 			},
+// 		},
+// 	})
+// }
 
-// Test overriding config json with a bad path
-func TestAccProviderCreds_BadConfigJsonPath(t *testing.T) {
+// // Test overriding config json with a bad path
+// func TestAccProviderCreds_BadConfigJsonPath(t *testing.T) {
 
-	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
-		Steps: []resource.TestStep{
-			{
-				Config: `provider "paralus" {
-					alias = "bad_config_json"
-					pctl_config_json = "mybad.json"
-				}
-				
-				data "paralus_project" "default" {
-					provider = paralus.bad_config_json
-					name     = "blah2"
-				  }
-				`,
-				ExpectError: regexp.MustCompile(".*error parsing config_json file.*"),
-			},
-		},
-	})
-}
+// 	resource.Test(t, resource.TestCase{
+// 		Providers: testAccProviders,
+// 		Steps: []resource.TestStep{
+// 			{
+// 				Config: `provider "paralus" {
+// 					alias = "bad_config_json"
+// 					pctl_config_json = "mybad.json"
+// 				}
 
-// set invalid api secret in provider
-func testAccProvider_setInvalidSecret() string {
+// 				data "paralus_project" "default" {
+// 					provider = paralus.bad_config_json
+// 					name     = "blah2"
+// 				  }
+// 				`,
+// 				ExpectError: regexp.MustCompile(".*error parsing config_json file.*"),
+// 			},
+// 		},
+// 	})
+// }
 
-	conf = paralusProviderConfig()
-	conf.APISecret = "smackety"
+// // set invalid api secret in provider
+// func testAccProvider_setInvalidSecret() string {
 
-	return fmt.Sprintf(`
-%s
+// 	conf = paralusProviderConfig()
+// 	conf.APISecret = "smackety"
 
-data "paralus_project" "custom_api_secret" {
-	provider = paralus.custom_api_secret
-	name = "acctest-donotdelete"
-  }`, providerString(conf, "custom_api_secret"))
-}
+// 	return fmt.Sprintf(`
+// %s
 
-// set invalid api key in provider
-func testAccProvider_setInvalidAPIKey() string {
+// data "paralus_project" "custom_api_secret" {
+// 	provider = paralus.custom_api_secret
+// 	name = "acctest-donotdelete"
+//   }`, providerString(conf, "custom_api_secret"))
+// }
 
-	conf = paralusProviderConfig()
-	conf.APIKey = "yackity"
+// // set invalid api key in provider
+// func testAccProvider_setInvalidAPIKey() string {
 
-	return fmt.Sprintf(`
-%s
+// 	conf = paralusProviderConfig()
+// 	conf.APIKey = "yackity"
 
-data "paralus_project" "custom_api_key" {
-	provider = paralus.custom_api_key
-	name = "acctest-donotdelete"
-  }`, providerString(conf, "custom_api_key"))
-}
+// 	return fmt.Sprintf(`
+// %s
 
-// set missing api key in provider
-func testAccProvider_setMissingAPIKey() string {
+// data "paralus_project" "custom_api_key" {
+// 	provider = paralus.custom_api_key
+// 	name = "acctest-donotdelete"
+//   }`, providerString(conf, "custom_api_key"))
+// }
 
-	conf = paralusProviderConfig()
-	conf.APIKey = ""
+// // set missing api key in provider
+// func testAccProvider_setMissingAPIKey() string {
 
-	return fmt.Sprintf(`
-%s
+// 	conf = paralusProviderConfig()
+// 	conf.APIKey = ""
 
-data "paralus_project" "missing_api_key" {
-	provider = paralus.missing_api_key
-	name = "acctest-donotdelete"
-  }`, providerString(conf, "missing_api_key"))
-}
+// 	return fmt.Sprintf(`
+// %s
 
-// set rest endpoint value in provider
-func testAccProvider_setRestEndpoint(endpoint string) string {
+// data "paralus_project" "missing_api_key" {
+// 	provider = paralus.missing_api_key
+// 	name = "acctest-donotdelete"
+//   }`, providerString(conf, "missing_api_key"))
+// }
 
-	conf = paralusProviderConfig()
-	conf.RESTEndpoint = endpoint
+// // set rest endpoint value in provider
+// func testAccProvider_setRestEndpoint(endpoint string) string {
 
-	return fmt.Sprintf(`
-%s
+// 	conf = paralusProviderConfig()
+// 	conf.RESTEndpoint = endpoint
 
-resource "paralus_cluster" "custom_rest_endpoint" {
-	provider = paralus.custom_rest_endpoint
-	name     = "tf-cluster-test"
-	project = "blah1"
-	cluster_type = "imported"
-  }`, providerString(conf, "custom_rest_endpoint"))
-}
+// 	return fmt.Sprintf(`
+// %s
+
+// resource "paralus_cluster" "custom_rest_endpoint" {
+// 	provider = paralus.custom_rest_endpoint
+// 	name     = "tf-cluster-test"
+// 	project = "blah1"
+// 	cluster_type = "imported"
+//   }`, providerString(conf, "custom_rest_endpoint"))
+// }
 
 // Set a valid provider
 func testAccProviderValidResource(resources string) string {

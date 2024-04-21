@@ -8,8 +8,8 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
 )
 
@@ -17,7 +17,7 @@ import (
 func TestAccParalusResourceMissingCluster_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		// CheckDestroy: testAccCheckClusterResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
@@ -45,7 +45,7 @@ func testAccClusterResourceConfigMissingCluster() string {
 func TestAccParalusResourceClusterMissingProject_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		// CheckDestroy: testAccCheckClusterResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
@@ -74,7 +74,7 @@ func testAccClusterResourceConfigMissingProject() string {
 func TestAccParalusResourceClusterEmptyProject_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		// CheckDestroy: testAccCheckClusterResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
@@ -105,7 +105,7 @@ func testAccClusterResourceConfiEmptyProject() string {
 func TestAccParalusResourceEmptyCluster_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		// CheckDestroy: testAccCheckClusterResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
@@ -139,9 +139,9 @@ func TestAccParalusResourceProjectCluster_full(t *testing.T) {
 	clusterRsName := "paralus_cluster.testcluster"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccConfigPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckClusterResourceDestroy(t),
+		PreCheck:                 func() { testAccConfigPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckClusterResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccProviderValidResource(`
@@ -193,9 +193,9 @@ func TestAccParalusResourceProjectCluster_full(t *testing.T) {
 func TestAccParalusResourceCluster_MissingClusterType(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccConfigPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckClusterResourceDestroy(t),
+		PreCheck:                 func() { testAccConfigPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckClusterResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccProviderValidResource(`
@@ -214,9 +214,9 @@ func TestAccParalusResourceCluster_MissingClusterType(t *testing.T) {
 func TestAccParalusResourceClusterUnknownProject_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccConfigPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckClusterResourceDestroy(t),
+		PreCheck:                 func() { testAccConfigPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckClusterResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccProviderValidResource(`
@@ -242,9 +242,9 @@ func TestAccParalusResourceClusterUnknownProject_basic(t *testing.T) {
 func TestAccParalusResourceCluster_WithProjectDatasource(t *testing.T) {
 	clusterRsName := "paralus_cluster.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccConfigPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckClusterResourceDestroy(t),
+		PreCheck:                 func() { testAccConfigPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckClusterResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccProviderValidResource(`
@@ -284,9 +284,9 @@ func TestAccParalusResourceCluster_Full(t *testing.T) {
 	clusterRsName := "paralus_cluster.test"
 	projectRsName := "paralus_project.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccConfigPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckClusterResourceDestroy(t),
+		PreCheck:                 func() { testAccConfigPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckClusterResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccProviderValidResource(`
@@ -334,9 +334,9 @@ func TestAccParalusResourceCluster_Full(t *testing.T) {
 func TestAccParalusResourceCluster_basic(t *testing.T) {
 	clusterRsName := "paralus_cluster.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccConfigPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckClusterResourceDestroy(t),
+		PreCheck:                 func() { testAccConfigPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckClusterResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccProviderValidResource(`

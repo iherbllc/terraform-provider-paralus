@@ -7,15 +7,15 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
 )
 
 // Test group not found
 func TestAccParalusNoGroup_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccDataSourceGroupConfig("blah"),
@@ -29,7 +29,7 @@ func TestAccParalusNoGroup_basic(t *testing.T) {
 func TestAccParalusDataSourceGroup_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceGroupConfig("All Local Users"),

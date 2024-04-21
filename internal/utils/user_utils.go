@@ -8,13 +8,13 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/iherbllc/terraform-provider-paralus/internal/structs"
 	"github.com/paralus/cli/pkg/authprofile"
 	"github.com/paralus/cli/pkg/config"
 	commonv3 "github.com/paralus/paralus/proto/types/commonpb/v3"
 	userv3 "github.com/paralus/paralus/proto/types/userpb/v3"
-	"github.com/pkg/errors"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -26,9 +26,11 @@ func CheckUsersExist(ctx context.Context, users []string, auth *authprofile.Prof
 			_, err := GetUserByName(ctx, usr, auth)
 			if err != nil {
 				if err == ErrResourceNotExists {
-					return diag.FromErr(fmt.Errorf("user '%s' does not exist", usr))
+					diags.AddError(fmt.Sprintf("user '%s' does not exist", usr), "")
+					return diags
 				}
-				return diag.FromErr(errors.Wrapf(err, "error getting user %s info", usr))
+				diags.AddError(fmt.Sprintf("error getting user %s info", usr), err.Error())
+				return diags
 			}
 		}
 	}
@@ -43,9 +45,12 @@ func CheckUserRoleUsersExist(ctx context.Context, userRoles []*userv3.UserRole, 
 			_, err := GetUserByName(ctx, userRole.User, auth)
 			if err != nil {
 				if err == ErrResourceNotExists {
-					return diag.FromErr(fmt.Errorf("user '%s' does not exist", userRole.User))
+					diags.AddError(fmt.Sprintf("user '%s' does not exist", userRole.User), "")
+					return diags
 				}
-				return diag.FromErr(errors.Wrapf(err, "error getting user %s info", userRole.User))
+
+				diags.AddError(fmt.Sprintf("error getting user %s info", userRole.User), err.Error())
+				return diags
 			}
 		}
 	}
@@ -102,80 +107,100 @@ func GetKubeConfig(ctx context.Context, accountID string, namespace string, clus
 	return makeRestCall(ctx, uri, "GET", nil, auth)
 }
 
-func BuildKubeConfigStruct(ctx context.Context, d *schema.ResourceData, kubeconfigYAML string) (string, error) {
+func BuildKubeConfigStruct(ctx context.Context, data *structs.KubeConfig, kubeconfigYAML string) (string, diag.Diagnostics) {
 	// decode := k8Scheme.Codecs.UniversalDeserializer().Decode
 	// obj, _, err := decode([]byte(kubeconfigYAML), nil, nil)
+	var diagsReturn diag.Diagnostics
+	var diags diag.Diagnostics
 	config, err := clientcmd.Load([]byte(kubeconfigYAML))
 
 	if err != nil {
-		return kubeconfigYAML, err
+		diagsReturn.AddError("Error loading kubeconfigYAML", err.Error())
+		return kubeconfigYAML, diagsReturn
 	}
 
 	if config.AuthInfos != nil {
 		for _, authInfo := range config.AuthInfos {
-			d.Set("client_certificate_data", string(authInfo.ClientCertificateData))
-			d.Set("client_key_data", string(authInfo.ClientKeyData))
+			data.ClientCertificateData = types.StringValue(string(authInfo.ClientCertificateData))
+			data.ClientKeyData = types.StringValue(string(authInfo.ClientKeyData))
 			break
 		}
 	}
 
 	if config.Clusters != nil {
-		clusters := make([]map[string]interface{}, 0)
+		clusters := make([]structs.ClusterInfo, 0)
 		for _, clusterInfo := range config.Clusters {
-			clusters = append(clusters, map[string]interface{}{
-				"certificate_authority_data": clusterInfo.CertificateAuthority,
-				"server":                     clusterInfo.Server,
+			clusters = append(clusters, structs.ClusterInfo{
+				CertificateAuthorityData: types.StringValue(clusterInfo.CertificateAuthority),
+				Server:                   types.StringValue(clusterInfo.Server),
 			})
 		}
-		d.Set("cluster_info", clusters)
+
+		data.ClusterInfo, diags = types.ListValueFrom(ctx, types.ObjectType{AttrTypes: structs.ClusterInfo{}.AttributeTypes()}, clusters)
+		diagsReturn.Append(diags...)
 	}
 
 	return "", nil
 }
 
 // Build the project struct from a schema resource
-func BuildUsersStructFromResource(d *schema.ResourceData) []*userv3.User {
+func BuildUsersStructFromResource(ctx context.Context, data *structs.User) ([]*userv3.User, diag.Diagnostics) {
 
 	users := make([]*userv3.User, 0)
-	if usersInfo, ok := d.GetOk("users_info"); ok {
-		usersList := usersInfo.([]interface{})
-		for _, eachUser := range usersList {
-			if user, ok := eachUser.(map[string]interface{}); ok {
-				userStruct := &userv3.User{
-					Kind: "User",
-					Metadata: &commonv3.Metadata{
-						Name: user["email"].(string),
-						Id:   user["id"].(string),
-					},
-					Spec: &userv3.UserSpec{
-						FirstName: user["first_name"].(string),
-						LastName:  user["last_name"].(string),
-						Groups:    user["groups"].([]string),
-					},
-				}
-				// define project roles
-				if projectRoles, ok := user["project_roles"]; ok {
-					userStruct.Spec.ProjectNamespaceRoles = make([]*userv3.ProjectNamespaceRole, 0)
-					rolesList := projectRoles.([]interface{})
-					for _, eachRole := range rolesList {
-						if role, ok := eachRole.(map[string]interface{}); ok {
-							project := role["project"].(string)
-							namespace := role["namespace"].(string)
-							group := role["group"].(string)
-							userStruct.Spec.ProjectNamespaceRoles = append(userStruct.Spec.ProjectNamespaceRoles, &userv3.ProjectNamespaceRole{
-								Project:   &project,
-								Role:      role["role"].(string),
-								Namespace: &namespace,
-								Group:     &group,
-							})
-						}
-					}
-				}
-				users = append(users, userStruct)
+	if !data.UsersInfo.IsNull() {
+		usersInfo := make([]structs.UserInfo, 0, len(data.UsersInfo.Elements()))
+		diags := data.UsersInfo.ElementsAs(ctx, &usersInfo, false)
+		if diags.HasError() {
+			return nil, diags
+		}
+		for _, user := range usersInfo {
+			userStruct := &userv3.User{
+				Kind: "User",
+				Metadata: &commonv3.Metadata{
+					Name: user.Email.ValueString(),
+					Id:   user.Id.ValueString(),
+				},
+				Spec: &userv3.UserSpec{
+					FirstName: user.FirstName.ValueString(),
+					LastName:  user.LastName.ValueString(),
+				},
 			}
+			if !user.Groups.IsNull() {
+				groups := make([]types.String, len(user.Groups.Elements()))
+				diags := user.Groups.ElementsAs(ctx, &groups, false)
+				if diags.HasError() {
+					return nil, diags
+				}
+				for _, v := range groups {
+					userStruct.Spec.Groups = append(userStruct.Spec.Groups, v.ValueString())
+				}
+			}
+
+			// define project roles
+			if !user.ProjectRoles.IsNull() {
+
+				projectRoles := make([]structs.ProjectRole, 0, len(user.ProjectRoles.Elements()))
+				diags := user.ProjectRoles.ElementsAs(ctx, &projectRoles, false)
+				if diags.HasError() {
+					return nil, diags
+				}
+				userStruct.Spec.ProjectNamespaceRoles = make([]*userv3.ProjectNamespaceRole, 0)
+				for _, projectRole := range projectRoles {
+					project := projectRole.Project.ValueString()
+					namespace := projectRole.Namespace.ValueString()
+					group := projectRole.Group.ValueString()
+					userStruct.Spec.ProjectNamespaceRoles = append(userStruct.Spec.ProjectNamespaceRoles, &userv3.ProjectNamespaceRole{
+						Project:   &project,
+						Role:      projectRole.Role.ValueString(),
+						Namespace: &namespace,
+						Group:     &group,
+					})
+				}
+			}
+			users = append(users, userStruct)
 		}
 	}
-	return users
+	return users, nil
 }
 
 // Filter the list of users based on the filter value requested
@@ -228,31 +253,43 @@ func FilterUsers(users []*userv3.User, filter_is string, filter_is_value string,
 }
 
 // Build the schema resource from users Struct
-func BuildResourceFromUsersStruct(users []*userv3.User, d *schema.ResourceData) {
+func BuildResourceFromUsersStruct(ctx context.Context, users []*userv3.User, data *structs.User) diag.Diagnostics {
+	var diagsReturn diag.Diagnostics
+	var diags diag.Diagnostics
 
 	if len(users) == 0 {
-		return
+		return diagsReturn
 	}
 
-	usersInfo := make([]map[string]interface{}, 0)
+	usersInfo := make([]structs.UserInfo, 0)
 	for _, user := range users {
-		projectRoles := make([]map[string]interface{}, 0)
+		projectRoles := make([]structs.ProjectRole, 0)
 		for _, role := range user.Spec.GetProjectNamespaceRoles() {
-			projectRoles = append(projectRoles, map[string]interface{}{
-				"project":   role.Project,
-				"role":      role.Role,
-				"namespace": role.Namespace,
-				"group":     role.Group,
+			project := role.Project
+			namespace := role.Namespace
+			group := role.Group
+			projectRoles = append(projectRoles, structs.ProjectRole{
+				Project:   types.StringValue(*project),
+				Role:      types.StringValue(role.Role),
+				Namespace: types.StringValue(*namespace),
+				Group:     types.StringValue(*group),
 			})
 		}
-		usersInfo = append(usersInfo, map[string]interface{}{
-			"first_name":    user.Spec.FirstName,
-			"last_name":     user.Spec.LastName,
-			"email":         user.Metadata.Name,
-			"id":            user.Metadata.Id,
-			"groups":        user.Spec.Groups,
-			"project_roles": projectRoles,
-		})
+		userInfo := structs.UserInfo{
+			FirstName: types.StringValue(user.Spec.FirstName),
+			LastName:  types.StringValue(user.Spec.LastName),
+			Email:     types.StringValue(user.Metadata.Name),
+			Id:        types.StringValue(user.Metadata.Id),
+		}
+		userInfo.ProjectRoles, diags = types.ListValueFrom(ctx, types.ObjectType{AttrTypes: structs.ProjectRole{}.AttributeTypes()}, projectRoles)
+		diagsReturn.Append(diags...)
+		userInfo.Groups, diags = types.ListValueFrom(ctx, types.StringType, user.Spec.Groups)
+		diagsReturn.Append(diags...)
+
+		usersInfo = append(usersInfo, userInfo)
 	}
-	d.Set("users_info", usersInfo)
+
+	data.UsersInfo, diags = types.ListValueFrom(ctx, types.ObjectType{AttrTypes: structs.UserInfo{}.AttributeTypes()}, usersInfo)
+
+	return diagsReturn
 }

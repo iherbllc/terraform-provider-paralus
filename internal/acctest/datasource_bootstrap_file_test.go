@@ -8,15 +8,15 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
 )
 
 // Test cluster not found
 func TestAccParalusBootstrapNotFound_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccDataSourceBootstrapConfig("blah"),
@@ -30,7 +30,7 @@ func TestAccParalusBootstrapNotFound_basic(t *testing.T) {
 func TestAccParalusDataSourceBootstrap_basic(t *testing.T) {
 	dsResourceName := "data.paralus_bootstrap_file.test"
 	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceBootstrapConfig("man-acctest"),

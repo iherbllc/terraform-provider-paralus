@@ -5,118 +5,107 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/iherbllc/terraform-provider-paralus/internal/structs"
 	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
 
 	"github.com/paralus/cli/pkg/config"
 
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/pkg/errors"
 )
 
+type dsCluster struct {
+}
+
+func (d *dsCluster) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_cluster"
+}
+
 // Paralus DataSource Cluster
-func DataSourceCluster() *schema.Resource {
-	return &schema.Resource{
+func (d *dsCluster) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+	resp.Schema = schema.Schema{
 		Description: "Retrieves a paralus cluster's information. Uses the [pctl](https://github.com/paralus/cli) library",
-		ReadContext: datasourceClusterRead,
-		Schema: map[string]*schema.Schema{
-			"id": {
-				Type:        schema.TypeString,
+		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
 				Description: "Cluster ID in the format \"PROJECT_NAME:CLUSTER_NAME\"",
 				Computed:    true,
 			},
-			"name": {
-				Type:        schema.TypeString,
+			"name": schema.StringAttribute{
 				Description: "Cluster name",
 				Required:    true,
 			},
-			"description": {
-				Type:        schema.TypeString,
+			"description": schema.StringAttribute{
 				Description: "Cluster description",
 				Computed:    true,
 			},
-			"cluster_type": {
-				Type:        schema.TypeString,
+			"cluster_type": schema.StringAttribute{
 				Description: "Cluster type. For example, \"imported.\" ",
 				Computed:    true,
 			},
-			"uuid": {
-				Type:        schema.TypeString,
+			"uuid": schema.StringAttribute{
 				Description: "Cluster UUID",
 				Computed:    true,
 			},
-			"params": {
-				Type:        schema.TypeSet,
+			"params": schema.MapNestedAttribute{
 				Description: "Import parameters",
 				Computed:    true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"provision_type": {
-							Type:        schema.TypeString,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"provision_type": schema.StringAttribute{
 							Description: "Provision Type. For example, \"IMPORT\"",
 							Computed:    true,
 						},
-						"provision_environment": {
-							Type:        schema.TypeString,
+						"provision_environment": schema.StringAttribute{
 							Description: "Provision Environment. For example, \"CLOUD\"",
 							Computed:    true,
 						},
-						"provision_package_type": {
-							Type:        schema.TypeString,
+						"provision_package_type": schema.StringAttribute{
 							Description: "Provision Type. For example, \"LINUX\"",
 							Computed:    true,
 						},
-						"environment_provider": {
-							Type:        schema.TypeString,
+						"environment_provider": schema.StringAttribute{
 							Description: "Provision Type. For example, \"GCP\"",
 							Computed:    true,
 						},
-						"kubernetes_provider": {
-							Type:        schema.TypeString,
+						"kubernetes_provider": schema.StringAttribute{
 							Description: "Provision Type. For example, \"EKS\"",
 							Computed:    true,
 						},
-						"state": {
-							Type:        schema.TypeString,
+						"state": schema.StringAttribute{
 							Description: "Provision Type. For example, \"PROVISION\"",
 							Computed:    true,
 						},
 					},
 				},
 			},
-			"project": {
-				Type:        schema.TypeString,
+			"project": schema.StringAttribute{
 				Description: "Project containing cluster",
 				Required:    true,
 			},
 			// Will only ever be updated by provider
-			"bootstrap_files_combined": {
-				Type:        schema.TypeString,
+			"bootstrap_files_combined": schema.StringAttribute{
 				Description: "YAML files used to deploy paralus agent to the cluster stored as a single massive file",
 				Computed:    true,
 			},
 			// Will only ever be updated by provider
-			"bootstrap_files": {
-				Type:        schema.TypeList,
+			"bootstrap_files": schema.ListAttribute{
 				Description: "YAML files used to deploy paralus agent to the cluster stored as a list",
 				Computed:    true,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
+				ElementType: types.StringType,
 			},
-			"labels": {
-				Type:        schema.TypeMap,
+			"labels": schema.MapAttribute{
 				Description: "Map of lables to include for cluster",
 				Computed:    true,
+				ElementType: types.StringType,
 			},
-			"annotations": {
-				Type:        schema.TypeMap,
+			"annotations": schema.MapAttribute{
 				Description: "Map of annotations to include for cluster",
 				Computed:    true,
+				ElementType: types.StringType,
 			},
-			"relays": {
-				Type:        schema.TypeString,
+			"relays": schema.StringAttribute{
 				Description: "Relays information",
 				Computed:    true,
 			},
@@ -125,47 +114,65 @@ func DataSourceCluster() *schema.Resource {
 }
 
 // Retreive cluster JSON info
-func datasourceClusterRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	var diags diag.Diagnostics
+func (d *dsCluster) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var data *structs.Cluster
+	diags := req.Config.Get(ctx, &data)
+	resp.Diagnostics.Append(diags...)
 
-	clusterId := d.Get("name").(string)
-	projectId := d.Get("project").(string)
+	projectId := data.Project.ValueString()
+	clusterId := data.Name.ValueString()
 
 	diags = utils.AssertStringNotEmpty("cluster project", projectId)
-	if diags.HasError() {
-		return diags
-	}
-
+	resp.Diagnostics.Append(diags...)
 	diags = utils.AssertStringNotEmpty("cluster name", clusterId)
-	if diags.HasError() {
-		return diags
+	resp.Diagnostics.Append(diags...)
+
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
-	d.SetId(clusterId + ":" + projectId)
+	data.Id = types.StringValue(clusterId + ":" + projectId)
 
-	tflog.Trace(ctx, "Retrieving cluster info", map[string]interface{}{
+	tflog.Trace(ctx, "Retrieving bootstrap info", map[string]interface{}{
 		"cluster": clusterId,
 		"project": projectId,
 	})
+	var cfg *config.Config
+	diags = req.Config.Get(ctx, &cfg)
+	resp.Diagnostics.Append(diags...)
 
-	cfg := m.(*config.Config)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	auth := cfg.GetAppAuthProfile()
-	tflog.Debug(ctx, fmt.Sprintf("datasourceClusterRead provider config used: %s", utils.GetConfigAsMap(cfg)))
+	tflog.Debug(ctx, fmt.Sprintf("Read provider config used: %s", utils.GetConfigAsMap(cfg)))
 
 	clusterStruct, err := utils.GetCluster(ctx, clusterId, projectId, auth)
 
 	if err != nil {
-		d.SetId("")
-		return diag.FromErr(errors.Wrapf(err, "error locating cluster %s in project %s",
-			clusterId, projectId))
+		resp.Diagnostics.AddError(fmt.Sprintf("error locating cluster %s in project %s",
+			clusterId, projectId), err.Error())
+		return
 	}
 
-	utils.BuildResourceFromClusterStruct(clusterStruct, d)
-	err = utils.SetBootstrapFileAndRelays(ctx, d, auth)
+	utils.BuildResourceFromClusterStruct(ctx, clusterStruct, data)
+	err, relays, bsfiles, bsfile := utils.SetBootstrapFileAndRelays(ctx, projectId, clusterId, auth)
 	if err != nil {
-		return diag.FromErr(err)
+		resp.Diagnostics.AddError("Setting bootstrap file and relays failed", err.Error())
+		return
+	}
+	data.Relays = types.StringValue(relays)
+	data.BSFiles, diags = types.ListValueFrom(ctx, types.StringType, bsfiles)
+	resp.Diagnostics.Append(diags...)
+	data.BSFileCombined = types.StringValue(bsfile)
+	data.Uuid = types.StringValue(clusterStruct.Metadata.Id)
+
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
-	return diags
+	diags = resp.State.Set(ctx, &data)
+	resp.Diagnostics.Append(diags...)
 
 }

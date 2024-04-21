@@ -5,65 +5,64 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/iherbllc/terraform-provider-paralus/internal/structs"
 	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
-	"github.com/pkg/errors"
 
 	"github.com/paralus/cli/pkg/config"
 
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-// Paralus DataSource KubeConfig
-func DataSourceKubeConfig() *schema.Resource {
-	return &schema.Resource{
+type dsKubeConfig struct {
+}
+
+func (d *dsKubeConfig) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_kubeconfig"
+}
+
+// Paralus DataSource Cluster
+func (d *dsKubeConfig) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+	resp.Schema = schema.Schema{
 		Description: "Retrieves a user's kubeconfig information. Uses the [pctl](https://github.com/paralus/cli) library",
-		ReadContext: datasourceKubeConfigRead,
-		Schema: map[string]*schema.Schema{
-			"name": {
-				Type:        schema.TypeString,
+		Attributes: map[string]schema.Attribute{
+			"name": schema.StringAttribute{
 				Description: "Name of user to retrieve kubeconfig of. Note: User must have already generate a kubeconfig file at least once through the UI to be able to retrieve it",
 				Required:    true,
 			},
-			"namespace": {
-				Type:        schema.TypeString,
+			"namespace": schema.StringAttribute{
 				Description: "Namespace to set as the default for the kubeconfig",
 				Optional:    true,
 			},
-			"cluster": {
-				Type:        schema.TypeString,
+			"cluster": schema.StringAttribute{
 				Description: "Cluster to get certificate information for",
 				Optional:    true,
 			},
-			"cluster_info": {
-				Type:        schema.TypeList,
+			"cluster_info": schema.ListNestedAttribute{
 				Description: "KubeConfig cluster information",
 				Computed:    true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"certificate_authority_data": {
-							Type:        schema.TypeString,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"certificate_authority_data": schema.StringAttribute{
 							Description: "Certificate authority data for cluster",
 							Computed:    true,
 							Sensitive:   true,
 						},
-						"server": {
-							Type:        schema.TypeString,
+						"server": schema.StringAttribute{
 							Description: "URL to server",
 							Computed:    true,
 						},
 					},
 				},
 			},
-			"client_certificate_data": {
-				Type:        schema.TypeString,
+			"client_certificate_data": schema.StringAttribute{
 				Description: "Client certificate data",
 				Computed:    true,
 				Sensitive:   true,
 			},
-			"client_key_data": {
-				Type:        schema.TypeString,
+			"client_key_data": schema.StringAttribute{
 				Description: "Client key data",
 				Computed:    true,
 				Sensitive:   true,
@@ -73,24 +72,38 @@ func DataSourceKubeConfig() *schema.Resource {
 }
 
 // Retreive KubeConfig JSON info
-func datasourceKubeConfigRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func (d *dsKubeConfig) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var diags diag.Diagnostics
+	var data *structs.KubeConfig
 
-	userName := d.Get("name").(string)
+	userName := data.Name.ValueString()
 
 	diags = utils.AssertStringNotEmpty("name", userName)
-	if diags.HasError() {
-		return diags
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
-	cluster := d.Get("cluster").(string)
-	namespace := d.Get("namespace").(string)
+	tflog.Trace(ctx, "Retrieving kubeconfig info", map[string]interface{}{
+		"name": userName,
+	})
 
-	cfg := m.(*config.Config)
+	cluster := data.Cluster.ValueString()
+	namespace := data.Namespace.ValueString()
+
+	var cfg *config.Config
+	diags = req.Config.Get(ctx, &cfg)
+	resp.Diagnostics.Append(diags...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	auth := cfg.GetAppAuthProfile()
+	tflog.Debug(ctx, fmt.Sprintf("Read provider config used: %s", utils.GetConfigAsMap(cfg)))
 	userInfo, err := utils.GetUserByName(ctx, userName, auth)
 	if err != nil {
-		return diag.FromErr(errors.Wrapf(err, "error locating user info: %s", userName))
+		resp.Diagnostics.AddError(fmt.Sprintf("error locating user info: %s", userName), err.Error())
+		return
 	}
 
 	userID := userInfo.Metadata.Id
@@ -102,17 +115,15 @@ func datasourceKubeConfigRead(ctx context.Context, d *schema.ResourceData, m int
 		"namespace": namespace,
 	})
 
-	tflog.Debug(ctx, fmt.Sprintf("datasourceKubeConfigRead provider config used: %s", utils.GetConfigAsMap(cfg)))
-
 	kubeConfig, err := utils.GetKubeConfig(ctx, userID, namespace, cluster, auth)
 	if err != nil {
-		return diag.FromErr(errors.Wrapf(err, "error locating kubeconfig for user %s. Make sure the kubeconfig has been generated manually through the UI for the first time.", userName))
+		resp.Diagnostics.AddError(fmt.Sprintf("error locating kubeconfig for user %s. Make sure "+
+			"the kubeconfig has been generated manually through the UI for the first time.", userName), err.Error())
 	}
 
-	utils.BuildKubeConfigStruct(ctx, d, kubeConfig)
+	utils.BuildKubeConfigStruct(ctx, data, kubeConfig)
 
-	d.SetId(userName)
-
-	return diags
+	diags = resp.State.Set(ctx, &data)
+	resp.Diagnostics.Append(diags...)
 
 }

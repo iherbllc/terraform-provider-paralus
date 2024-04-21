@@ -7,8 +7,8 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
 )
 
@@ -16,7 +16,7 @@ import (
 func TestAccParalusDataSourceMissingProject_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		// CheckDestroy: testAccCheckProjectDataSourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
@@ -44,7 +44,7 @@ func testAccProjectDataSourceConfigMissingProject() string {
 func TestAccParalusDataSourceEmptyProject_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		// CheckDestroy: testAccCheckProjectDataSourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
@@ -72,7 +72,7 @@ func testAccProjectDataSourceConfigEmptyProject() string {
 // Test project not found
 func TestAccParalusNoProject_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccDataSourceProjectConfig("blah"),
@@ -86,7 +86,7 @@ func TestAccParalusNoProject_basic(t *testing.T) {
 func TestAccParalusDataSourceProject_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceProjectConfig("acctest-donotdelete"),
