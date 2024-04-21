@@ -5,83 +5,77 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/iherbllc/terraform-provider-paralus/internal/structs"
 	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
-	"github.com/pkg/errors"
 
 	"github.com/paralus/cli/pkg/config"
 
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
+type dsProject struct {
+}
+
+func (d *dsProject) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_project"
+}
+
 // Paralus DataSource Project
-func DataSourceProject() *schema.Resource {
-	return &schema.Resource{
+func (d *dsProject) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+	resp.Schema = schema.Schema{
 		Description: "Retrieves a paralus project's information. Uses the [pctl](https://github.com/paralus/cli) library",
-		ReadContext: datasourceProjectRead,
-		Schema: map[string]*schema.Schema{
-			"id": {
-				Type:        schema.TypeString,
+		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
 				Description: "Project ID in the format \"PROJECT_NAME\"",
 				Computed:    true,
 			},
-			"name": {
-				Type:        schema.TypeString,
+			"name": schema.StringAttribute{
 				Description: "Project name",
 				Required:    true,
 			},
-			"description": {
-				Type:        schema.TypeString,
+			"description": schema.StringAttribute{
 				Description: "Project description",
 				Computed:    true,
 			},
-			"uuid": {
-				Type:        schema.TypeString,
+			"uuid": schema.StringAttribute{
 				Description: "Project UUID",
 				Computed:    true,
 			},
-			"project_roles": {
-				Type:        schema.TypeList,
+			"project_roles": schema.ListNestedAttribute{
 				Description: "Project roles attached to project, containing group or namespace",
 				Computed:    true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"project": {
-							Type:     schema.TypeString,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"project": schema.StringAttribute{
 							Computed: true,
 						},
-						"role": {
-							Type:     schema.TypeString,
+						"role": schema.StringAttribute{
 							Computed: true,
 						},
-						"namespace": {
-							Type:     schema.TypeString,
+						"namespace": schema.StringAttribute{
 							Computed: true,
 						},
-						"group": {
-							Type:     schema.TypeString,
+						"group": schema.StringAttribute{
 							Computed: true,
 						},
 					},
 				},
 			},
-			"user_roles": {
-				Type:        schema.TypeList,
+			"user_roles": schema.ListNestedAttribute{
 				Description: "User roles attached to project",
 				Computed:    true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"user": {
-							Type:     schema.TypeString,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"user": schema.StringAttribute{
 							Computed: true,
 						},
-						"role": {
-							Type:     schema.TypeString,
+						"role": schema.StringAttribute{
 							Computed: true,
 						},
-						"namespace": {
-							Type:        schema.TypeString,
+						"namespace": schema.StringAttribute{
 							Description: "Authorized namespace",
 							Computed:    true,
 						},
@@ -93,34 +87,41 @@ func DataSourceProject() *schema.Resource {
 }
 
 // Retreive project JSON info
-func datasourceProjectRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func (d *dsProject) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var diags diag.Diagnostics
+	var data *structs.Project
 
-	projectId := d.Get("name").(string)
+	projectId := data.Name.ValueString()
 
 	diags = utils.AssertStringNotEmpty("project name", projectId)
-	if diags.HasError() {
-		return diags
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	tflog.Trace(ctx, "Retrieving project info", map[string]interface{}{
 		"project": projectId,
 	})
 
-	cfg := m.(*config.Config)
+	var cfg *config.Config
+	diags = req.Config.Get(ctx, &cfg)
+	resp.Diagnostics.Append(diags...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	auth := cfg.GetAppAuthProfile()
-	tflog.Debug(ctx, fmt.Sprintf("datasourceProjectRead provider config used: %s", utils.GetConfigAsMap(cfg)))
+	tflog.Debug(ctx, fmt.Sprintf("Read provider config used: %s", utils.GetConfigAsMap(cfg)))
 
 	project, err := utils.GetProjectByName(ctx, projectId, auth)
 	if err != nil {
-		return diag.FromErr(errors.Wrapf(err, "error locating project %s",
-			projectId))
+		resp.Diagnostics.AddError(fmt.Sprintf("error locating project %s", projectId), err.Error())
+		return
 	}
 
-	utils.BuildResourceFromProjectStruct(project, d)
+	utils.BuildResourceFromProjectStruct(ctx, project, data)
 
-	d.SetId(projectId)
-
-	return diags
+	diags = resp.State.Set(ctx, &data)
+	resp.Diagnostics.Append(diags...)
 
 }
