@@ -7,7 +7,6 @@ import (
 
 	"github.com/iherbllc/terraform-provider-paralus/internal/structs"
 	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
-
 	"github.com/paralus/cli/pkg/config"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -17,34 +16,41 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-type dsGroup struct {
+var _ datasource.DataSource = (*DsGroup)(nil)
+
+func DataSourceGroup() datasource.DataSource {
+	return &DsGroup{}
 }
 
-func (d *dsGroup) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+type DsGroup struct {
+	cfg *config.Config
+}
+
+func (d *DsGroup) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_group"
 }
 
 // Paralus DataSource Cluster
-func (d *dsGroup) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *DsGroup) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Retrieves a paralus group's information. Uses the [pctl](https://github.com/paralus/cli) library",
+		MarkdownDescription: "Retrieves a paralus group's information. Uses the [pctl](https://github.com/paralus/cli) library",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Group ID in the format \"GROUP_NAME\"",
-				Computed:    true,
+				MarkdownDescription: "Group ID in the format \"GROUP_NAME\"",
+				Computed:            true,
 			},
 			"name": schema.StringAttribute{
-				Description: "Group name",
-				Required:    true,
+				MarkdownDescription: "Group name",
+				Required:            true,
 			},
 			"description": schema.StringAttribute{
-				Description: "Group description",
-				Computed:    true,
+				MarkdownDescription: "Group description",
+				Computed:            true,
 			},
 			"project_roles": schema.ListNestedAttribute{
-				Description: "Project roles attached to group, containing group or namespace",
-				Computed:    true,
-				Optional:    true,
+				MarkdownDescription: "Project roles attached to group, containing group or namespace",
+				Computed:            true,
+				Optional:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"project": schema.StringAttribute{
@@ -63,20 +69,50 @@ func (d *dsGroup) Schema(ctx context.Context, req datasource.SchemaRequest, resp
 				},
 			},
 			"users": schema.ListAttribute{
-				Description: "Users attached to group",
-				Computed:    true,
-				ElementType: types.StringType,
+				MarkdownDescription: "Users attached to group",
+				Computed:            true,
+				ElementType:         types.StringType,
 			},
 			"type": schema.StringAttribute{
-				Description: "Type of group",
-				Computed:    true,
+				MarkdownDescription: "Type of group",
+				Computed:            true,
 			},
 		},
 	}
 }
 
+func (d *DsGroup) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+	// Always perform a nil check when handling ProviderData because Terraform
+	// sets that data after it calls the ConfigureProvider RPC.
+	if req.ProviderData == nil {
+		return
+	}
+
+	cfg, ok := req.ProviderData.(*config.Config)
+
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Unexpected Data Source Configure Type",
+			fmt.Sprintf("Expected *config.Config, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+		)
+
+		return
+	}
+
+	d.cfg = cfg
+}
+
 // Retreive group info
-func (d *dsGroup) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+func (d *DsGroup) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	// Prevent panic if the provider has not been configured.
+	if d.cfg == nil {
+		resp.Diagnostics.AddError(
+			"Unconfigured PCTL Config",
+			"Expected configured PCTL config. Please ensure the values are passed in or report this issue to the provider developers.",
+		)
+		return
+	}
+
 	var diags diag.Diagnostics
 	var data *structs.Group
 
@@ -93,16 +129,8 @@ func (d *dsGroup) Read(ctx context.Context, req datasource.ReadRequest, resp *da
 		"group": groupId,
 	})
 
-	var cfg *config.Config
-	diags = req.Config.Get(ctx, &cfg)
-	resp.Diagnostics.Append(diags...)
-
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	auth := cfg.GetAppAuthProfile()
-	tflog.Debug(ctx, fmt.Sprintf("Read provider config used: %s", utils.GetConfigAsMap(cfg)))
+	auth := d.cfg.GetAppAuthProfile()
+	tflog.Debug(ctx, fmt.Sprintf("Read provider config used: %s", utils.GetConfigAsMap(d.cfg)))
 
 	group, err := utils.GetGroupByName(ctx, groupId, auth)
 	if err != nil {

@@ -5,125 +5,189 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/iherbllc/terraform-provider-paralus/internal/structs"
 	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
-	"github.com/pkg/errors"
 
 	"github.com/paralus/cli/pkg/config"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
+var _ resource.Resource = (*RsGoup)(nil)
+
+func ResourceGroup() resource.Resource {
+	return &RsGoup{}
+}
+
+type RsGoup struct {
+	cfg *config.Config
+}
+
+// With the resource.Resource implementation
+func (r *RsGoup) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_group"
+}
+
 // Paralus Resource Group
-func ResourceGroup() *schema.Resource {
-	return &schema.Resource{
-		Description:   "Resource containing paralus group information. Uses the [pctl](https://github.com/paralus/cli) library",
-		CreateContext: resourceGroupCreate,
-		ReadContext:   resourceGroupRead,
-		UpdateContext: resourceGroupUpdate,
-		DeleteContext: resourceGroupDelete,
-		Importer: &schema.ResourceImporter{
-			StateContext: resourceGroupImport,
-		},
-		Schema: map[string]*schema.Schema{
-			"id": {
-				Type:        schema.TypeString,
-				Description: "Group ID in the format \"GROUP_NAME\"",
-				Computed:    true,
+// Paralus Resource Cluster
+func (r RsGoup) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = schema.Schema{
+		MarkdownDescription: "Resource containing paralus group information. Uses the [pctl](https://github.com/paralus/cli) library",
+		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				MarkdownDescription: "Group ID in the format \"GROUP_NAME\"",
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
-			"name": {
-				Type:        schema.TypeString,
-				Description: "Group name",
-				ForceNew:    true,
-				Required:    true,
+			"name": schema.StringAttribute{
+				MarkdownDescription: "Group name",
+				Required:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
-			"description": {
-				Type:        schema.TypeString,
-				Description: "Group description.",
-				Optional:    true,
+			"description": schema.StringAttribute{
+				MarkdownDescription: "Group description.",
+				Optional:            true,
 			},
-			"project_roles": {
-				Type:        schema.TypeList,
-				Description: "Project namespace roles to attach to the group",
-				Optional:    true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"project": {
-							Type:        schema.TypeString,
-							Description: "Project name",
-							Optional:    true,
+			"project_roles": schema.ListNestedAttribute{
+				MarkdownDescription: "Project namespace roles to attach to the group",
+				Optional:            true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"project": schema.StringAttribute{
+							MarkdownDescription: "Project name",
+							Optional:            true,
 						},
-						"role": {
-							Type:        schema.TypeString,
-							Description: "Role name",
-							Required:    true,
+						"role": schema.StringAttribute{
+							MarkdownDescription: "Role name",
+							Required:            true,
 						},
-						"namespace": {
-							Type:        schema.TypeString,
-							Description: "Authorized namespace",
-							Optional:    true,
+						"namespace": schema.StringAttribute{
+							MarkdownDescription: "Authorized namespace",
+							Optional:            true,
 						},
-						"group": {
-							Type:        schema.TypeString,
-							Description: "Authorized group. This will always be the same as the resource group name.",
-							Computed:    true,
+						"group": schema.StringAttribute{
+							MarkdownDescription: "Authorized group. This will always be the same as the resource group name.",
+							Computed:            true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.UseStateForUnknown(),
+							},
 						},
 					},
 				},
 			},
-			"users": {
-				Type:        schema.TypeList,
-				Description: "User roles attached to group",
-				Optional:    true,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
+			"users": schema.ListAttribute{
+				MarkdownDescription: "User roles attached to group",
+				Optional:            true,
+				ElementType:         types.StringType,
 			},
-			"type": {
-				Type:        schema.TypeString,
-				Description: "Type of group",
-				Optional:    true,
-				Default:     "SYSTEM",
+			"type": schema.StringAttribute{
+				MarkdownDescription: "Type of group",
+				Optional:            true,
+				Default:             stringdefault.StaticString("SYSTEM"),
 			},
 		},
 	}
 }
 
-// Create a specific group
-func resourceGroupCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-
-	groupId := d.Get("name").(string)
-
-	cfg := m.(*config.Config)
-	tflog.Debug(ctx, fmt.Sprintf("resourceGroupCreate provider config used: %s", utils.GetConfigAsMap(cfg)))
-
-	diags := createOrUpdateGroup(ctx, d, "POST", m)
-
-	if diags.HasError() {
-		return diags
+func (r *RsGoup) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	// Always perform a nil check when handling ProviderData because Terraform
+	// sets that data after it calls the ConfigureProvider RPC.
+	if req.ProviderData == nil {
+		return
 	}
 
-	d.SetId(groupId)
+	cfg, ok := req.ProviderData.(*config.Config)
 
-	return diags
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Unexpected Resource Configure Type",
+			fmt.Sprintf("Expected *config.Config, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+		)
+
+		return
+	}
+
+	r.cfg = cfg
 }
 
-func resourceGroupUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+// Create a specific group
+func (r *RsGoup) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	// Prevent panic if the provider has not been configured.
+	if r.cfg == nil {
+		resp.Diagnostics.AddError(
+			"Unconfigured PCTL Config",
+			"Expected configured PCTL config. Please ensure the values are passed in or report this issue to the provider developers.",
+		)
+		return
+	}
 
-	cfg := m.(*config.Config)
-	tflog.Debug(ctx, fmt.Sprintf("resourceGroupUpdate provider config used: %s", utils.GetConfigAsMap(cfg)))
+	var data *structs.Group
+	diags := req.Config.Get(ctx, &data)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
-	return createOrUpdateGroup(ctx, d, "PUT", m)
+	tflog.Debug(ctx, fmt.Sprintf("Create provider config used: %s", utils.GetConfigAsMap(r.cfg)))
+
+	diags = createOrUpdateGroup(ctx, data, "POST", r.cfg)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	diags = resp.State.Set(ctx, &data)
+	resp.Diagnostics.Append(diags...)
+}
+
+func (r RsGoup) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	// Prevent panic if the provider has not been configured.
+	if r.cfg == nil {
+		resp.Diagnostics.AddError(
+			"Unconfigured PCTL Config",
+			"Expected configured PCTL config. Please ensure the values are passed in or report this issue to the provider developers.",
+		)
+		return
+	}
+
+	var data *structs.Group
+	diags := req.Config.Get(ctx, &data)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Debug(ctx, fmt.Sprintf("Update provider config used: %s", utils.GetConfigAsMap(r.cfg)))
+
+	diags = createOrUpdateGroup(ctx, data, "PUT", r.cfg)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	diags = resp.State.Set(ctx, &data)
+	resp.Diagnostics.Append(diags...)
+
 }
 
 // Creates a new group or updates an existing one
-func createOrUpdateGroup(ctx context.Context, d *schema.ResourceData, requestType string, m interface{}) diag.Diagnostics {
+func createOrUpdateGroup(ctx context.Context, data *structs.Group, requestType string, cfg *config.Config) diag.Diagnostics {
 
-	groupId := d.Get("name").(string)
+	var diags diag.Diagnostics
+	groupId := data.Name.ValueString()
 
-	auth := m.(*config.Config).GetAppAuthProfile()
-	diags := utils.AssertStringNotEmpty("group name", groupId)
+	auth := cfg.GetAppAuthProfile()
+	diags = utils.AssertStringNotEmpty("group name", groupId)
 	if diags.HasError() {
 		return diags
 	}
@@ -136,7 +200,10 @@ func createOrUpdateGroup(ctx context.Context, d *schema.ResourceData, requestTyp
 	tflog.Trace(ctx, fmt.Sprintf("Group %s request", requestType), map[string]interface{}{
 		"group": groupId,
 	})
-	groupStruct := utils.BuildGroupStructFromResource(d)
+	groupStruct, diags := utils.BuildGroupStructFromResource(ctx, data)
+	if diags.HasError() {
+		return diags
+	}
 
 	// before creating the group, verify that projects in PNR structs exist
 	diags = utils.CheckProjectsFromPNRStructExist(ctx, groupStruct.Spec.GetProjectNamespaceRoles(), auth)
@@ -158,27 +225,41 @@ func createOrUpdateGroup(ctx context.Context, d *schema.ResourceData, requestTyp
 
 	err := utils.ApplyGroup(ctx, groupStruct, auth)
 	if err != nil {
-		return diag.FromErr(errors.Wrapf(err,
+		diags.AddError(fmt.Sprintf(
 			"failed to %s group %s", howFail,
-			groupId))
+			groupId), err.Error())
 	}
 
-	return resourceGroupRead(ctx, d, m)
+	return diags
 }
 
 // Retreive group info
-func resourceGroupRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	var diags diag.Diagnostics
+func (r RsGoup) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	// Prevent panic if the provider has not been configured.
+	if r.cfg == nil {
+		resp.Diagnostics.AddError(
+			"Unconfigured PCTL Config",
+			"Expected configured PCTL config. Please ensure the values are passed in or report this issue to the provider developers.",
+		)
+		return
+	}
 
-	cfg := m.(*config.Config)
-	auth := cfg.GetAppAuthProfile()
-	tflog.Debug(ctx, fmt.Sprintf("resourceGroupRead provider config used: %s", utils.GetConfigAsMap(cfg)))
+	var data *structs.Group
+	diags := req.State.Get(ctx, &data)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
-	groupId := d.Get("name").(string)
+	auth := r.cfg.GetAppAuthProfile()
+	tflog.Debug(ctx, fmt.Sprintf("Read provider config used: %s", utils.GetConfigAsMap(r.cfg)))
+
+	groupId := data.Name.ValueString()
 
 	diags = utils.AssertStringNotEmpty("group name", groupId)
-	if diags.HasError() {
-		return diags
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	tflog.Trace(ctx, "Retrieving group info", map[string]interface{}{
@@ -187,27 +268,46 @@ func resourceGroupRead(ctx context.Context, d *schema.ResourceData, m interface{
 
 	groupStruct, err := utils.GetGroupByName(ctx, groupId, auth)
 	if err == utils.ErrResourceNotExists {
-		d.SetId("")
-		return diags
+		resp.State.RemoveResource(ctx)
+		return
 	}
 	if err != nil {
-		return diag.FromErr(errors.Wrapf(err, "Error retrieving group info for %s", groupId))
+		resp.Diagnostics.AddError(fmt.Sprintf("Error retrieving group info for %s", groupId), err.Error())
 	}
 
 	// Update resource information from updated cluster
-	utils.BuildResourceFromGroupStruct(groupStruct, d)
+	diags = utils.BuildResourceFromGroupStruct(ctx, groupStruct, data)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
-	return diags
+	diags = resp.State.Set(ctx, &data)
+	resp.Diagnostics.Append(diags...)
+
 }
 
 // Import group into TF
-func resourceGroupImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+func (r *RsGoup) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 
-	groupId := d.Id()
+	// Prevent panic if the provider has not been configured.
+	if r.cfg == nil {
+		resp.Diagnostics.AddError(
+			"Unconfigured PCTL Config",
+			"Expected configured PCTL config. Please ensure the values are passed in or report this issue to the provider developers.",
+		)
+		return
+	}
 
-	cfg := m.(*config.Config)
-	auth := cfg.GetAppAuthProfile()
-	tflog.Debug(ctx, fmt.Sprintf("resourceGroupImport provider config used: %s", utils.GetConfigAsMap(cfg)))
+	var data *structs.Group
+	auth := r.cfg.GetAppAuthProfile()
+	tflog.Debug(ctx, fmt.Sprintf("resourceGroupImport provider config used: %s", utils.GetConfigAsMap(r.cfg)))
+
+	groupId := req.ID
+	if groupId == "" {
+		resp.Diagnostics.AddError("Must specify a group ID", "")
+		return
+	}
 
 	tflog.Trace(ctx, "Retrieving group info", map[string]interface{}{
 		"group": groupId,
@@ -216,29 +316,50 @@ func resourceGroupImport(ctx context.Context, d *schema.ResourceData, m interfac
 	groupStruct, err := utils.GetGroupByName(ctx, groupId, auth)
 	// unlike others, fail and stop the import if we fail to get group info
 	if err != nil {
-		return nil, errors.Wrapf(err, "group %s does not exist", groupId)
+		resp.Diagnostics.AddError(
+			"Unexpected Import Identifier",
+			fmt.Sprintf("group %s does not exist", req.ID),
+		)
+		return
 	}
 
-	utils.BuildResourceFromGroupStruct(groupStruct, d)
+	diags := utils.BuildResourceFromGroupStruct(ctx, groupStruct, data)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
-	schemas := make([]*schema.ResourceData, 0)
-	schemas = append(schemas, d)
-	return schemas, nil
+	diags = resp.State.Set(ctx, &data)
+	resp.Diagnostics.Append(diags...)
 
 }
 
 // Delete an existing cluster
-func resourceGroupDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	var diags diag.Diagnostics
+func (r RsGoup) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	// Prevent panic if the provider has not been configured.
+	if r.cfg == nil {
+		resp.Diagnostics.AddError(
+			"Unconfigured PCTL Config",
+			"Expected configured PCTL config. Please ensure the values are passed in or report this issue to the provider developers.",
+		)
+		return
+	}
 
-	cfg := m.(*config.Config)
-	auth := cfg.GetAppAuthProfile()
-	tflog.Debug(ctx, fmt.Sprintf("resourceGroupDelete provider config used: %s", utils.GetConfigAsMap(cfg)))
-	groupId := d.Get("name").(string)
+	var data *structs.Cluster
+	diags := req.State.Get(ctx, &data)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	auth := r.cfg.GetAppAuthProfile()
+	tflog.Debug(ctx, fmt.Sprintf("Delete provider config used: %s", utils.GetConfigAsMap(r.cfg)))
+	groupId := data.Name.ValueString()
 
 	diags = utils.AssertStringNotEmpty("group name", groupId)
-	if diags.HasError() {
-		return diags
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	tflog.Trace(ctx, "Deleting Group info", map[string]interface{}{
@@ -248,16 +369,14 @@ func resourceGroupDelete(ctx context.Context, d *schema.ResourceData, m interfac
 	// verify group exists before attempting delete
 	_, err := utils.GetGroupByName(ctx, groupId, auth)
 	if err != nil && err != utils.ErrResourceNotExists {
-		return diag.FromErr(errors.Wrapf(err, "failed to retrieve group %s",
-			groupId))
+		resp.Diagnostics.AddError(fmt.Sprintf("failed to retrieve group %s",
+			groupId), err.Error())
+		return
 	}
 
 	err = utils.DeleteGroup(ctx, groupId, auth)
 	if err != nil {
-		return diag.FromErr(errors.Wrapf(err, "failed to delete group %s",
-			groupId))
+		resp.Diagnostics.AddError(fmt.Sprintf("failed to delete group %s",
+			groupId), err.Error())
 	}
-
-	d.SetId("")
-	return diags
 }

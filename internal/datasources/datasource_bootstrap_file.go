@@ -14,54 +14,92 @@ import (
 	"github.com/paralus/cli/pkg/config"
 )
 
-type dsBSFile struct {
+var _ datasource.DataSource = (*DsBSFile)(nil)
+
+func DataSourceBootstrapFile() datasource.DataSource {
+	return &DsBSFile{}
 }
 
-func (d *dsBSFile) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+type DsBSFile struct {
+	cfg *config.Config
+}
+
+func (d *DsBSFile) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_bootstrap_file"
 }
 
-func (d *dsBSFile) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *DsBSFile) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Retrieves the bootstrap file generated after a cluster is imported. Uses the [pctl](https://github.com/paralus/cli) library",
+		MarkdownDescription: "Retrieves the bootstrap file generated after a cluster is imported. Uses the [pctl](https://github.com/paralus/cli) library",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Cluster ID in the format \"PROJECT_NAME:CLUSTER_NAME\"",
-				Computed:    true,
+				MarkdownDescription: "Cluster ID in the format \"PROJECT_NAME:CLUSTER_NAME\"",
+				Computed:            true,
 			},
 			"name": schema.StringAttribute{
-				Description: "Cluster name",
-				Required:    true,
+				MarkdownDescription: "Cluster name",
+				Required:            true,
 			},
 			"uuid": schema.StringAttribute{
-				Description: "Cluster UUID",
-				Computed:    true,
+				MarkdownDescription: "Cluster UUID",
+				Computed:            true,
 			},
 			"project": schema.StringAttribute{
-				Description: "Project containing cluster",
-				Required:    true,
+				MarkdownDescription: "Project containing cluster",
+				Required:            true,
 			},
 			// Will only ever be updated by provider
 			"bootstrap_files_combined": schema.StringAttribute{
-				Description: "YAML files used to deploy paralus agent to the cluster stored as a single massive file",
-				Computed:    true,
+				MarkdownDescription: "YAML files used to deploy paralus agent to the cluster stored as a single massive file",
+				Computed:            true,
 			},
 			// Will only ever be updated by provider
 			"bootstrap_files": schema.ListAttribute{
-				Description: "YAML files used to deploy paralus agent to the cluster stored as a list",
-				Computed:    true,
-				ElementType: types.StringType,
+				MarkdownDescription: "YAML files used to deploy paralus agent to the cluster stored as a list",
+				Computed:            true,
+				ElementType:         types.StringType,
 			},
 			"relays": schema.StringAttribute{
-				Description: "Relays information",
-				Computed:    true,
+				MarkdownDescription: "Relays information",
+				Computed:            true,
 			},
 		},
 	}
 }
 
+func (d *DsBSFile) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+	// Always perform a nil check when handling ProviderData because Terraform
+	// sets that data after it calls the ConfigureProvider RPC.
+	if req.ProviderData == nil {
+		return
+	}
+
+	cfg, ok := req.ProviderData.(*config.Config)
+
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Unexpected Data Source Configure Type",
+			fmt.Sprintf("Expected *config.Config, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+		)
+
+		return
+	}
+
+	d.cfg = cfg
+}
+
 // Retreive cluster bootstrap file
-func (d *dsBSFile) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+func (d *DsBSFile) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+
+	// Prevent panic if the provider has not been configured.
+	if d.cfg == nil {
+		resp.Diagnostics.AddError(
+			"Unconfigured PCTL Config",
+			"Expected configured PCTL config. Please ensure the values are passed in or report this issue to the provider developers.",
+		)
+		return
+	}
+
 	var data *structs.BootstrapFileData
 
 	diags := req.Config.Get(ctx, &data)
@@ -86,16 +124,8 @@ func (d *dsBSFile) Read(ctx context.Context, req datasource.ReadRequest, resp *d
 		"project": projectId,
 	})
 
-	var cfg *config.Config
-	diags = req.Config.Get(ctx, &cfg)
-	resp.Diagnostics.Append(diags...)
-
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	auth := cfg.GetAppAuthProfile()
-	tflog.Debug(ctx, fmt.Sprintf("Read provider config used: %s", utils.GetConfigAsMap(cfg)))
+	auth := d.cfg.GetAppAuthProfile()
+	tflog.Debug(ctx, fmt.Sprintf("Read provider config used: %s", utils.GetConfigAsMap(d.cfg)))
 
 	clusterStruct, err := utils.GetCluster(ctx, clusterId, projectId, auth)
 

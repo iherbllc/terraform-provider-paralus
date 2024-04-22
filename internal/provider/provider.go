@@ -43,30 +43,30 @@ func (p *paralusProvider) Schema(ctx context.Context, req provider.SchemaRequest
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"pctl_profile": rs.StringAttribute{
-				Description: "PCTL Profile",
-				Optional:    true,
+				MarkdownDescription: "PCTL Profile",
+				Optional:            true,
 			},
 			"pctl_rest_endpoint": rs.StringAttribute{
-				Description: "PCTL Profile",
-				Optional:    true,
+				MarkdownDescription: "PCTL Profile",
+				Optional:            true,
 			},
 			"pctl_ops_endpoint": rs.StringAttribute{
-				Description: "OPS Endpoint",
-				Optional:    true,
+				MarkdownDescription: "OPS Endpoint",
+				Optional:            true,
 			},
 			"pctl_api_key": rs.StringAttribute{
-				Description: "PCTL API Key (obtained from UI). Either this and api_secret must be set config_json set",
-				Optional:    true,
-				Sensitive:   true,
+				MarkdownDescription: "PCTL API Key (obtained from UI). Either this and api_secret must be set config_json set",
+				Optional:            true,
+				Sensitive:           true,
 			},
 			"pctl_api_secret": rs.StringAttribute{
-				Description: "PCTL API Secret (obtained from UI). Either this and api_key must be set config_json set",
-				Optional:    true,
-				Sensitive:   true,
+				MarkdownDescription: "PCTL API Secret (obtained from UI). Either this and api_key must be set config_json set",
+				Optional:            true,
+				Sensitive:           true,
 			},
 			"pctl_config_json": rs.StringAttribute{
-				Description: "Config JSON (obtained from UI). Either this must be set or api_key/api_secret set",
-				Optional:    true,
+				MarkdownDescription: "Config JSON (obtained from UI). Either this must be set or api_key/api_secret set",
+				Optional:            true,
 			},
 			"pctl_partner": rs.StringAttribute{
 				Optional: true,
@@ -139,7 +139,7 @@ func (p *paralusProvider) Configure(ctx context.Context, req provider.ConfigureR
 		return
 	}
 
-	client, err := paralus.NewConfig(ctx, profile, rest_endpoint, ops_endpoint, api_key, api_secret, config_json, partner, organization, skip_cert_valid)
+	cfg, err := paralus.NewConfig(ctx, profile, rest_endpoint, ops_endpoint, api_key, api_secret, config_json, partner, organization, skip_cert_valid)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to load configuration",
@@ -150,20 +150,20 @@ func (p *paralusProvider) Configure(ctx context.Context, req provider.ConfigureR
 		return
 	}
 
-	resp.DataSourceData = client
-	resp.ResourceData = client
+	resp.DataSourceData = cfg
+	resp.ResourceData = cfg
 }
 
 func (p *paralusProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		func() resource.Resource {
-			return &resources.ResourceCluster{}
+			return resources.ResourceCluster()
 		},
 		func() resource.Resource {
-			return &resources.ResourceProject{}
+			return resources.ResourceProject()
 		},
 		func() resource.Resource {
-			return &resources.ResourceGroup{}
+			return resources.ResourceGroup()
 		},
 	}
 }
@@ -171,63 +171,22 @@ func (p *paralusProvider) Resources(ctx context.Context) []func() resource.Resou
 func (p *paralusProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		func() datasource.DataSource {
-			return datasources.DataSourceBootstrapFile{}
+			return datasources.DataSourceBootstrapFile()
 		},
 		func() datasource.DataSource {
-			return datasources.DataSourceCluster{}
+			return datasources.DataSourceCluster()
 		},
 		func() datasource.DataSource {
-			return datasources.DataSourceProject{}
+			return datasources.DataSourceProject()
 		},
 		func() datasource.DataSource {
-			return datasources.DataSourceGroup{}
+			return datasources.DataSourceGroup()
 		},
 		func() datasource.DataSource {
-			return datasources.DataSourceKubeConfig{}
+			return datasources.DataSourceKubeConfig()
 		},
 		func() datasource.DataSource {
-			return datasources.DataSourceUsers{}
+			return datasources.DataSourceUsers()
 		},
 	}
 }
-
-// // provider instance. Schema must either have all individual values set
-// // or a path to a config file that can be loaded.
-// func New() *schema.Provider {
-// 	return &schema.Provider{
-// 		Schema: map[string]*schema.Schema{},
-// 		ResourcesMap: map[string]*schema.Resource{
-// 			"paralus_cluster": resources.ResourceCluster(),
-// 			"paralus_project": resources.ResourceProject(),
-// 			"paralus_group":   resources.ResourceGroup(),
-// 		},
-// 		DataSourcesMap: map[string]*schema.Resource{
-// 			"paralus_bootstrap_file": datasources.DataSourceBootstrapFile(),
-// 			"paralus_cluster":        datasources.DataSourceCluster(),
-// 			"paralus_project":        datasources.DataSourceProject(),
-// 			"paralus_group":          datasources.DataSourceGroup(),
-// 			"paralus_kubeconfig":     datasources.DataSourceKubeConfig(),
-// 			"paralus_users":          datasources.DataSourceUsers(),
-// 		},
-// 		ConfigureContextFunc: providerConfigure,
-// 	}
-// }
-
-// // Configure provider
-// func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
-
-// 	tflog.Debug(ctx, fmt.Sprintf(`Provider info:
-// 	- pctl_profile: %s
-// 	- pctl_rest_endpoint: %s
-// 	- pctl_ops_endpoint: %s
-// 	- pctl_config_json: %s
-// 	- pctl_partner: %s
-// 	- pctl_organization: %s
-// 	- pctl_skip_server_cert_valid: %s
-// 	`, d.Get("pctl_profile"),
-// 		d.Get("pctl_rest_endpoint"), d.Get("pctl_ops_endpoint"),
-// 		d.Get("pctl_config_json"), d.Get("pctl_partner"),
-// 		d.Get("pctl_organization"), d.Get("pctl_skip_server_cert_valid")))
-
-// 	return paralus.NewConfig(ctx, d)
-// }

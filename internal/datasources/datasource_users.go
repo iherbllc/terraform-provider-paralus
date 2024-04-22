@@ -9,91 +9,92 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/iherbllc/terraform-provider-paralus/internal/structs"
 	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
-	"github.com/pkg/errors"
 
 	"github.com/paralus/cli/pkg/config"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
+var _ datasource.DataSource = (*DsUsers)(nil)
+
+func DataSourceUsers() datasource.DataSource {
+	return &DsUsers{}
+}
+
+type DsUsers struct {
+	cfg *config.Config
+}
+
+func (d *DsUsers) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_users"
+}
+
 // Paralus DataSource Users
-func DataSourceUsers() *schema.Resource {
-	return &schema.Resource{
-		Description: "Retrieves information on all paralus users or a filtered few. Uses the [pctl](https://github.com/paralus/cli) library",
-		ReadContext: datasourceUsersRead,
-		Schema: map[string]*schema.Schema{
-			"limit": {
-				Type:        schema.TypeInt,
-				Description: "Number of users to return. Specify -1 for all (Default: 10)",
-				Optional:    true,
-				Default:     10,
+func (d *DsUsers) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+	resp.Schema = schema.Schema{
+		MarkdownDescription: "Retrieves information on all paralus users or a filtered few. Uses the [pctl](https://github.com/paralus/cli) library",
+		Attributes: map[string]schema.Attribute{
+			"limit": schema.Int64Attribute{
+				MarkdownDescription: "Number of users to return. Specify -1 for all (Default: 10)",
+				Optional:            true,
 			},
-			"offset": {
-				Type:        schema.TypeInt,
-				Description: "Where to begin the return based on the total number of users (Default: 0)",
-				Optional:    true,
-				Default:     0,
+			"offset": schema.Int64Attribute{
+				MarkdownDescription: "Where to begin the return based on the total number of users (Default: 0)",
+				Optional:            true,
 			},
-			"users_info": {
-				Type:        schema.TypeList,
-				Description: "Users information",
-				Computed:    true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"first_name": {
-							Type:        schema.TypeString,
-							Description: "User's first name",
-							Computed:    true,
-							Sensitive:   true,
+			"users_info": schema.ListNestedAttribute{
+				MarkdownDescription: "Users information",
+				Computed:            true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"first_name": schema.StringAttribute{
+							MarkdownDescription: "User's first name",
+							Computed:            true,
+							Sensitive:           true,
 						},
-						"last_name": {
-							Type:        schema.TypeString,
-							Description: "User's last name",
-							Computed:    true,
-							Sensitive:   true,
+						"last_name": schema.StringAttribute{
+							MarkdownDescription: "User's last name",
+							Computed:            true,
+							Sensitive:           true,
 						},
-						"email": {
-							Type:        schema.TypeString,
-							Description: "User's email",
-							Computed:    true,
-							Sensitive:   true,
+						"email": schema.StringAttribute{
+							MarkdownDescription: "User's email",
+							Computed:            true,
+							Sensitive:           true,
 						},
-						"id": {
-							Type:        schema.TypeString,
-							Description: "User's ID",
-							Computed:    true,
+						"id": schema.StringAttribute{
+							MarkdownDescription: "User's ID",
+							Computed:            true,
 						},
-						"groups": {
-							Type:        schema.TypeList,
-							Description: "List of groups user belong's to",
-							Computed:    true,
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-							},
+						"groups": schema.ListAttribute{
+							MarkdownDescription: "List of groups user belong's to",
+							Computed:            true,
+							ElementType:         types.StringType,
 						},
-						"project_roles": {
-							Type:        schema.TypeList,
-							Description: "Project roles attached to user, containing group or namespace",
-							Computed:    true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"project": {
-										Type:     schema.TypeString,
+						"project_roles": schema.ListNestedAttribute{
+							MarkdownDescription: "Project roles attached to user, containing group or namespace",
+							Computed:            true,
+							NestedObject: schema.NestedAttributeObject{
+								Attributes: map[string]schema.Attribute{
+									"project": schema.StringAttribute{
 										Computed: true,
 									},
-									"role": {
-										Type:     schema.TypeString,
+									"role": schema.StringAttribute{
 										Computed: true,
 									},
-									"namespace": {
-										Type:     schema.TypeString,
+									"namespace": schema.StringAttribute{
 										Computed: true,
 									},
-									"group": {
-										Type:     schema.TypeString,
+									"group": schema.StringAttribute{
 										Computed: true,
 									},
 								},
@@ -102,61 +103,48 @@ func DataSourceUsers() *schema.Resource {
 					},
 				},
 			},
-			"filters": {
-				Type:        schema.TypeList,
-				Description: "Filters to narrow returned user information",
-				Optional:    true,
-				MaxItems:    1,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"project": {
-							Type:        schema.TypeString,
-							Description: "Name of a project to filter against, as defined under spec.projectNamespaceRoles.project",
-							Optional:    true,
+			"filters": schema.MapNestedAttribute{
+				MarkdownDescription: "Filters to narrow returned user information",
+				Optional:            true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"project": schema.StringAttribute{
+							MarkdownDescription: "Name of a project to filter against, as defined under spec.projectNamespaceRoles.project",
+							Optional:            true,
 						},
-						"role": {
-							Type:        schema.TypeString,
-							Description: "Name of a role to filter against, as defined under spec.projectNamespaceRoles.role",
-							Optional:    true,
+						"role": schema.StringAttribute{
+							MarkdownDescription: "Name of a role to filter against, as defined under spec.projectNamespaceRoles.role",
+							Optional:            true,
 						},
-						"group": {
-							Type:        schema.TypeString,
-							Description: "Name of one of the groups to filter against, as defined within the spec.groups list",
-							Optional:    true,
+						"group": schema.StringAttribute{
+							MarkdownDescription: "Name of one of the groups to filter against, as defined within the spec.groups list",
+							Optional:            true,
 						},
-						"email": {
-							Type:        schema.TypeString,
-							Description: "Filter by the user's email address, as defined under metadata.name",
-							Optional:    true,
-							ValidateFunc: func(val any, key string) (warns []string, errs []error) {
-								v := val.(string)
-								if !regexp.MustCompile(`^.*@.*$`).MatchString(v) {
-									errs = append(errs, fmt.Errorf("%q must be in format: XXXX@XXX.XXX, got: %s", key, v))
-								}
-								return
+						"email": schema.StringAttribute{
+							MarkdownDescription: "Filter by the user's email address, as defined under metadata.name",
+							Optional:            true,
+							Validators: []validator.String{
+								stringvalidator.RegexMatches(
+									regexp.MustCompile(`^.*@.*$`),
+									"email must be in format: XXXX@XXX.XXX",
+								),
 							},
 						},
-						"first_name": {
-							Type:        schema.TypeString,
-							Description: "Filter by the user's first name, as defined under spec.firstName",
-							Optional:    true,
+						"first_name": schema.StringAttribute{
+							MarkdownDescription: "Filter by the user's first name, as defined under spec.firstName",
+							Optional:            true,
 						},
-						"last_name": {
-							Type:        schema.TypeString,
-							Description: "Filter by the user's last name, as defined under spec.lastName",
-							Optional:    true,
+						"last_name": schema.StringAttribute{
+							MarkdownDescription: "Filter by the user's last name, as defined under spec.lastName",
+							Optional:            true,
 						},
-						"case_sensitive": {
-							Type:        schema.TypeBool,
-							Description: "Whether to make the filter on first_name, last_name, or email address case-sensitive. (Default: false)",
-							Optional:    true,
-							Default:     false,
+						"case_sensitive": schema.BoolAttribute{
+							MarkdownDescription: "Whether to make the filter on first_name, last_name, or email address case-sensitive. (Default: false)",
+							Optional:            true,
 						},
-						"allow_more_than_one": {
-							Type:        schema.TypeBool,
-							Description: "Whether to allow more than one record to return when filtering. (Default: false)",
-							Optional:    true,
-							Default:     false,
+						"allow_more_than_one": schema.BoolAttribute{
+							MarkdownDescription: "Whether to allow more than one record to return when filtering. (Default: false)",
+							Optional:            true,
 						},
 					},
 				},
@@ -165,23 +153,53 @@ func DataSourceUsers() *schema.Resource {
 	}
 }
 
+func (d *DsUsers) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+	// Always perform a nil check when handling ProviderData because Terraform
+	// sets that data after it calls the ConfigureProvider RPC.
+	if req.ProviderData == nil {
+		return
+	}
+
+	cfg, ok := req.ProviderData.(*config.Config)
+
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Unexpected Data Source Configure Type",
+			fmt.Sprintf("Expected *config.Config, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+		)
+
+		return
+	}
+
+	d.cfg = cfg
+}
+
 // Retreive Users JSON info
-func datasourceUsersRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func (d *DsUsers) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	// Prevent panic if the provider has not been configured.
+	if d.cfg == nil {
+		resp.Diagnostics.AddError(
+			"Unconfigured PCTL Config",
+			"Expected configured PCTL config. Please ensure the values are passed in or report this issue to the provider developers.",
+		)
+		return
+	}
+
 	var diags diag.Diagnostics
 
-	cfg := m.(*config.Config)
-	auth := cfg.GetAppAuthProfile()
+	auth := d.cfg.GetAppAuthProfile()
 
-	limit := d.Get("limit").(int)
-	offset := d.Get("offset").(int)
-
-	var id strings.Builder
-	fmt.Fprintf(&id, "%d%d", limit, offset)
+	var data *structs.User
+	limit := data.Limit.ValueInt64()
+	if limit == 0 {
+		limit = 10
+	}
+	offset := data.Offset.ValueInt64()
 
 	// build parameters based on the filter given
 	params := make([]string, 10)
-	params[0] = fmt.Sprintf("organization=%s", cfg.Organization)
-	params[1] = fmt.Sprintf("partner=%s", cfg.Partner)
+	params[0] = fmt.Sprintf("organization=%s", d.cfg.Organization)
+	params[1] = fmt.Sprintf("partner=%s", d.cfg.Partner)
 	params[2] = fmt.Sprintf("limit=%d", limit)
 	params[3] = fmt.Sprintf("offset=%d", offset)
 	filtersCounter := 4
@@ -189,58 +207,51 @@ func datasourceUsersRead(ctx context.Context, d *schema.ResourceData, m interfac
 	filter_is_value := ""
 	filter_is_case_senstive := false
 	filter_allow_more_than_one := false
-	if filtersAttr, ok := d.GetOk("filters"); ok {
-		filters := filtersAttr.([]interface{})
-		for _, eachFilter := range filters {
-			if filter, ok := eachFilter.(map[string]interface{}); ok {
-				role := filter["role"]
-				if role != "" {
-					params[filtersCounter] = fmt.Sprintf("role=%s&", role)
-					id.WriteString(role.(string))
-					filtersCounter++
-				}
-				project := filter["project"]
-				if project != "" {
-					params[filtersCounter] = fmt.Sprintf("project=%s&", project)
-					id.WriteString(project.(string))
-					filtersCounter++
-				}
-				group := filter["group"]
-				if group != "" {
-					params[filtersCounter] = fmt.Sprintf("group=%s&", group)
-					id.WriteString(group.(string))
-					filtersCounter++
-				}
-				filter_is_case_senstive = filter["case_sensitive"].(bool)
-				filter_allow_more_than_one = filter["allow_more_than_one"].(bool)
-				email := filter["email"]
-				first_name := filter["first_name"]
-				last_name := filter["last_name"]
-				if email != "" && first_name != "" || email != "" && last_name != "" || first_name != "" && last_name != "" {
-					return diag.Errorf("Please specify only one: email, first_name, or last_name")
-				}
-				if email != "" {
-					params[filtersCounter] = fmt.Sprintf("q=%s&", email)
-					id.WriteString(email.(string))
-					filter_is = "email"
-					filter_is_value = email.(string)
-					filtersCounter++
-				}
-				if first_name != "" {
-					params[filtersCounter] = fmt.Sprintf("q=%s&", first_name)
-					id.WriteString(first_name.(string))
-					filter_is = "first_name"
-					filter_is_value = first_name.(string)
-					filtersCounter++
-				}
-				if last_name != "" {
-					params[filtersCounter] = fmt.Sprintf("q=%s&", last_name)
-					id.WriteString(last_name.(string))
-					filter_is = "last_name"
-					filter_is_value = last_name.(string)
-					filtersCounter++
-				}
-			}
+	if !data.Filters.IsNull() {
+		var filters structs.Filter
+		diags := data.Filters.As(ctx, &params, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		if !filters.Role.IsNull() {
+			params[filtersCounter] = fmt.Sprintf("role=%s&", filters.Role.ValueString())
+			filtersCounter++
+		}
+		if !filters.Project.IsNull() {
+			params[filtersCounter] = fmt.Sprintf("project=%s&", filters.Project.ValueString())
+			filtersCounter++
+		}
+		if !filters.Group.IsNull() {
+			params[filtersCounter] = fmt.Sprintf("group=%s&", filters.Group.ValueString())
+			filtersCounter++
+		}
+		filter_is_case_senstive = filters.CaseSensitive.ValueBool()
+		filter_allow_more_than_one = filters.AllowMoreThanOne.ValueBool()
+		email := filters.Email.ValueString()
+		first_name := filters.FirstName.ValueString()
+		last_name := filters.LastName.ValueString()
+		if email != "" && first_name != "" || email != "" && last_name != "" || first_name != "" && last_name != "" {
+			resp.Diagnostics.AddError("Please specify only one: email, first_name, or last_name", "")
+			return
+		}
+		if email != "" {
+			params[filtersCounter] = fmt.Sprintf("q=%s&", email)
+			filter_is = "email"
+			filter_is_value = email
+			filtersCounter++
+		}
+		if first_name != "" {
+			params[filtersCounter] = fmt.Sprintf("q=%s&", first_name)
+			filter_is = "first_name"
+			filter_is_value = first_name
+			filtersCounter++
+		}
+		if last_name != "" {
+			params[filtersCounter] = fmt.Sprintf("q=%s&", last_name)
+			filter_is = "last_name"
+			filter_is_value = last_name
+			filtersCounter++
 		}
 	}
 
@@ -248,11 +259,13 @@ func datasourceUsersRead(ctx context.Context, d *schema.ResourceData, m interfac
 
 	usersInfo, err := utils.GetUsers(ctx, params, auth)
 	if err != nil {
-		return diag.FromErr(errors.Wrapf(err, "error locating users based on provided values"))
+		resp.Diagnostics.AddError("error locating users based on provided values", err.Error())
+		return
 	}
 
 	if len(usersInfo) == 0 {
-		return diag.Errorf("No users returned based on provided query params: %s", strings.Join(params, "&"))
+		resp.Diagnostics.AddError(fmt.Sprintf("No users returned based on provided query params: %s", strings.Join(params, "&")), "")
+		return
 	}
 
 	if val, ok := os.LookupEnv("TF_LOG"); ok && val == "TRACE" {
@@ -260,11 +273,13 @@ func datasourceUsersRead(ctx context.Context, d *schema.ResourceData, m interfac
 			var usersMap map[string]interface{}
 			usersData, err := json.Marshal(userInfo)
 			if err != nil {
-				return diag.FromErr(errors.Wrapf(err, "error converting usersInfo to usersData bytes"))
+				resp.Diagnostics.AddError("error converting usersInfo to usersData bytes", err.Error())
+				return
 			}
 			err = json.Unmarshal(usersData, &usersMap)
 			if err != nil {
-				return diag.FromErr(errors.Wrapf(err, "error converting usersData bytes to usersMap map[string]interface{}"))
+				resp.Diagnostics.AddError("error converting usersData bytes to usersMap map[string]interface{}", err.Error())
+				return
 			}
 			tflog.Trace(ctx, "users returned based on query parameters: ", usersMap)
 		}
@@ -274,16 +289,15 @@ func datasourceUsersRead(ctx context.Context, d *schema.ResourceData, m interfac
 	if filter_is != "" {
 		usersInfo, err = utils.FilterUsers(usersInfo, filter_is, filter_is_value, filter_is_case_senstive, filter_allow_more_than_one)
 		if err != nil {
-			return diag.FromErr(errors.Wrapf(err, "error locating filtered user"))
+			resp.Diagnostics.AddError("error locating filtered user", err.Error())
+			return
 		}
 	}
 
-	tflog.Debug(ctx, fmt.Sprintf("datasourceUsersRead provider config used: %s", utils.GetConfigAsMap(cfg)))
+	tflog.Debug(ctx, fmt.Sprintf("datasourceUsersRead provider config used: %s", utils.GetConfigAsMap(d.cfg)))
 
-	utils.BuildResourceFromUsersStruct(usersInfo, d)
+	utils.BuildResourceFromUsersStruct(ctx, usersInfo, data)
 
-	d.SetId(id.String()) // ID is a value made up of the offset,limit,and whatever specified filters
-
-	return diags
-
+	diags = resp.State.Set(ctx, &data)
+	resp.Diagnostics.Append(diags...)
 }

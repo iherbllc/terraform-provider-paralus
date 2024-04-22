@@ -16,37 +16,44 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-type dsProject struct {
+var _ datasource.DataSource = (*DsProject)(nil)
+
+func DataSourceProject() datasource.DataSource {
+	return &DsProject{}
 }
 
-func (d *dsProject) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+type DsProject struct {
+	cfg *config.Config
+}
+
+func (d *DsProject) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_project"
 }
 
 // Paralus DataSource Project
-func (d *dsProject) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *DsProject) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Retrieves a paralus project's information. Uses the [pctl](https://github.com/paralus/cli) library",
+		MarkdownDescription: "Retrieves a paralus project's information. Uses the [pctl](https://github.com/paralus/cli) library",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Project ID in the format \"PROJECT_NAME\"",
-				Computed:    true,
+				MarkdownDescription: "Project ID in the format \"PROJECT_NAME\"",
+				Computed:            true,
 			},
 			"name": schema.StringAttribute{
-				Description: "Project name",
-				Required:    true,
+				MarkdownDescription: "Project name",
+				Required:            true,
 			},
 			"description": schema.StringAttribute{
-				Description: "Project description",
-				Computed:    true,
+				MarkdownDescription: "Project description",
+				Computed:            true,
 			},
 			"uuid": schema.StringAttribute{
-				Description: "Project UUID",
-				Computed:    true,
+				MarkdownDescription: "Project UUID",
+				Computed:            true,
 			},
 			"project_roles": schema.ListNestedAttribute{
-				Description: "Project roles attached to project, containing group or namespace",
-				Computed:    true,
+				MarkdownDescription: "Project roles attached to project, containing group or namespace",
+				Computed:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"project": schema.StringAttribute{
@@ -65,8 +72,8 @@ func (d *dsProject) Schema(ctx context.Context, req datasource.SchemaRequest, re
 				},
 			},
 			"user_roles": schema.ListNestedAttribute{
-				Description: "User roles attached to project",
-				Computed:    true,
+				MarkdownDescription: "User roles attached to project",
+				Computed:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"user": schema.StringAttribute{
@@ -76,8 +83,8 @@ func (d *dsProject) Schema(ctx context.Context, req datasource.SchemaRequest, re
 							Computed: true,
 						},
 						"namespace": schema.StringAttribute{
-							Description: "Authorized namespace",
-							Computed:    true,
+							MarkdownDescription: "Authorized namespace",
+							Computed:            true,
 						},
 					},
 				},
@@ -86,8 +93,38 @@ func (d *dsProject) Schema(ctx context.Context, req datasource.SchemaRequest, re
 	}
 }
 
+func (d *DsProject) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+	// Always perform a nil check when handling ProviderData because Terraform
+	// sets that data after it calls the ConfigureProvider RPC.
+	if req.ProviderData == nil {
+		return
+	}
+
+	cfg, ok := req.ProviderData.(*config.Config)
+
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Unexpected Data Source Configure Type",
+			fmt.Sprintf("Expected *config.Config, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+		)
+
+		return
+	}
+
+	d.cfg = cfg
+}
+
 // Retreive project JSON info
-func (d *dsProject) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+func (d *DsProject) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	// Prevent panic if the provider has not been configured.
+	if d.cfg == nil {
+		resp.Diagnostics.AddError(
+			"Unconfigured PCTL Config",
+			"Expected configured PCTL config. Please ensure the values are passed in or report this issue to the provider developers.",
+		)
+		return
+	}
+
 	var diags diag.Diagnostics
 	var data *structs.Project
 
@@ -103,15 +140,8 @@ func (d *dsProject) Read(ctx context.Context, req datasource.ReadRequest, resp *
 		"project": projectId,
 	})
 
-	var cfg *config.Config
-	diags = req.Config.Get(ctx, &cfg)
-	resp.Diagnostics.Append(diags...)
-
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	auth := cfg.GetAppAuthProfile()
-	tflog.Debug(ctx, fmt.Sprintf("Read provider config used: %s", utils.GetConfigAsMap(cfg)))
+	auth := d.cfg.GetAppAuthProfile()
+	tflog.Debug(ctx, fmt.Sprintf("Read provider config used: %s", utils.GetConfigAsMap(d.cfg)))
 
 	project, err := utils.GetProjectByName(ctx, projectId, auth)
 	if err != nil {

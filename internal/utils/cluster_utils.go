@@ -91,7 +91,7 @@ func BuildClusterStructFromResource(ctx context.Context, data *structs.Cluster) 
 }
 
 // Build the schema resource from Cluster Struct
-func BuildResourceFromClusterStruct(ctx context.Context, cluster *infrav3.Cluster, data *structs.Cluster) diag.Diagnostics {
+func BuildResourceFromClusterStruct(ctx context.Context, cluster *infrav3.Cluster, data *structs.Cluster, auth *authprofile.Profile) diag.Diagnostics {
 	var diagsReturn diag.Diagnostics
 	var diags diag.Diagnostics
 	data.Name = types.StringValue(cluster.Metadata.Name)
@@ -118,6 +118,16 @@ func BuildResourceFromClusterStruct(ctx context.Context, cluster *infrav3.Cluste
 	diagsReturn.Append(diags...)
 	data.Annotations, diags = types.MapValueFrom(ctx, types.StringType, cluster.Metadata.Annotations)
 	diagsReturn.Append(diags...)
+
+	err, relays, bsfiles, bsfile := SetBootstrapFileAndRelays(ctx, cluster.Metadata.Project, cluster.Metadata.Name, auth)
+	if err != nil {
+		diagsReturn.AddError("Setting bootstrap file and relays failed", err.Error())
+	} else {
+		data.Relays = types.StringValue(relays)
+		data.BSFiles, diags = types.ListValueFrom(ctx, types.StringType, bsfiles)
+		diagsReturn.Append(diags...)
+		data.BSFileCombined = types.StringValue(bsfile)
+	}
 	return diagsReturn
 }
 

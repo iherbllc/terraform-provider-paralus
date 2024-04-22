@@ -5,139 +5,200 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/iherbllc/terraform-provider-paralus/internal/structs"
 	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
-	"github.com/pkg/errors"
 
 	"github.com/paralus/cli/pkg/config"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-// Paralus Resource Project
-func ResourceProject() *schema.Resource {
-	return &schema.Resource{
-		Description:   "Resource containing paralus project information. Uses the [pctl](https://github.com/paralus/cli) library",
-		CreateContext: resourceProjectCreate,
-		ReadContext:   resourceProjectRead,
-		UpdateContext: resourceProjectUpdate,
-		DeleteContext: resourceProjectDelete,
-		Importer: &schema.ResourceImporter{
-			StateContext: resourceProjectImport,
-		},
-		Schema: map[string]*schema.Schema{
-			"id": {
-				Type:        schema.TypeString,
-				Description: "Project ID in the format \"PROJECT_NAME\"",
-				Computed:    true,
+var _ resource.Resource = (*RsProject)(nil)
+
+func ResourceProject() resource.Resource {
+	return &RsProject{}
+}
+
+type RsProject struct {
+	cfg *config.Config
+}
+
+// With the resource.Resource implementation
+func (r *RsProject) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_group"
+}
+
+// Paralus Resource Group
+// Paralus Resource Cluster
+func (r RsProject) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = schema.Schema{
+		MarkdownDescription: "Resource containing paralus project information. Uses the [pctl](https://github.com/paralus/cli) library",
+		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				MarkdownDescription: "Project ID in the format \"PROJECT_NAME\"",
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
-			"name": {
-				Type:        schema.TypeString,
-				Description: "Project name",
-				ForceNew:    true,
-				Required:    true,
+			"name": schema.StringAttribute{
+				MarkdownDescription: "Project name",
+				Required:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
-			"description": {
-				Type:        schema.TypeString,
-				Description: "Project description.",
-				Optional:    true,
+			"description": schema.StringAttribute{
+				MarkdownDescription: "Project description.",
+				Optional:            true,
 			},
-			"uuid": {
-				Type:        schema.TypeString,
-				Description: "Project UUID",
-				Computed:    true,
+			"uuid": schema.StringAttribute{
+				MarkdownDescription: "Project UUID",
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
-			"project_roles": {
-				Type:        schema.TypeList,
-				Description: "Project roles attached to project, containing group or namespace",
-				Optional:    true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"project": {
-							Type:        schema.TypeString,
-							Description: "Project name. This will always be the same as the resource project name.",
-							Computed:    true,
+			"project_roles": schema.ListNestedAttribute{
+				MarkdownDescription: "Project roles attached to project, containing group or namespace",
+				Optional:            true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"project": schema.StringAttribute{
+							MarkdownDescription: "Project name. This will always be the same as the resource project name.",
+							Computed:            true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.UseStateForUnknown(),
+							},
 						},
-						"role": {
-							Type:        schema.TypeString,
-							Description: "Role name",
-							Required:    true,
+						"role": schema.StringAttribute{
+							MarkdownDescription: "Role name",
+							Required:            true,
 						},
-						"namespace": {
-							Type:        schema.TypeString,
-							Description: "Authorized namespace",
-							Optional:    true,
+						"namespace": schema.StringAttribute{
+							MarkdownDescription: "Authorized namespace",
+							Optional:            true,
 						},
-						"group": {
-							Type:        schema.TypeString,
-							Description: "Authorized group",
-							Required:    true,
+						"group": schema.StringAttribute{
+							MarkdownDescription: "Authorized group",
+							Required:            true,
 						},
 					},
 				},
 			},
-			"user_roles": {
-				Type:        schema.TypeList,
-				Description: "User roles attached to project",
-				Optional:    true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"user": {
-							Type:        schema.TypeString,
-							Description: "Authorized user",
-							Required:    true,
+			"user_roles": schema.ListNestedAttribute{
+				MarkdownDescription: "User roles attached to project",
+				Optional:            true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"user": schema.StringAttribute{
+							MarkdownDescription: "Authorized user",
+							Required:            true,
 						},
-						"role": {
-							Type:        schema.TypeString,
-							Description: "Authorized role",
-							Required:    true,
+						"role": schema.StringAttribute{
+							MarkdownDescription: "Authorized role",
+							Required:            true,
 						},
-						"namespace": {
-							Type:        schema.TypeString,
-							Description: "Authorized namespace",
-							Optional:    true,
+						"namespace": schema.StringAttribute{
+							MarkdownDescription: "Authorized namespace",
+							Optional:            true,
 						},
 					},
 				},
 			},
 		},
 	}
+}
+
+func (r *RsProject) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	// Always perform a nil check when handling ProviderData because Terraform
+	// sets that data after it calls the ConfigureProvider RPC.
+	if req.ProviderData == nil {
+		return
+	}
+
+	cfg, ok := req.ProviderData.(*config.Config)
+
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Unexpected Resource Configure Type",
+			fmt.Sprintf("Expected *config.Config, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+		)
+
+		return
+	}
+
+	r.cfg = cfg
 }
 
 // Import an existing K8S cluster into a designated project
-func resourceProjectCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-
-	projectId := d.Get("name").(string)
-
-	cfg := m.(*config.Config)
-	tflog.Debug(ctx, fmt.Sprintf("resourceProjectCreate provider config used: %s", utils.GetConfigAsMap(cfg)))
-	diags := createOrUpdateProject(ctx, d, "POST", m)
-
-	if diags.HasError() {
-		return diags
+func (r *RsProject) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	// Prevent panic if the provider has not been configured.
+	if r.cfg == nil {
+		resp.Diagnostics.AddError(
+			"Unconfigured PCTL Config",
+			"Expected configured PCTL config. Please ensure the values are passed in or report this issue to the provider developers.",
+		)
+		return
 	}
 
-	d.SetId(projectId)
-
-	return diags
+	var data *structs.Project
+	diags := req.Config.Get(ctx, &data)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Debug(ctx, fmt.Sprintf("Create provider config used: %s", utils.GetConfigAsMap(r.cfg)))
+	diags = createOrUpdateProject(ctx, data, "POST", r.cfg)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	diags = resp.State.Set(ctx, &data)
+	resp.Diagnostics.Append(diags...)
 }
 
-func resourceProjectUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func (r RsProject) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	// Prevent panic if the provider has not been configured.
+	if r.cfg == nil {
+		resp.Diagnostics.AddError(
+			"Unconfigured PCTL Config",
+			"Expected configured PCTL config. Please ensure the values are passed in or report this issue to the provider developers.",
+		)
+		return
+	}
 
-	cfg := m.(*config.Config)
-	tflog.Debug(ctx, fmt.Sprintf("resourceProjectUpdate provider config used: %s", utils.GetConfigAsMap(cfg)))
+	var data *structs.Project
+	diags := req.Config.Get(ctx, &data)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	tflog.Debug(ctx, fmt.Sprintf("resourceProjectUpdate provider config used: %s", utils.GetConfigAsMap(r.cfg)))
 
-	return createOrUpdateProject(ctx, d, "PUT", m)
+	diags = createOrUpdateProject(ctx, data, "PUT", r.cfg)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	diags = resp.State.Set(ctx, &data)
+	resp.Diagnostics.Append(diags...)
 }
 
 // Creates a new project or updates an existing one
-func createOrUpdateProject(ctx context.Context, d *schema.ResourceData, requestType string, m interface{}) diag.Diagnostics {
+func createOrUpdateProject(ctx context.Context, data *structs.Project, requestType string, cfg *config.Config) diag.Diagnostics {
 
-	projectId := d.Get("name").(string)
+	var diags diag.Diagnostics
+	projectId := data.Name.ValueString()
 
-	auth := m.(*config.Config).GetAppAuthProfile()
-	diags := utils.AssertStringNotEmpty("project name", projectId)
+	auth := cfg.GetAppAuthProfile()
+	diags = utils.AssertStringNotEmpty("project name", projectId)
 	if diags.HasError() {
 		return diags
 	}
@@ -151,7 +212,10 @@ func createOrUpdateProject(ctx context.Context, d *schema.ResourceData, requestT
 		"project": projectId,
 	})
 
-	projectStruct := utils.BuildProjectStructFromResource(d)
+	projectStruct, diags := utils.BuildProjectStructFromResource(ctx, data)
+	if diags.HasError() {
+		return diags
+	}
 
 	// before creating the project, verify that requested group exists
 	diags = utils.CheckGroupsFromPNRStructExist(ctx, projectStruct.Spec.GetProjectNamespaceRoles(), auth)
@@ -175,27 +239,40 @@ func createOrUpdateProject(ctx context.Context, d *schema.ResourceData, requestT
 
 	err := utils.ApplyProject(ctx, projectStruct, auth)
 	if err != nil {
-		return diag.FromErr(errors.Wrapf(err,
+		diags.AddError(fmt.Sprintf(
 			"failed to %s project %s", howFail,
-			projectId))
+			projectId), err.Error())
 	}
 
-	return resourceProjectRead(ctx, d, m)
+	return diags
 }
 
 // Retreive project info
-func resourceProjectRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	var diags diag.Diagnostics
+func (r RsProject) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	// Prevent panic if the provider has not been configured.
+	if r.cfg == nil {
+		resp.Diagnostics.AddError(
+			"Unconfigured PCTL Config",
+			"Expected configured PCTL config. Please ensure the values are passed in or report this issue to the provider developers.",
+		)
+		return
+	}
 
-	cfg := m.(*config.Config)
-	auth := cfg.GetAppAuthProfile()
-	tflog.Debug(ctx, fmt.Sprintf("resourceProjectRead provider config used: %s", utils.GetConfigAsMap(cfg)))
+	var data *structs.Project
+	diags := req.State.Get(ctx, &data)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
-	projectId := d.Get("name").(string)
+	auth := r.cfg.GetAppAuthProfile()
+	tflog.Debug(ctx, fmt.Sprintf("Read provider config used: %s", utils.GetConfigAsMap(r.cfg)))
 
+	projectId := data.Name.ValueString()
 	diags = utils.AssertStringNotEmpty("project name", projectId)
-	if diags.HasError() {
-		return diags
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	tflog.Trace(ctx, "Retrieving project info", map[string]interface{}{
@@ -204,27 +281,45 @@ func resourceProjectRead(ctx context.Context, d *schema.ResourceData, m interfac
 
 	projectStruct, err := utils.GetProjectByName(ctx, projectId, auth)
 	if err == utils.ErrResourceNotExists {
-		d.SetId("")
-		return diags
+		resp.State.RemoveResource(ctx)
+		return
 	}
 	if err != nil {
-		return diag.FromErr(errors.Wrapf(err, "Error retrieving info for project %s", projectId))
+		resp.Diagnostics.AddError(fmt.Sprintf("Error retrieving info for project %s", projectId), err.Error())
 	}
 
 	// Update resource information from updated cluster
-	utils.BuildResourceFromProjectStruct(projectStruct, d)
+	diags = utils.BuildResourceFromProjectStruct(ctx, projectStruct, data)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
-	return diags
+	diags = resp.State.Set(ctx, &data)
+	resp.Diagnostics.Append(diags...)
 }
 
 // Import project into TF
-func resourceProjectImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+func (r *RsProject) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 
-	projectId := d.Id()
+	// Prevent panic if the provider has not been configured.
+	if r.cfg == nil {
+		resp.Diagnostics.AddError(
+			"Unconfigured PCTL Config",
+			"Expected configured PCTL config. Please ensure the values are passed in or report this issue to the provider developers.",
+		)
+		return
+	}
 
-	cfg := m.(*config.Config)
-	auth := cfg.GetAppAuthProfile()
-	tflog.Debug(ctx, fmt.Sprintf("resourceProjectImport provider config used: %s", utils.GetConfigAsMap(cfg)))
+	var data *structs.Project
+	auth := r.cfg.GetAppAuthProfile()
+	tflog.Debug(ctx, fmt.Sprintf("Import provider config used: %s", utils.GetConfigAsMap(r.cfg)))
+
+	projectId := req.ID
+	if projectId == "" {
+		resp.Diagnostics.AddError("Must specify a project name", "")
+		return
+	}
 
 	tflog.Trace(ctx, "Retrieving project info", map[string]interface{}{
 		"project": projectId,
@@ -233,30 +328,50 @@ func resourceProjectImport(ctx context.Context, d *schema.ResourceData, m interf
 	projectStruct, err := utils.GetProjectByName(ctx, projectId, auth)
 	// unlike others, fail and stop the import if we fail to get project info
 	if err != nil {
-		return nil, errors.Wrapf(err, "project %s does not exist", projectId)
+		resp.Diagnostics.AddError(
+			"Unexpected Import Identifier",
+			fmt.Sprintf("project %s does not exist", req.ID),
+		)
+		return
 	}
 
-	utils.BuildResourceFromProjectStruct(projectStruct, d)
+	diags := utils.BuildResourceFromProjectStruct(ctx, projectStruct, data)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
-	schemas := make([]*schema.ResourceData, 0)
-	schemas = append(schemas, d)
-	return schemas, nil
+	diags = resp.State.Set(ctx, &data)
+	resp.Diagnostics.Append(diags...)
 
 }
 
 // Delete an existing cluster
-func resourceProjectDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	var diags diag.Diagnostics
+func (r RsProject) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	// Prevent panic if the provider has not been configured.
+	if r.cfg == nil {
+		resp.Diagnostics.AddError(
+			"Unconfigured PCTL Config",
+			"Expected configured PCTL config. Please ensure the values are passed in or report this issue to the provider developers.",
+		)
+		return
+	}
 
-	cfg := m.(*config.Config)
-	auth := cfg.GetAppAuthProfile()
-	tflog.Debug(ctx, fmt.Sprintf("resourceProjectDelete provider config used: %s", utils.GetConfigAsMap(cfg)))
+	var data *structs.Project
+	diags := req.State.Get(ctx, &data)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
-	projectId := d.Get("name").(string)
+	auth := r.cfg.GetAppAuthProfile()
+	tflog.Debug(ctx, fmt.Sprintf("resourceProjectDelete provider config used: %s", utils.GetConfigAsMap(r.cfg)))
 
+	projectId := data.Name.ValueString()
 	diags = utils.AssertStringNotEmpty("project name", projectId)
-	if diags.HasError() {
-		return diags
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	tflog.Trace(ctx, "Deleting Project info", map[string]interface{}{
@@ -266,16 +381,15 @@ func resourceProjectDelete(ctx context.Context, d *schema.ResourceData, m interf
 	// verify project exists before attempting delete
 	_, err := utils.GetProjectByName(ctx, projectId, auth)
 	if err != nil && err != utils.ErrResourceNotExists {
-		return diag.FromErr(errors.Wrapf(err, "failed to retrieve project %s",
-			projectId))
+		resp.Diagnostics.AddError(fmt.Sprintf("failed to retrieve project %s",
+			projectId), err.Error())
+		return
 	}
 
 	err = utils.DeleteProject(ctx, projectId, auth)
 	if err != nil {
-		return diag.FromErr(errors.Wrapf(err, "failed to delete project %s",
-			projectId))
+		resp.Diagnostics.AddError(fmt.Sprintf("failed to delete project %s",
+			projectId), err.Error())
+		return
 	}
-
-	d.SetId("")
-	return diags
 }
