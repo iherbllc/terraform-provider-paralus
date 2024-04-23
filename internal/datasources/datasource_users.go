@@ -17,7 +17,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
@@ -185,11 +184,13 @@ func (d *DsUsers) Read(ctx context.Context, req datasource.ReadRequest, resp *da
 		return
 	}
 
-	var diags diag.Diagnostics
-
-	auth := d.cfg.GetAppAuthProfile()
-
 	var data *structs.User
+	diags := req.Config.Get(ctx, &data)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	limit := data.Limit.ValueInt64()
 	if limit == 0 {
 		limit = 10
@@ -257,6 +258,7 @@ func (d *DsUsers) Read(ctx context.Context, req datasource.ReadRequest, resp *da
 
 	params = params[0:filtersCounter] // compress the list and remove empty params
 
+	auth := d.cfg.GetAppAuthProfile()
 	usersInfo, err := utils.GetUsers(ctx, params, auth)
 	if err != nil {
 		resp.Diagnostics.AddError("error locating users based on provided values", err.Error())

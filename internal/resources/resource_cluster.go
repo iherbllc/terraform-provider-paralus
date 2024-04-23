@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -78,59 +79,6 @@ func (r RsCluster) Schema(ctx context.Context, req resource.SchemaRequest, resp 
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"params": schema.MapNestedAttribute{
-				MarkdownDescription: "Import parameters",
-				Optional:            true,
-				PlanModifiers: []planmodifier.Map{
-					mapplanmodifier.RequiresReplace(),
-				},
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"provision_type": schema.StringAttribute{
-							MarkdownDescription: "Provision Type. For example, \"IMPORT\"",
-							Required:            true,
-							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.RequiresReplace(),
-							},
-						},
-						"provision_environment": schema.StringAttribute{
-							MarkdownDescription: "Provision Environment. For example, \"CLOUD\"",
-							Required:            true,
-							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.RequiresReplace(),
-							},
-						},
-						"provision_package_type": schema.StringAttribute{
-							MarkdownDescription: "Provision Type. For example, \"LINUX\"",
-							Optional:            true,
-							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.RequiresReplace(),
-							},
-						},
-						"environment_provider": schema.StringAttribute{
-							MarkdownDescription: "Provision Type. For example, \"GCP\"",
-							Optional:            true,
-							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.RequiresReplace(),
-							},
-						},
-						"kubernetes_provider": schema.StringAttribute{
-							MarkdownDescription: "Provision Type. For example, \"EKS\"",
-							Required:            true,
-							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.RequiresReplace(),
-							},
-						},
-						"state": schema.StringAttribute{
-							MarkdownDescription: "Provision Type. For example, \"PROVISION\"",
-							Required:            true,
-							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.RequiresReplace(),
-							},
-						},
-					},
-				},
-			},
 			"project": schema.StringAttribute{
 				MarkdownDescription: "Project containing cluster",
 				Required:            true,
@@ -182,6 +130,58 @@ func (r RsCluster) Schema(ctx context.Context, req resource.SchemaRequest, resp 
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+		},
+		Blocks: map[string]schema.Block{
+			"params": schema.SingleNestedBlock{
+				MarkdownDescription: "Import parameters",
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.RequiresReplace(),
+				},
+				Attributes: map[string]schema.Attribute{
+					"provision_type": schema.StringAttribute{
+						MarkdownDescription: "Provision Type. For example, \"IMPORT\"",
+						Required:            true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+					},
+					"provision_environment": schema.StringAttribute{
+						MarkdownDescription: "Provision Environment. For example, \"CLOUD\"",
+						Required:            true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+					},
+					"provision_package_type": schema.StringAttribute{
+						MarkdownDescription: "Provision Type. For example, \"LINUX\"",
+						Optional:            true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+					},
+					"environment_provider": schema.StringAttribute{
+						MarkdownDescription: "Provision Type. For example, \"GCP\"",
+						Optional:            true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+					},
+					"kubernetes_provider": schema.StringAttribute{
+						MarkdownDescription: "Provision Type. For example, \"EKS\"",
+						Required:            true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+					},
+					"state": schema.StringAttribute{
+						MarkdownDescription: "Provision Type. For example, \"PROVISION\"",
+						Required:            true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+					},
 				},
 			},
 		},

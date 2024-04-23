@@ -30,7 +30,7 @@ type RsProject struct {
 
 // With the resource.Resource implementation
 func (r *RsProject) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_group"
+	resp.TypeName = req.ProviderTypeName + "_project"
 }
 
 // Paralus Resource Group

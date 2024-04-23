@@ -27,15 +27,18 @@ data "paralus_group" "default" {
 
 - `name` (String) Group name
 
+### Optional
+
+- `project_roles` (Attributes List) Project roles attached to group, containing group or namespace (see [below for nested schema](#nestedatt--project_roles))
+
 ### Read-Only
 
 - `description` (String) Group description
 - `id` (String) Group ID in the format "GROUP_NAME"
-- `project_roles` (Block List) Project roles attached to group, containing group or namespace (see [below for nested schema](#nestedblock--project_roles))
 - `type` (String) Type of group
 - `users` (List of String) Users attached to group
 
-<a id="nestedblock--project_roles"></a>
+<a id="nestedatt--project_roles"></a>
 ### Nested Schema for `project_roles`
 
 Read-Only:

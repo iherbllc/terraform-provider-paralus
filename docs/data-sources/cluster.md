@@ -38,20 +38,20 @@ data "paralus_cluster" "test" {
 - `description` (String) Cluster description
 - `id` (String) Cluster ID in the format "PROJECT_NAME:CLUSTER_NAME"
 - `labels` (Map of String) Map of lables to include for cluster
-- `params` (Set of Object) Import parameters (see [below for nested schema](#nestedatt--params))
+- `params` (Block, Read-only) Import parameters (see [below for nested schema](#nestedblock--params))
 - `relays` (String) Relays information
 - `uuid` (String) Cluster UUID
 
-<a id="nestedatt--params"></a>
+<a id="nestedblock--params"></a>
 ### Nested Schema for `params`
 
 Read-Only:
 
-- `environment_provider` (String)
-- `kubernetes_provider` (String)
-- `provision_environment` (String)
-- `provision_package_type` (String)
-- `provision_type` (String)
-- `state` (String)
+- `environment_provider` (String) Provision Type. For example, "GCP"
+- `kubernetes_provider` (String) Provision Type. For example, "EKS"
+- `provision_environment` (String) Provision Environment. For example, "CLOUD"
+- `provision_package_type` (String) Provision Type. For example, "LINUX"
+- `provision_type` (String) Provision Type. For example, "IMPORT"
+- `state` (String) Provision Type. For example, "PROVISION"
 
 

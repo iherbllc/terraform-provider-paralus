@@ -12,7 +12,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
@@ -125,9 +124,12 @@ func (d *DsProject) Read(ctx context.Context, req datasource.ReadRequest, resp *
 		return
 	}
 
-	var diags diag.Diagnostics
 	var data *structs.Project
-
+	diags := req.Config.Get(ctx, &data)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	projectId := data.Name.ValueString()
 
 	diags = utils.AssertStringNotEmpty("project name", projectId)

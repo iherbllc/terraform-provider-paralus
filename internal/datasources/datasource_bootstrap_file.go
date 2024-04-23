@@ -104,6 +104,9 @@ func (d *DsBSFile) Read(ctx context.Context, req datasource.ReadRequest, resp *d
 
 	diags := req.Config.Get(ctx, &data)
 	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	projectId := data.Project.ValueString()
 	clusterId := data.Name.ValueString()

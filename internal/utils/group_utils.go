@@ -62,6 +62,9 @@ func BuildGroupStructFromResource(ctx context.Context, data *structs.Group) (*gr
 	}
 
 	groupStruct.Spec.Type = data.Type.ValueString()
+	if groupStruct.Spec.Type == "" {
+		groupStruct.Spec.Type = "SYSTEM"
+	}
 
 	return &groupStruct, nil
 }
@@ -77,13 +80,12 @@ func BuildResourceFromGroupStruct(ctx context.Context, group *groupv3.Group, dat
 		project := role.Project
 		namespace := role.Namespace
 		group := role.Group
-		projectRole := structs.ProjectRole{
+		projectRoles = append(projectRoles, structs.ProjectRole{
 			Project:   types.StringValue(*project),
 			Role:      types.StringValue(role.Role),
 			Namespace: types.StringValue(*namespace),
 			Group:     types.StringValue(*group),
-		}
-		projectRoles = append(projectRoles, projectRole)
+		})
 	}
 
 	// Couresty of https://github.com/hashicorp/terraform-plugin-framework/issues/713#issuecomment-1577729734

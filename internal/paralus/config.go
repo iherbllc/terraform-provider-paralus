@@ -13,7 +13,7 @@ import (
 
 // Generates a new config either from a json file or via environment variables
 func NewConfig(ctx context.Context, profile string, rest_endpoint string,
-	ops_endpoint string, api_key string, api_secret string, partner string, config_json string,
+	ops_endpoint string, api_key string, api_secret string, config_json string, partner string,
 	organization string, skip_cert_valid string) (*config.Config, error) {
 
 	if config_json != "" {

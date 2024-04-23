@@ -41,7 +41,7 @@ resource "paralus_cluster" "testcluster" {
 
 - `annotations` (Map of String) Map of annotations to include for cluster
 - `labels` (Map of String) Map of lables to include for cluster
-- `params` (Block Set, Max: 1) Import parameters (see [below for nested schema](#nestedblock--params))
+- `params` (Block, Optional) Import parameters (see [below for nested schema](#nestedblock--params))
 
 ### Read-Only
 

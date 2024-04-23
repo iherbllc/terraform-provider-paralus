@@ -5,15 +5,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/iherbllc/terraform-provider-paralus/internal/structs"
-	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
-
-	"github.com/paralus/cli/pkg/config"
-
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/iherbllc/terraform-provider-paralus/internal/structs"
+	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
+	"github.com/paralus/cli/pkg/config"
 )
 
 var _ datasource.DataSource = (*DsCluster)(nil)
@@ -55,38 +53,6 @@ func (d *DsCluster) Schema(ctx context.Context, req datasource.SchemaRequest, re
 				MarkdownDescription: "Cluster UUID",
 				Computed:            true,
 			},
-			"params": schema.MapNestedAttribute{
-				MarkdownDescription: "Import parameters",
-				Computed:            true,
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"provision_type": schema.StringAttribute{
-							MarkdownDescription: "Provision Type. For example, \"IMPORT\"",
-							Computed:            true,
-						},
-						"provision_environment": schema.StringAttribute{
-							MarkdownDescription: "Provision Environment. For example, \"CLOUD\"",
-							Computed:            true,
-						},
-						"provision_package_type": schema.StringAttribute{
-							MarkdownDescription: "Provision Type. For example, \"LINUX\"",
-							Computed:            true,
-						},
-						"environment_provider": schema.StringAttribute{
-							MarkdownDescription: "Provision Type. For example, \"GCP\"",
-							Computed:            true,
-						},
-						"kubernetes_provider": schema.StringAttribute{
-							MarkdownDescription: "Provision Type. For example, \"EKS\"",
-							Computed:            true,
-						},
-						"state": schema.StringAttribute{
-							MarkdownDescription: "Provision Type. For example, \"PROVISION\"",
-							Computed:            true,
-						},
-					},
-				},
-			},
 			"project": schema.StringAttribute{
 				MarkdownDescription: "Project containing cluster",
 				Required:            true,
@@ -115,6 +81,37 @@ func (d *DsCluster) Schema(ctx context.Context, req datasource.SchemaRequest, re
 			"relays": schema.StringAttribute{
 				MarkdownDescription: "Relays information",
 				Computed:            true,
+			},
+		},
+		Blocks: map[string]schema.Block{
+			"params": schema.SingleNestedBlock{
+				MarkdownDescription: "Import parameters",
+				Attributes: map[string]schema.Attribute{
+					"provision_type": schema.StringAttribute{
+						MarkdownDescription: "Provision Type. For example, \"IMPORT\"",
+						Computed:            true,
+					},
+					"provision_environment": schema.StringAttribute{
+						MarkdownDescription: "Provision Environment. For example, \"CLOUD\"",
+						Computed:            true,
+					},
+					"provision_package_type": schema.StringAttribute{
+						MarkdownDescription: "Provision Type. For example, \"LINUX\"",
+						Computed:            true,
+					},
+					"environment_provider": schema.StringAttribute{
+						MarkdownDescription: "Provision Type. For example, \"GCP\"",
+						Computed:            true,
+					},
+					"kubernetes_provider": schema.StringAttribute{
+						MarkdownDescription: "Provision Type. For example, \"EKS\"",
+						Computed:            true,
+					},
+					"state": schema.StringAttribute{
+						MarkdownDescription: "Provision Type. For example, \"PROVISION\"",
+						Computed:            true,
+					},
+				},
 			},
 		},
 	}
@@ -156,6 +153,9 @@ func (d *DsCluster) Read(ctx context.Context, req datasource.ReadRequest, resp *
 	var data *structs.Cluster
 	diags := req.Config.Get(ctx, &data)
 	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	projectId := data.Project.ValueString()
 	clusterId := data.Name.ValueString()
