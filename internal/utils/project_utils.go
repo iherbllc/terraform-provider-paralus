@@ -81,13 +81,11 @@ func BuildResourceFromProjectStruct(ctx context.Context, project *systemv3.Proje
 	data.Uuid = types.StringValue(project.Metadata.Id)
 	projectRoles := make([]structs.ProjectRole, 0)
 	for _, role := range project.Spec.GetProjectNamespaceRoles() {
-		namespace := role.Namespace
-		group := role.Group
 		projectRoles = append(projectRoles, structs.ProjectRole{
 			Project:   types.StringValue(project.Metadata.Name),
 			Role:      types.StringValue(role.Role),
-			Namespace: types.StringValue(*namespace),
-			Group:     types.StringValue(*group),
+			Namespace: types.StringValue(DerefString(role.Namespace)),
+			Group:     types.StringValue(DerefString(role.Group)),
 		})
 	}
 

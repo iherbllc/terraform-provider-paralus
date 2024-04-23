@@ -77,14 +77,11 @@ func BuildResourceFromGroupStruct(ctx context.Context, group *groupv3.Group, dat
 	data.Description = types.StringValue(group.Metadata.Description)
 	projectRoles := make([]structs.ProjectRole, 0)
 	for _, role := range group.Spec.GetProjectNamespaceRoles() {
-		project := role.Project
-		namespace := role.Namespace
-		group := role.Group
 		projectRoles = append(projectRoles, structs.ProjectRole{
-			Project:   types.StringValue(*project),
+			Project:   types.StringValue(DerefString(role.Project)),
 			Role:      types.StringValue(role.Role),
-			Namespace: types.StringValue(*namespace),
-			Group:     types.StringValue(*group),
+			Namespace: types.StringValue(DerefString(role.Namespace)),
+			Group:     types.StringValue(DerefString(role.Group)),
 		})
 	}
 

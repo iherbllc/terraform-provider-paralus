@@ -197,3 +197,12 @@ func handleRestPanic(uri string, method string, payload interface{}, err error) 
 	}
 	return err
 }
+
+// Converts string pointer to string if not nul, other returns empty string
+func DerefString(s *string) string {
+	if s != nil {
+		return *s
+	}
+
+	return ""
+}

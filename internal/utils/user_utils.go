@@ -265,14 +265,11 @@ func BuildResourceFromUsersStruct(ctx context.Context, users []*userv3.User, dat
 	for _, user := range users {
 		projectRoles := make([]structs.ProjectRole, 0)
 		for _, role := range user.Spec.GetProjectNamespaceRoles() {
-			project := role.Project
-			namespace := role.Namespace
-			group := role.Group
 			projectRoles = append(projectRoles, structs.ProjectRole{
-				Project:   types.StringValue(*project),
+				Project:   types.StringValue(DerefString(role.Project)),
 				Role:      types.StringValue(role.Role),
-				Namespace: types.StringValue(*namespace),
-				Group:     types.StringValue(*group),
+				Namespace: types.StringValue(DerefString(role.Namespace)),
+				Group:     types.StringValue(DerefString(role.Group)),
 			})
 		}
 		userInfo := structs.UserInfo{
@@ -290,6 +287,7 @@ func BuildResourceFromUsersStruct(ctx context.Context, users []*userv3.User, dat
 	}
 
 	data.UsersInfo, diags = types.ListValueFrom(ctx, types.ObjectType{AttrTypes: structs.UserInfo{}.AttributeTypes()}, usersInfo)
+	diagsReturn.Append(diags...)
 
 	return diagsReturn
 }
