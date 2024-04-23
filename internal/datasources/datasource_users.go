@@ -102,49 +102,48 @@ func (d *DsUsers) Schema(ctx context.Context, req datasource.SchemaRequest, resp
 					},
 				},
 			},
-			"filters": schema.MapNestedAttribute{
+		},
+		Blocks: map[string]schema.Block{
+			"filters": schema.SingleNestedBlock{
 				MarkdownDescription: "Filters to narrow returned user information",
-				Optional:            true,
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"project": schema.StringAttribute{
-							MarkdownDescription: "Name of a project to filter against, as defined under spec.projectNamespaceRoles.project",
-							Optional:            true,
+				Attributes: map[string]schema.Attribute{
+					"project": schema.StringAttribute{
+						MarkdownDescription: "Name of a project to filter against, as defined under spec.projectNamespaceRoles.project",
+						Optional:            true,
+					},
+					"role": schema.StringAttribute{
+						MarkdownDescription: "Name of a role to filter against, as defined under spec.projectNamespaceRoles.role",
+						Optional:            true,
+					},
+					"group": schema.StringAttribute{
+						MarkdownDescription: "Name of one of the groups to filter against, as defined within the spec.groups list",
+						Optional:            true,
+					},
+					"email": schema.StringAttribute{
+						MarkdownDescription: "Filter by the user's email address, as defined under metadata.name",
+						Optional:            true,
+						Validators: []validator.String{
+							stringvalidator.RegexMatches(
+								regexp.MustCompile(`^.*@.*$`),
+								"email must be in format: XXXX@XXX.XXX",
+							),
 						},
-						"role": schema.StringAttribute{
-							MarkdownDescription: "Name of a role to filter against, as defined under spec.projectNamespaceRoles.role",
-							Optional:            true,
-						},
-						"group": schema.StringAttribute{
-							MarkdownDescription: "Name of one of the groups to filter against, as defined within the spec.groups list",
-							Optional:            true,
-						},
-						"email": schema.StringAttribute{
-							MarkdownDescription: "Filter by the user's email address, as defined under metadata.name",
-							Optional:            true,
-							Validators: []validator.String{
-								stringvalidator.RegexMatches(
-									regexp.MustCompile(`^.*@.*$`),
-									"email must be in format: XXXX@XXX.XXX",
-								),
-							},
-						},
-						"first_name": schema.StringAttribute{
-							MarkdownDescription: "Filter by the user's first name, as defined under spec.firstName",
-							Optional:            true,
-						},
-						"last_name": schema.StringAttribute{
-							MarkdownDescription: "Filter by the user's last name, as defined under spec.lastName",
-							Optional:            true,
-						},
-						"case_sensitive": schema.BoolAttribute{
-							MarkdownDescription: "Whether to make the filter on first_name, last_name, or email address case-sensitive. (Default: false)",
-							Optional:            true,
-						},
-						"allow_more_than_one": schema.BoolAttribute{
-							MarkdownDescription: "Whether to allow more than one record to return when filtering. (Default: false)",
-							Optional:            true,
-						},
+					},
+					"first_name": schema.StringAttribute{
+						MarkdownDescription: "Filter by the user's first name, as defined under spec.firstName",
+						Optional:            true,
+					},
+					"last_name": schema.StringAttribute{
+						MarkdownDescription: "Filter by the user's last name, as defined under spec.lastName",
+						Optional:            true,
+					},
+					"case_sensitive": schema.BoolAttribute{
+						MarkdownDescription: "Whether to make the filter on first_name, last_name, or email address case-sensitive. (Default: false)",
+						Optional:            true,
+					},
+					"allow_more_than_one": schema.BoolAttribute{
+						MarkdownDescription: "Whether to allow more than one record to return when filtering. (Default: false)",
+						Optional:            true,
 					},
 				},
 			},
@@ -210,7 +209,7 @@ func (d *DsUsers) Read(ctx context.Context, req datasource.ReadRequest, resp *da
 	filter_allow_more_than_one := false
 	if !data.Filters.IsNull() {
 		var filters structs.Filter
-		diags := data.Filters.As(ctx, &params, basetypes.ObjectAsOptions{})
+		diags := data.Filters.As(ctx, &filters, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
