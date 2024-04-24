@@ -27,8 +27,8 @@ func (u UserInfo) AttributeTypes() map[string]attr.Type {
 		"last_name":     types.StringType,
 		"email":         types.StringType,
 		"id":            types.StringType,
-		"groups":        types.ListType{},
-		"project_roles": types.ListType{},
+		"groups":        types.ListType{ElemType: types.StringType},
+		"project_roles": types.ListType{ElemType: types.ObjectType{AttrTypes: ProjectRole{}.AttributeTypes()}},
 	}
 }
 
