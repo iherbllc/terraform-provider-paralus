@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
 )
@@ -176,9 +177,10 @@ func TestAccParalusResourceProjectCluster_full(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      clusterRsName,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            clusterRsName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"annotations", "labels"},
 			},
 			{
 				ResourceName:      projectRsName,
@@ -450,4 +452,62 @@ func testAccCheckResourceAttributeSet(resourceName string, attrName string) func
 
 		return nil
 	}
+}
+
+func TestResource_UpgradeFromVersion(t *testing.T) {
+	/* ... */
+	resource.Test(t, resource.TestCase{
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"paralus": {
+						VersionConstraint: "0.0.47",
+						Source:            "iherbllc/paralus",
+					},
+				},
+				Config: testAccProviderValidResource(`resource "paralus_cluster" "example" {
+							provider = paralus.valid_resource
+							name = "basic-test1"
+							project = "acctest-donotdelete"
+							cluster_type = "imported"
+							params {
+								provision_type = "IMPORT"
+								provision_environment = "CLOUD"
+								kubernetes_provider = "EKS"
+								state = "PROVISION"
+							}
+                        }`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("paralus_cluster.example", "name", "basic-test1"),
+					resource.TestCheckResourceAttr("paralus_cluster.example", "project", "acctest-donotdelete"),
+					/* ... */
+				),
+			},
+			{
+				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+				Config: testAccProviderValidResource(`resource "paralus_cluster" "example" {
+							provider = paralus.valid_resource
+							name = "basic-test1"
+							project = "acctest-donotdelete"
+							cluster_type = "imported"
+							params {
+								provision_type = "IMPORT"
+								provision_environment = "CLOUD"
+								kubernetes_provider = "EKS"
+								state = "PROVISION"
+							}
+                        }`),
+				// ConfigPlanChecks is a terraform-plugin-testing feature.
+				// If acceptance testing is still using terraform-plugin-sdk/v2,
+				// use `PlanOnly: true` instead. When migrating to
+				// terraform-plugin-testing, switch to `ConfigPlanChecks` or you
+				// will likely experience test failures.
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+		},
+	})
 }

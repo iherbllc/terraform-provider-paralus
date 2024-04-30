@@ -46,11 +46,20 @@ func (d *DsGroup) Schema(ctx context.Context, req datasource.SchemaRequest, resp
 				MarkdownDescription: "Group description",
 				Computed:            true,
 			},
-			"project_roles": schema.ListNestedAttribute{
-				MarkdownDescription: "Project roles attached to group, containing group or namespace",
+			"users": schema.ListAttribute{
+				MarkdownDescription: "Users attached to group",
 				Computed:            true,
-				Optional:            true,
-				NestedObject: schema.NestedAttributeObject{
+				ElementType:         types.StringType,
+			},
+			"type": schema.StringAttribute{
+				MarkdownDescription: "Type of group",
+				Computed:            true,
+			},
+		},
+		Blocks: map[string]schema.Block{
+			"project_roles": schema.ListNestedBlock{
+				MarkdownDescription: "Project roles attached to group, containing group or namespace",
+				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"project": schema.StringAttribute{
 							Computed: true,
@@ -66,15 +75,6 @@ func (d *DsGroup) Schema(ctx context.Context, req datasource.SchemaRequest, resp
 						},
 					},
 				},
-			},
-			"users": schema.ListAttribute{
-				MarkdownDescription: "Users attached to group",
-				Computed:            true,
-				ElementType:         types.StringType,
-			},
-			"type": schema.StringAttribute{
-				MarkdownDescription: "Type of group",
-				Computed:            true,
 			},
 		},
 	}

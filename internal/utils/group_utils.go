@@ -73,6 +73,7 @@ func BuildGroupStructFromResource(ctx context.Context, data *structs.Group) (*gr
 func BuildResourceFromGroupStruct(ctx context.Context, group *groupv3.Group, data *structs.Group) diag.Diagnostics {
 	var diagsReturn diag.Diagnostics
 	var diags diag.Diagnostics
+	data.Id = types.StringValue(group.Metadata.Name) // will be removed eventually
 	data.Name = types.StringValue(group.Metadata.Name)
 	data.Description = types.StringValue(group.Metadata.Description)
 	projectRoles := make([]structs.ProjectRole, 0)
@@ -149,7 +150,11 @@ func ApplyGroup(ctx context.Context, grp *groupv3.Group, auth *authprofile.Profi
 	if grpExisting != nil {
 		tflog.Debug(ctx, fmt.Sprintf("updating group: %s", grp.Metadata.Name))
 		uri := fmt.Sprintf("/auth/v3/partner/%s/organization/%s/group/%s", cfg.Partner, cfg.Organization, grp.Metadata.Name)
-		_, err := makeRestCall(ctx, uri, "PUT", grp, auth)
+		resp, err := makeRestCall(ctx, uri, "PUT", grp, auth)
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal([]byte(resp), grp)
 		if err != nil {
 			return err
 		}
@@ -161,7 +166,11 @@ func ApplyGroup(ctx context.Context, grp *groupv3.Group, auth *authprofile.Profi
 
 		tflog.Debug(ctx, fmt.Sprintf("creating group: %s", grp.Metadata.Name))
 		uri := fmt.Sprintf("/auth/v3/partner/%s/organization/%s/groups", cfg.Partner, cfg.Organization)
-		_, err := makeRestCall(ctx, uri, "POST", grp, auth)
+		resp, err := makeRestCall(ctx, uri, "POST", grp, auth)
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal([]byte(resp), grp)
 		if err != nil {
 			return err
 		}

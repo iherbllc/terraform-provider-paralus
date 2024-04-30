@@ -139,7 +139,7 @@ func (d *DsBSFile) Read(ctx context.Context, req datasource.ReadRequest, resp *d
 		return
 	}
 
-	err, relays, bsfiles, bsfile := utils.SetBootstrapFileAndRelays(ctx, projectId, clusterId, auth)
+	relays, bsfiles, bsfile, err := utils.SetBootstrapFileAndRelays(ctx, projectId, clusterId, auth)
 	if err != nil {
 		resp.Diagnostics.AddError("Setting bootstrap file and relays failed", err.Error())
 		return

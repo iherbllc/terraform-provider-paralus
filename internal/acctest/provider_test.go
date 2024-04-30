@@ -13,6 +13,7 @@ import (
 	"github.com/iherbllc/terraform-provider-paralus/internal/provider"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 )
 
@@ -22,6 +23,10 @@ import (
 // reattach.
 var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
 	"paralus": providerserver.NewProtocol6WithError(provider.New()),
+}
+
+var testAccProtoV5ProviderFactories = map[string]func() (tfprotov5.ProviderServer, error){
+	"paralus": providerserver.NewProtocol5WithError(provider.New()),
 }
 
 func testAccPreCheck(t *testing.T) {

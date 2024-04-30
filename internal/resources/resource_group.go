@@ -46,6 +46,7 @@ func (r RsGoup) Schema(ctx context.Context, req resource.SchemaRequest, resp *re
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
+				DeprecationMessage: "id is no longer a required valie for providers and will eventually be removed. Use \"name\" instead.",
 			},
 			"name": schema.StringAttribute{
 				MarkdownDescription: "Group name",
@@ -58,10 +59,20 @@ func (r RsGoup) Schema(ctx context.Context, req resource.SchemaRequest, resp *re
 				MarkdownDescription: "Group description.",
 				Optional:            true,
 			},
-			"project_roles": schema.ListNestedAttribute{
-				MarkdownDescription: "Project namespace roles to attach to the group",
+			"users": schema.ListAttribute{
+				MarkdownDescription: "User roles attached to group",
 				Optional:            true,
-				NestedObject: schema.NestedAttributeObject{
+				ElementType:         types.StringType,
+			},
+			"type": schema.StringAttribute{
+				MarkdownDescription: "Type of group",
+				Optional:            true,
+			},
+		},
+		Blocks: map[string]schema.Block{
+			"project_roles": schema.ListNestedBlock{
+				MarkdownDescription: "Project namespace roles to attach to the group",
+				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"project": schema.StringAttribute{
 							MarkdownDescription: "Project name",
@@ -84,15 +95,6 @@ func (r RsGoup) Schema(ctx context.Context, req resource.SchemaRequest, resp *re
 						},
 					},
 				},
-			},
-			"users": schema.ListAttribute{
-				MarkdownDescription: "User roles attached to group",
-				Optional:            true,
-				ElementType:         types.StringType,
-			},
-			"type": schema.StringAttribute{
-				MarkdownDescription: "Type of group",
-				Optional:            true,
 			},
 		},
 	}
@@ -160,7 +162,7 @@ func (r RsGoup) Update(ctx context.Context, req resource.UpdateRequest, resp *re
 	}
 
 	var data *structs.Group
-	diags := req.Config.Get(ctx, &data)
+	diags := req.Plan.Get(ctx, &data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -226,8 +228,11 @@ func createOrUpdateGroup(ctx context.Context, data *structs.Group, requestType s
 		diags.AddError(fmt.Sprintf(
 			"failed to %s group %s", howFail,
 			groupId), err.Error())
+		return diags
 	}
 
+	// Update resource information from updated group
+	diags = utils.BuildResourceFromGroupStruct(ctx, groupStruct, data)
 	return diags
 }
 
@@ -271,6 +276,7 @@ func (r RsGoup) Read(ctx context.Context, req resource.ReadRequest, resp *resour
 	}
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("Error retrieving group info for %s", groupId), err.Error())
+		return
 	}
 
 	// Update resource information from updated cluster
@@ -297,13 +303,12 @@ func (r *RsGoup) ImportState(ctx context.Context, req resource.ImportStateReques
 		return
 	}
 
-	var data *structs.Group
 	auth := r.cfg.GetAppAuthProfile()
 	tflog.Debug(ctx, fmt.Sprintf("resourceGroupImport provider config used: %s", utils.GetConfigAsMap(r.cfg)))
 
 	groupId := req.ID
-	if groupId == "" {
-		resp.Diagnostics.AddError("Must specify a group ID", "")
+	if groupId == "" || groupId == "id-attribute-not-set" {
+		resp.Diagnostics.AddError("Must specify a group name when importing", "")
 		return
 	}
 
@@ -321,7 +326,8 @@ func (r *RsGoup) ImportState(ctx context.Context, req resource.ImportStateReques
 		return
 	}
 
-	diags := utils.BuildResourceFromGroupStruct(ctx, groupStruct, data)
+	var data structs.Group
+	diags := utils.BuildResourceFromGroupStruct(ctx, groupStruct, &data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

@@ -50,10 +50,11 @@ func (d *DsProject) Schema(ctx context.Context, req datasource.SchemaRequest, re
 				MarkdownDescription: "Project UUID",
 				Computed:            true,
 			},
-			"project_roles": schema.ListNestedAttribute{
+		},
+		Blocks: map[string]schema.Block{
+			"project_roles": schema.ListNestedBlock{
 				MarkdownDescription: "Project roles attached to project, containing group or namespace",
-				Computed:            true,
-				NestedObject: schema.NestedAttributeObject{
+				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"project": schema.StringAttribute{
 							Computed: true,
@@ -70,10 +71,9 @@ func (d *DsProject) Schema(ctx context.Context, req datasource.SchemaRequest, re
 					},
 				},
 			},
-			"user_roles": schema.ListNestedAttribute{
+			"user_roles": schema.ListNestedBlock{
 				MarkdownDescription: "User roles attached to project",
-				Computed:            true,
-				NestedObject: schema.NestedAttributeObject{
+				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"user": schema.StringAttribute{
 							Computed: true,

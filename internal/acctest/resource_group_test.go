@@ -547,3 +547,71 @@ func TestAccParalusNamespaceGroups_Multi(t *testing.T) {
 		},
 	})
 }
+
+// Test multinamespace groups with same namespace
+func TestAccParalusNamespaceGroups_MultiDynamic(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccConfigPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckGroupResourceDestroy(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderValidResource(`
+				locals {
+					groups = [
+						{
+							description =  "catalog namespace read group"
+							name =  "Catalog Namespace Read"
+							type =  "SYSTEM"
+							users =  [ "acctest2-user@example.com", "acctest-user@example.com"]
+							project_roles = [
+								{
+									namespace =  "catalog"
+									project =  "acctest-donotdelete"
+									role =  "NAMESPACE_READ_ONLY"
+								},
+								{
+									namespace =  "garden"
+									project =  "acctest-donotdelete"
+									role =  "NAMESPACE_READ_ONLY"
+								},
+								{
+									namespace = "telemetry"
+									project =  "acctest-donotdelete"
+									role =  "NAMESPACE_READ_ONLY"
+								},
+								{
+									namespace =  "garden"
+									project =  "acctest-donotdelete"
+									role =  "NAMESPACE_READ_ONLY"
+								},
+								{
+									namespace =  "web"
+									project =  "acctest-donotdelete"
+									role =  "NAMESPACE_READ_ONLY"
+								}
+							]
+						}
+					]
+				}
+				resource "paralus_group" "namespace_read" {
+					for_each = { for group in local.groups : group.name => group }
+
+					name = each.value.name
+					description = each.value.description
+					users = can(each.value.users) ? each.value.users : []
+				  
+					dynamic "project_roles" {
+					  for_each = each.value.project_roles
+					  content {
+						role  = project_roles.value.role
+						project = project_roles.value.project
+						namespace = project_roles.value.namespace
+					  }
+					}
+				}`),
+				ExpectError: regexp.MustCompile(".*must have a unique combination.*"),
+			},
+		},
+	})
+}

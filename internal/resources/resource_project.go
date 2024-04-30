@@ -45,6 +45,7 @@ func (r RsProject) Schema(ctx context.Context, req resource.SchemaRequest, resp 
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
+				DeprecationMessage: "id is no longer a required valie for providers and will eventually be removed. Use \"name\" instead.",
 			},
 			"name": schema.StringAttribute{
 				MarkdownDescription: "Project name",
@@ -64,10 +65,11 @@ func (r RsProject) Schema(ctx context.Context, req resource.SchemaRequest, resp 
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"project_roles": schema.ListNestedAttribute{
+		},
+		Blocks: map[string]schema.Block{
+			"project_roles": schema.ListNestedBlock{
 				MarkdownDescription: "Project roles attached to project, containing group or namespace",
-				Optional:            true,
-				NestedObject: schema.NestedAttributeObject{
+				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"project": schema.StringAttribute{
 							MarkdownDescription: "Project name. This will always be the same as the resource project name.",
@@ -91,10 +93,9 @@ func (r RsProject) Schema(ctx context.Context, req resource.SchemaRequest, resp 
 					},
 				},
 			},
-			"user_roles": schema.ListNestedAttribute{
+			"user_roles": schema.ListNestedBlock{
 				MarkdownDescription: "User roles attached to project",
-				Optional:            true,
-				NestedObject: schema.NestedAttributeObject{
+				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"user": schema.StringAttribute{
 							MarkdownDescription: "Authorized user",
@@ -174,7 +175,7 @@ func (r RsProject) Update(ctx context.Context, req resource.UpdateRequest, resp 
 	}
 
 	var data *structs.Project
-	diags := req.Config.Get(ctx, &data)
+	diags := req.Plan.Get(ctx, &data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -242,8 +243,11 @@ func createOrUpdateProject(ctx context.Context, data *structs.Project, requestTy
 		diags.AddError(fmt.Sprintf(
 			"failed to %s project %s", howFail,
 			projectId), err.Error())
+		return diags
 	}
 
+	// Update resource information from updated cluster
+	diags = utils.BuildResourceFromProjectStruct(ctx, projectStruct, data)
 	return diags
 }
 
@@ -286,6 +290,7 @@ func (r RsProject) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	}
 	if err != nil {
 		resp.Diagnostics.AddError(fmt.Sprintf("Error retrieving info for project %s", projectId), err.Error())
+		return
 	}
 
 	// Update resource information from updated cluster
@@ -311,13 +316,12 @@ func (r *RsProject) ImportState(ctx context.Context, req resource.ImportStateReq
 		return
 	}
 
-	var data *structs.Project
 	auth := r.cfg.GetAppAuthProfile()
 	tflog.Debug(ctx, fmt.Sprintf("Import provider config used: %s", utils.GetConfigAsMap(r.cfg)))
 
 	projectId := req.ID
-	if projectId == "" {
-		resp.Diagnostics.AddError("Must specify a project name", "")
+	if projectId == "" || projectId == "id-attribute-not-set" {
+		resp.Diagnostics.AddError("Must specify a project name when importing", "")
 		return
 	}
 
@@ -335,7 +339,8 @@ func (r *RsProject) ImportState(ctx context.Context, req resource.ImportStateReq
 		return
 	}
 
-	diags := utils.BuildResourceFromProjectStruct(ctx, projectStruct, data)
+	var data structs.Project
+	diags := utils.BuildResourceFromProjectStruct(ctx, projectStruct, &data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

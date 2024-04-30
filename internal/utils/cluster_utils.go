@@ -29,10 +29,8 @@ func BuildClusterStructFromResource(ctx context.Context, data *structs.Cluster) 
 	clusterStruct := &infrav3.Cluster{
 		Kind: "Cluster",
 		Metadata: &commonv3.Metadata{
-			Name:        data.Name.ValueString(),
-			Description: data.Description.ValueString(),
-			Project:     data.Project.ValueString(),
-			Id:          data.Uuid.ValueString(),
+			Name:    data.Name.ValueString(),
+			Project: data.Project.ValueString(),
 		},
 		Spec: &infrav3.ClusterSpec{
 			Metro:       &infrav3.Metro{},
@@ -94,20 +92,44 @@ func BuildClusterStructFromResource(ctx context.Context, data *structs.Cluster) 
 func BuildResourceFromClusterStruct(ctx context.Context, cluster *infrav3.Cluster, data *structs.Cluster, auth *authprofile.Profile) diag.Diagnostics {
 	var diagsReturn diag.Diagnostics
 	var diags diag.Diagnostics
+	data.Id = types.StringValue(cluster.Metadata.Project + ":" + cluster.Metadata.Name) // will be removed eventually
 	data.Name = types.StringValue(cluster.Metadata.Name)
 	data.Description = types.StringValue(cluster.Metadata.Description)
 	data.Project = types.StringValue(cluster.Metadata.Project)
 	data.ClusterType = types.StringValue(cluster.Spec.ClusterType)
 	data.Uuid = types.StringValue(cluster.Metadata.Id)
 	if cluster.Spec.Params != nil {
-
+		envProvider := types.StringValue(cluster.Spec.Params.EnvironmentProvider)
+		if envProvider == types.StringValue("") {
+			envProvider = types.StringNull()
+		}
+		provisionEnv := types.StringValue(cluster.Spec.Params.ProvisionEnvironment)
+		if provisionEnv == types.StringValue("") {
+			provisionEnv = types.StringNull()
+		}
+		k8sProvider := types.StringValue(cluster.Spec.Params.KubernetesProvider)
+		if k8sProvider == types.StringValue("") {
+			k8sProvider = types.StringNull()
+		}
+		provisionPkgType := types.StringValue(cluster.Spec.Params.ProvisionPackageType)
+		if provisionPkgType == types.StringValue("") {
+			provisionPkgType = types.StringNull()
+		}
+		provisionType := types.StringValue(cluster.Spec.Params.ProvisionType)
+		if provisionType == types.StringValue("") {
+			provisionType = types.StringNull()
+		}
+		state := types.StringValue(cluster.Spec.Params.State)
+		if state == types.StringValue("") {
+			state = types.StringNull()
+		}
 		params := structs.Params{
-			EnvironmentProvider:  types.StringValue(cluster.Spec.Params.EnvironmentProvider),
-			KubernetesProvider:   types.StringValue(cluster.Spec.Params.KubernetesProvider),
-			ProvisionEnvironment: types.StringValue(cluster.Spec.Params.ProvisionEnvironment),
-			ProvisionPackageType: types.StringValue(cluster.Spec.Params.ProvisionPackageType),
-			ProvisionType:        types.StringValue(cluster.Spec.Params.ProvisionType),
-			State:                types.StringValue(cluster.Spec.Params.State),
+			EnvironmentProvider:  envProvider,
+			KubernetesProvider:   k8sProvider,
+			ProvisionEnvironment: provisionEnv,
+			ProvisionPackageType: provisionPkgType,
+			ProvisionType:        provisionType,
+			State:                state,
 		}
 		data.Params, diags = types.ObjectValueFrom(ctx, params.AttributeTypes(), params)
 		diagsReturn.Append(diags...)
@@ -119,7 +141,7 @@ func BuildResourceFromClusterStruct(ctx context.Context, cluster *infrav3.Cluste
 	data.Annotations, diags = types.MapValueFrom(ctx, types.StringType, cluster.Metadata.Annotations)
 	diagsReturn.Append(diags...)
 
-	err, relays, bsfiles, bsfile := SetBootstrapFileAndRelays(ctx, cluster.Metadata.Project, cluster.Metadata.Name, auth)
+	relays, bsfiles, bsfile, err := SetBootstrapFileAndRelays(ctx, cluster.Metadata.Project, cluster.Metadata.Name, auth)
 	if err != nil {
 		diagsReturn.AddError("Setting bootstrap file and relays failed", err.Error())
 	} else {
@@ -128,6 +150,7 @@ func BuildResourceFromClusterStruct(ctx context.Context, cluster *infrav3.Cluste
 		diagsReturn.Append(diags...)
 		data.BSFileCombined = types.StringValue(bsfile)
 	}
+
 	return diagsReturn
 }
 
@@ -189,7 +212,7 @@ func getBootstrapRelays(bootstrapFiles []string) (string, error) {
 // Due to the parallel nature of testing, it might be that the cluster would be created
 // before the relay was effectively populated. So let's do a increased delay check
 func SetBootstrapFileAndRelays(ctx context.Context, projectId, clusterId string,
-	auth *authprofile.Profile) (error, string, []string, string) {
+	auth *authprofile.Profile) (string, []string, string, error) {
 
 	b := &backoff.Backoff{
 		Jitter: true,
@@ -206,14 +229,14 @@ func SetBootstrapFileAndRelays(ctx context.Context, projectId, clusterId string,
 		bootstrapFile, err = GetBootstrapFile(ctx, clusterId, projectId, auth)
 
 		if err != nil {
-			return errors.Wrapf(err, "Error retrieving bootstrap file for cluster %s in project %s",
-				clusterId, projectId), "", nil, ""
+			return "", nil, "", errors.Wrapf(err, "Error retrieving bootstrap file for cluster %s in project %s",
+				clusterId, projectId)
 		}
 
 		bootstrapFiles = splitSingleYAMLIntoList(bootstrapFile)
 		relay_or_resp, err = getBootstrapRelays(bootstrapFiles)
 		if err != nil {
-			return errors.Wrapf(err, "Error while decoding YAML object %s", relay_or_resp), "", nil, ""
+			return "", nil, "", errors.Wrapf(err, "Error while decoding YAML object %s", relay_or_resp)
 		}
 
 		d := b.Duration()
@@ -229,12 +252,12 @@ func SetBootstrapFileAndRelays(ctx context.Context, projectId, clusterId string,
 	}
 
 	if relay_or_resp == "" {
-		return errors.Errorf("Unable to retrieve relay info from created cluster within %s", b.Duration()), "", nil, ""
+		return "", nil, "", errors.Errorf("Unable to retrieve relay info from created cluster within %s", b.Duration())
 	}
 
 	b.Reset()
 
-	return nil, relay_or_resp, bootstrapFiles, bootstrapFile
+	return relay_or_resp, bootstrapFiles, bootstrapFile, nil
 }
 
 // Will retrieve the bootstrap file for imported clusters
@@ -283,9 +306,12 @@ func DeleteCluster(ctx context.Context, name, project string, auth *authprofile.
 // Update cluster takes the updated cluster details and sends it to the core
 func CreateCluster(ctx context.Context, cluster *infrav3.Cluster, auth *authprofile.Profile) error {
 	uri := fmt.Sprintf("/infra/v3/project/%s/cluster", cluster.Metadata.Project)
-	_, err := makeRestCall(ctx, uri, "POST", cluster, auth)
+	resp, err := makeRestCall(ctx, uri, "POST", cluster, auth)
 	if err != nil {
 		return err
+	}
+	if err := json.Unmarshal([]byte(resp), &cluster); err != nil {
+		return fmt.Errorf("error unmarshalling cluster details: %s", err)
 	}
 	return nil
 }
@@ -293,9 +319,12 @@ func CreateCluster(ctx context.Context, cluster *infrav3.Cluster, auth *authprof
 // Update cluster takes the updated cluster details and sends it to the core
 func UpdateCluster(ctx context.Context, cluster *infrav3.Cluster, auth *authprofile.Profile) error {
 	uri := fmt.Sprintf("/infra/v3/project/%s/cluster/%s", cluster.Metadata.Project, cluster.Metadata.Name)
-	_, err := makeRestCall(ctx, uri, "PUT", cluster, auth)
+	resp, err := makeRestCall(ctx, uri, "PUT", cluster, auth)
 	if err != nil {
 		return err
+	}
+	if err := json.Unmarshal([]byte(resp), &cluster); err != nil {
+		return fmt.Errorf("error unmarshalling cluster details: %s", err)
 	}
 	return nil
 }

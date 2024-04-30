@@ -55,7 +55,7 @@ func BuildProjectStructFromResource(ctx context.Context, data *structs.Project) 
 	// define user roles
 	if !data.UserRoles.IsNull() {
 		userRoles := make([]structs.UserRole, 0, len(data.UserRoles.Elements()))
-		diags := data.ProjectRoles.ElementsAs(ctx, &userRoles, false)
+		diags := data.UserRoles.ElementsAs(ctx, &userRoles, false)
 		if diags.HasError() {
 			return nil, diags
 		}
@@ -76,11 +76,12 @@ func BuildProjectStructFromResource(ctx context.Context, data *structs.Project) 
 func BuildResourceFromProjectStruct(ctx context.Context, project *systemv3.Project, data *structs.Project) diag.Diagnostics {
 	var diagsReturn diag.Diagnostics
 	var diags diag.Diagnostics
+	data.Id = types.StringValue(project.Metadata.Name) // will be removed eventually
 	data.Name = types.StringValue(project.Metadata.Name)
 	data.Description = types.StringValue(project.Metadata.Description)
 	data.Uuid = types.StringValue(project.Metadata.Id)
 	projectRoles := make([]structs.ProjectRole, 0)
-	for _, role := range project.Spec.GetProjectNamespaceRoles() {
+	for _, role := range project.Spec.ProjectNamespaceRoles {
 		projectRoles = append(projectRoles, structs.ProjectRole{
 			Project:   types.StringValue(project.Metadata.Name),
 			Role:      types.StringValue(role.Role),
@@ -218,7 +219,11 @@ func ApplyProject(ctx context.Context, proj *systemv3.Project, auth *authprofile
 	if projExisting != nil {
 		tflog.Debug(context.Background(), fmt.Sprintf("updating project: %s", proj.Metadata.Name))
 		uri := fmt.Sprintf("/auth/v3/partner/%s/organization/%s/project/%s", cfg.Partner, cfg.Organization, proj.Metadata.Name)
-		_, err := makeRestCall(ctx, uri, "PUT", proj, auth)
+		resp, err := makeRestCall(ctx, uri, "PUT", proj, auth)
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal([]byte(resp), proj)
 		if err != nil {
 			return err
 		}
@@ -228,7 +233,11 @@ func ApplyProject(ctx context.Context, proj *systemv3.Project, auth *authprofile
 		}
 		tflog.Debug(context.Background(), fmt.Sprintf("creating project: %s", proj.Metadata.Name))
 		uri := fmt.Sprintf("/auth/v3/partner/%s/organization/%s/project", cfg.Partner, cfg.Organization)
-		_, err := makeRestCall(ctx, uri, "POST", proj, auth)
+		resp, err := makeRestCall(ctx, uri, "POST", proj, auth)
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal([]byte(resp), proj)
 		if err != nil {
 			return err
 		}

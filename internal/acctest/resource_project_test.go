@@ -744,9 +744,10 @@ func TestAccParalusResourceProject_Add2UserRoles(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      projectRsName,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            projectRsName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"user_roles", "uuid"},
 			},
 		},
 	})

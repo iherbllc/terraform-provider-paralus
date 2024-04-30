@@ -49,6 +49,7 @@ func (r RsCluster) Schema(ctx context.Context, req resource.SchemaRequest, resp 
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
+				DeprecationMessage: "id is no longer a required value for providers and will eventually be removed. Use \"name\":\"project\" instead.",
 			},
 			"name": schema.StringAttribute{
 				MarkdownDescription: "Cluster name",
@@ -271,27 +272,29 @@ func (r RsCluster) Update(ctx context.Context, req resource.UpdateRequest, resp 
 
 // Creates a new cluster or updates an existing one
 func createOrUpdateCluster(ctx context.Context, data *structs.Cluster, requestType string, cfg *config.Config) diag.Diagnostics {
-	var diags diag.Diagnostics
+	var diagsReturn diag.Diagnostics
 
 	projectId := data.Project.ValueString()
 	clusterId := data.Name.ValueString()
 
 	auth := cfg.GetAppAuthProfile()
-	diags = utils.AssertStringNotEmpty("cluster project", projectId)
-	if diags.HasError() {
-		return diags
+	diags := utils.AssertStringNotEmpty("cluster project", projectId)
+	diagsReturn.Append(diags...)
+	if diagsReturn.HasError() {
+		return diagsReturn
 	}
 	diags = utils.AssertStringNotEmpty("cluster name", clusterId)
-	if diags.HasError() {
-		return diags
+	diagsReturn.Append(diags...)
+	if diagsReturn.HasError() {
+		return diagsReturn
 	}
 
 	tflog.Trace(ctx, fmt.Sprintf("Checking for project %s existance", projectId))
 
 	projectStruct, err := utils.GetProjectByName(ctx, projectId, auth)
 	if projectStruct == nil {
-		diags.AddError(fmt.Sprintf("project %s does not exist", projectId), err.Error())
-		return diags
+		diagsReturn.AddError(fmt.Sprintf("project %s does not exist", projectId), err.Error())
+		return diagsReturn
 	}
 
 	howFail := "create"
@@ -300,8 +303,9 @@ func createOrUpdateCluster(ctx context.Context, data *structs.Cluster, requestTy
 	}
 
 	clusterStruct, diags := utils.BuildClusterStructFromResource(ctx, data)
-	if diags.HasError() {
-		return diags
+	diagsReturn.Append(diags...)
+	if diagsReturn.HasError() {
+		return diagsReturn
 	}
 
 	tflog.Trace(ctx, fmt.Sprintf("Cluster %s request", requestType), map[string]interface{}{
@@ -316,24 +320,30 @@ func createOrUpdateCluster(ctx context.Context, data *structs.Cluster, requestTy
 			return diags
 		}
 		if err != nil && err != utils.ErrResourceNotExists {
-			diags.AddError(fmt.Sprintf("failed to get cluster %s in project %s", clusterId, projectId), err.Error())
-			return diags
+			diagsReturn.AddError(fmt.Sprintf("failed to get cluster %s in project %s", clusterId, projectId), err.Error())
+			return diagsReturn
 		}
 
 		err = utils.CreateCluster(ctx, clusterStruct, auth)
 		if err != nil {
-			diags.AddError(fmt.Sprintf("failed to %s cluster %s in project %s", howFail, clusterId, projectId), err.Error())
+			diagsReturn.AddError(fmt.Sprintf("failed to %s cluster %s in project %s", howFail, clusterId, projectId), err.Error())
+			return diagsReturn
 		}
 	} else if requestType == "PUT" {
 		err := utils.UpdateCluster(ctx, clusterStruct, auth)
 		if err != nil {
-			diags.AddError(fmt.Sprintf("failed to %s cluster %s in project %s", howFail, clusterId, projectId), err.Error())
+			diagsReturn.AddError(fmt.Sprintf("failed to %s cluster %s in project %s", howFail, clusterId, projectId), err.Error())
+			return diagsReturn
 		}
 	} else {
-		diags.AddError(fmt.Sprintf("unknown request type %s", requestType), "")
+		diagsReturn.AddError(fmt.Sprintf("unknown request type %s", requestType), "")
+		return diagsReturn
 	}
 
-	return diags
+	// Update resource information from created/updated cluster
+	diags = utils.BuildResourceFromClusterStruct(ctx, clusterStruct, data, auth)
+	diagsReturn.Append(diags...)
+	return diagsReturn
 }
 
 // Retreive cluster info
@@ -411,7 +421,6 @@ func (r *RsCluster) ImportState(ctx context.Context, req resource.ImportStateReq
 		return
 	}
 
-	var data *structs.Cluster
 	auth := r.cfg.GetAppAuthProfile()
 	tflog.Debug(ctx, fmt.Sprintf("Import provider Config Used: %s", utils.GetConfigAsMap(r.cfg)))
 
@@ -435,7 +444,8 @@ func (r *RsCluster) ImportState(ctx context.Context, req resource.ImportStateReq
 		return
 	}
 
-	diags := utils.BuildResourceFromClusterStruct(ctx, clusterStruct, data, auth)
+	var data structs.Cluster
+	diags := utils.BuildResourceFromClusterStruct(ctx, clusterStruct, &data, auth)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
