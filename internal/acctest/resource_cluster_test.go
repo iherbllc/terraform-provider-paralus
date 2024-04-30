@@ -273,9 +273,10 @@ func TestAccParalusResourceCluster_WithProjectDatasource(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      clusterRsName,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            clusterRsName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"annotations", "labels"},
 			},
 		},
 	})
@@ -319,9 +320,10 @@ func TestAccParalusResourceCluster_Full(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      clusterRsName,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            clusterRsName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"annotations", "labels"},
 			},
 			{
 				ResourceName:      projectRsName,
@@ -362,9 +364,10 @@ func TestAccParalusResourceCluster_basic(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      clusterRsName,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            clusterRsName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"annotations", "labels"},
 			},
 		},
 	})

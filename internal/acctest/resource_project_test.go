@@ -132,7 +132,7 @@ func TestAccParalusResourceProject_basic(t *testing.T) {
 	})
 }
 
-// Verifies the cluster has been destroyed
+// Verifies the project has been destroyed
 func testAccCheckProjectResourceDestroy(t *testing.T) func(s *terraform.State) error {
 
 	return func(s *terraform.State) error {

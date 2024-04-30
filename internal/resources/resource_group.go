@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -67,6 +68,8 @@ func (r RsGoup) Schema(ctx context.Context, req resource.SchemaRequest, resp *re
 			"type": schema.StringAttribute{
 				MarkdownDescription: "Type of group",
 				Optional:            true,
+				Computed:            true,
+				Default:             stringdefault.StaticString("SYSTEM"),
 			},
 		},
 		Blocks: map[string]schema.Block{
@@ -338,7 +341,7 @@ func (r *RsGoup) ImportState(ctx context.Context, req resource.ImportStateReques
 
 }
 
-// Delete an existing cluster
+// Delete an existing group
 func (r RsGoup) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	// Prevent panic if the provider has not been configured.
 	if r.cfg == nil {
@@ -349,7 +352,7 @@ func (r RsGoup) Delete(ctx context.Context, req resource.DeleteRequest, resp *re
 		return
 	}
 
-	var data *structs.Cluster
+	var data *structs.Group
 	diags := req.State.Get(ctx, &data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

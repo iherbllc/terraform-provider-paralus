@@ -33,8 +33,7 @@ func (r *RsProject) Metadata(ctx context.Context, req resource.MetadataRequest, 
 	resp.TypeName = req.ProviderTypeName + "_project"
 }
 
-// Paralus Resource Group
-// Paralus Resource Cluster
+// Paralus Resource Project
 func (r RsProject) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Resource containing paralus project information. Uses the [pctl](https://github.com/paralus/cli) library",

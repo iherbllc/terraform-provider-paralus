@@ -82,11 +82,27 @@ func BuildResourceFromProjectStruct(ctx context.Context, project *systemv3.Proje
 	data.Uuid = types.StringValue(project.Metadata.Id)
 	projectRoles := make([]structs.ProjectRole, 0)
 	for _, role := range project.Spec.ProjectNamespaceRoles {
+		project := types.StringValue(project.Metadata.Name)
+		if project == types.StringValue("") {
+			project = types.StringNull()
+		}
+		namespace := types.StringValue(DerefString(role.Namespace))
+		if namespace == types.StringValue("") {
+			namespace = types.StringNull()
+		}
+		roleVal := types.StringValue(role.Role)
+		if roleVal == types.StringValue("") {
+			roleVal = types.StringNull()
+		}
+		group := types.StringValue(DerefString(role.Group))
+		if group == types.StringValue("") {
+			group = types.StringNull()
+		}
 		projectRoles = append(projectRoles, structs.ProjectRole{
-			Project:   types.StringValue(project.Metadata.Name),
-			Role:      types.StringValue(role.Role),
-			Namespace: types.StringValue(DerefString(role.Namespace)),
-			Group:     types.StringValue(DerefString(role.Group)),
+			Project:   project,
+			Role:      roleVal,
+			Namespace: namespace,
+			Group:     group,
 		})
 	}
 
@@ -96,10 +112,22 @@ func BuildResourceFromProjectStruct(ctx context.Context, project *systemv3.Proje
 
 	userRoles := make([]structs.UserRole, 0)
 	for _, role := range project.Spec.UserRoles {
+		userVal := types.StringValue(role.User)
+		if userVal == types.StringValue("") {
+			userVal = types.StringNull()
+		}
+		namespace := types.StringValue(role.Namespace)
+		if namespace == types.StringValue("") {
+			namespace = types.StringNull()
+		}
+		roleVal := types.StringValue(role.Role)
+		if roleVal == types.StringValue("") {
+			roleVal = types.StringNull()
+		}
 		userRoles = append(userRoles, structs.UserRole{
-			User:      types.StringValue(role.User),
-			Role:      types.StringValue(role.Role),
-			Namespace: types.StringValue(role.Namespace),
+			User:      userVal,
+			Role:      roleVal,
+			Namespace: namespace,
 		})
 	}
 	data.UserRoles, diags = types.ListValueFrom(ctx, types.ObjectType{AttrTypes: structs.UserRole{}.AttributeTypes()}, userRoles)
