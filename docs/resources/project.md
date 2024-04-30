@@ -92,15 +92,15 @@ resource "paralus_project" "test" {
 ### Optional
 
 - `description` (String) Project description.
-- `project_roles` (Attributes List) Project roles attached to project, containing group or namespace (see [below for nested schema](#nestedatt--project_roles))
-- `user_roles` (Attributes List) User roles attached to project (see [below for nested schema](#nestedatt--user_roles))
+- `project_roles` (Block List) Project roles attached to project, containing group or namespace (see [below for nested schema](#nestedblock--project_roles))
+- `user_roles` (Block List) User roles attached to project (see [below for nested schema](#nestedblock--user_roles))
 
 ### Read-Only
 
-- `id` (String) Project ID in the format "PROJECT_NAME"
+- `id` (String, Deprecated) Project ID in the format "PROJECT_NAME"
 - `uuid` (String) Project UUID
 
-<a id="nestedatt--project_roles"></a>
+<a id="nestedblock--project_roles"></a>
 ### Nested Schema for `project_roles`
 
 Required:
@@ -117,7 +117,7 @@ Read-Only:
 - `project` (String) Project name. This will always be the same as the resource project name.
 
 
-<a id="nestedatt--user_roles"></a>
+<a id="nestedblock--user_roles"></a>
 ### Nested Schema for `user_roles`
 
 Required:

@@ -82,15 +82,15 @@ resource "paralus_group" "test" {
 ### Optional
 
 - `description` (String) Group description.
-- `project_roles` (Attributes List) Project namespace roles to attach to the group (see [below for nested schema](#nestedatt--project_roles))
+- `project_roles` (Block List) Project namespace roles to attach to the group (see [below for nested schema](#nestedblock--project_roles))
 - `type` (String) Type of group
 - `users` (List of String) User roles attached to group
 
 ### Read-Only
 
-- `id` (String) Group ID in the format "GROUP_NAME"
+- `id` (String, Deprecated) Group ID in the format "GROUP_NAME"
 
-<a id="nestedatt--project_roles"></a>
+<a id="nestedblock--project_roles"></a>
 ### Nested Schema for `project_roles`
 
 Required:
