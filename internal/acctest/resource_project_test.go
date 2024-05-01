@@ -805,3 +805,58 @@ func testAccCheckResourceProjectUserRoleMap(resourceName string, userRoles map[s
 		return utils.ValidateUserRolesSet(projectStruct.Spec.UserRoles, userRoles)
 	}
 }
+
+// Test creating project and adding in group
+func TestAccParalusResourceProjectMove(t *testing.T) {
+	projectRsName1 := "paralus_project.test_move_1"
+	projectRSNameFor := "paralus_project.test_move_for"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccConfigPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckProjectResourceDestroy(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderValidResource(`
+				resource "paralus_project" "test_move_1" {
+					provider = paralus.valid_resource
+					name = "test-move-1"
+					description = "project 1 for move test"
+				}
+				`),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckResourceProjectExists(projectRsName1),
+					testAccCheckResourceProjectTypeAttribute(projectRsName1, "project 1 for move test"),
+					resource.TestCheckResourceAttr(projectRsName1, "description", "project 1 for move test"),
+				),
+				Destroy: false,
+			},
+			{
+				ResourceName: projectRsName1,
+				Config: testAccProviderValidResource(fmt.Sprintf(`
+				locals {
+					projects = [{
+						name = "test-move-1"
+						description = "project 1 for move test"
+					}
+					]
+				}
+				resource "paralus_project" "test_move_for" {
+					count = length(local.projects)
+					provider = paralus.valid_resource
+					name = element(local.projects, count.index).name
+					description = element(local.projects, count.index).description
+				}
+				moved {
+					from = %s
+					to = %s[0]
+				}
+				`, projectRsName1, projectRSNameFor)),
+				// PlanOnly: true,
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckResourceProjectExists(projectRSNameFor + ".0"),
+				),
+			},
+		},
+	})
+}

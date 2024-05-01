@@ -13,7 +13,6 @@ import (
 	"github.com/iherbllc/terraform-provider-paralus/internal/provider"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
-	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 )
 
@@ -25,17 +24,17 @@ var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServe
 	"paralus": providerserver.NewProtocol6WithError(provider.New()),
 }
 
-var testAccProtoV5ProviderFactories = map[string]func() (tfprotov5.ProviderServer, error){
-	"paralus": providerserver.NewProtocol5WithError(provider.New()),
-}
+// var testAccProtoV5ProviderFactories = map[string]func() (tfprotov5.ProviderServer, error){
+// 	"paralus": providerserver.NewProtocol5WithError(provider.New()),
+// }
 
-func testAccPreCheck(t *testing.T) {
-	// You can add code here to run prior to any test case execution, for example assertions
-	// about the appropriate environment variables being set are common to see in a pre-check
-	// function.
-	conf = paralusProviderConfig()
-	testAccConfigPreCheck(t)
-}
+// func testAccPreCheck(t *testing.T) {
+// 	// You can add code here to run prior to any test case execution, for example assertions
+// 	// about the appropriate environment variables being set are common to see in a pre-check
+// 	// function.
+// 	conf = paralusProviderConfig()
+// 	testAccConfigPreCheck(t)
+// }
 
 // var testAccProviders map[string]*provider.Provider
 // var testAccProvider *provider.Provider
