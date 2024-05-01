@@ -46,7 +46,6 @@ func (r RsGoup) Schema(ctx context.Context, req resource.SchemaRequest, resp *re
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
-				DeprecationMessage: "id is no longer a required valie for providers and will eventually be removed. Use \"name\" instead.",
 			},
 			"name": schema.StringAttribute{
 				MarkdownDescription: "Group name",

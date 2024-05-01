@@ -73,7 +73,7 @@ func BuildGroupStructFromResource(ctx context.Context, data *structs.Group) (*gr
 func BuildResourceFromGroupStruct(ctx context.Context, group *groupv3.Group, data *structs.Group) diag.Diagnostics {
 	var diagsReturn diag.Diagnostics
 	var diags diag.Diagnostics
-	data.Id = types.StringValue(group.Metadata.Name) // will be removed eventually
+	data.Id = types.StringValue(group.Metadata.Name)
 	data.Name = types.StringValue(group.Metadata.Name)
 	data.Description = types.StringValue(group.Metadata.Description)
 	projectRoles := make([]structs.ProjectRole, 0)

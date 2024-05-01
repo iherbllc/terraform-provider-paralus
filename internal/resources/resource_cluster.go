@@ -49,7 +49,6 @@ func (r RsCluster) Schema(ctx context.Context, req resource.SchemaRequest, resp 
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
-				DeprecationMessage: "id is no longer a required value for providers and will eventually be removed. Use \"name\":\"project\" instead.",
 			},
 			"name": schema.StringAttribute{
 				MarkdownDescription: "Cluster name",

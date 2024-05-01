@@ -76,7 +76,7 @@ func BuildProjectStructFromResource(ctx context.Context, data *structs.Project) 
 func BuildResourceFromProjectStruct(ctx context.Context, project *systemv3.Project, data *structs.Project) diag.Diagnostics {
 	var diagsReturn diag.Diagnostics
 	var diags diag.Diagnostics
-	data.Id = types.StringValue(project.Metadata.Name) // will be removed eventually
+	data.Id = types.StringValue(project.Metadata.Name)
 	data.Name = types.StringValue(project.Metadata.Name)
 	data.Description = types.StringValue(project.Metadata.Description)
 	data.Uuid = types.StringValue(project.Metadata.Id)

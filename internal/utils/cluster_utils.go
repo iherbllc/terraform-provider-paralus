@@ -92,7 +92,7 @@ func BuildClusterStructFromResource(ctx context.Context, data *structs.Cluster) 
 func BuildResourceFromClusterStruct(ctx context.Context, cluster *infrav3.Cluster, data *structs.Cluster, auth *authprofile.Profile) diag.Diagnostics {
 	var diagsReturn diag.Diagnostics
 	var diags diag.Diagnostics
-	data.Id = types.StringValue(cluster.Metadata.Project + ":" + cluster.Metadata.Name) // will be removed eventually
+	data.Id = types.StringValue(cluster.Metadata.Project + ":" + cluster.Metadata.Name)
 	data.Name = types.StringValue(cluster.Metadata.Name)
 	data.Description = types.StringValue(cluster.Metadata.Description)
 	data.Project = types.StringValue(cluster.Metadata.Project)
