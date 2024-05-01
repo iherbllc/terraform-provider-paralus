@@ -136,7 +136,7 @@ func (r *RsProject) Configure(ctx context.Context, req resource.ConfigureRequest
 	r.cfg = cfg
 }
 
-// Import an existing K8S cluster into a designated project
+// Create a project
 func (r *RsProject) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	// Prevent panic if the provider has not been configured.
 	if r.cfg == nil {
@@ -245,7 +245,7 @@ func createOrUpdateProject(ctx context.Context, data *structs.Project, requestTy
 		return diags
 	}
 
-	// Update resource information from updated cluster
+	// Update resource information from updated project
 	diags = utils.BuildResourceFromProjectStruct(ctx, projectStruct, data)
 	return diags
 }
@@ -292,7 +292,7 @@ func (r RsProject) Read(ctx context.Context, req resource.ReadRequest, resp *res
 		return
 	}
 
-	// Update resource information from updated cluster
+	// Update resource information from updated project
 	diags = utils.BuildResourceFromProjectStruct(ctx, projectStruct, data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -350,7 +350,7 @@ func (r *RsProject) ImportState(ctx context.Context, req resource.ImportStateReq
 
 }
 
-// Delete an existing cluster
+// Delete an existing project
 func (r RsProject) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	// Prevent panic if the provider has not been configured.
 	if r.cfg == nil {

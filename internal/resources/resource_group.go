@@ -36,7 +36,6 @@ func (r *RsGoup) Metadata(ctx context.Context, req resource.MetadataRequest, res
 }
 
 // Paralus Resource Group
-// Paralus Resource Cluster
 func (r RsGoup) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Resource containing paralus group information. Uses the [pctl](https://github.com/paralus/cli) library",
@@ -282,7 +281,7 @@ func (r RsGoup) Read(ctx context.Context, req resource.ReadRequest, resp *resour
 		return
 	}
 
-	// Update resource information from updated cluster
+	// Update resource information from updated group
 	diags = utils.BuildResourceFromGroupStruct(ctx, groupStruct, data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

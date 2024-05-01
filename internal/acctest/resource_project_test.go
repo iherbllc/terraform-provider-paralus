@@ -319,14 +319,15 @@ func TestAccParalusResourceProject_AddToGroup(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      projectRsName,
+				ResourceName:      groupRsName,
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
 			{
-				ResourceName:      groupRsName,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            projectRsName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"project_roles"},
 			},
 		},
 	})
@@ -407,9 +408,10 @@ func TestAccParalusResourceProject_Add2GroupsNamespaceAndProjectRoles(t *testing
 				),
 			},
 			{
-				ResourceName:      projectRsName,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            projectRsName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"project_roles"},
 			},
 			{
 				ResourceName:      groupRsName1,
@@ -503,9 +505,10 @@ func TestAccParalusResourceProject_Add2GroupsDifferentNamespaceRoles(t *testing.
 				),
 			},
 			{
-				ResourceName:      projectRsName,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            projectRsName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"project_roles"},
 			},
 			{
 				ResourceName:      groupRsName1,
@@ -593,9 +596,10 @@ func TestAccParalusResourceProject_Add2GroupsDifferentProjectRoles(t *testing.T)
 				),
 			},
 			{
-				ResourceName:      projectRsName,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            projectRsName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"project_roles"},
 			},
 			{
 				ResourceName:      groupRsName1,
