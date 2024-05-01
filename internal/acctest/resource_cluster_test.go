@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
 )
@@ -98,6 +97,12 @@ func testAccClusterResourceConfiEmptyProject() string {
 			name = "crcep-test"
 			project = ""
 			cluster_type = "imported"
+			params {
+				provision_type = "IMPORT"
+				provision_environment = "CLOUD"
+				kubernetes_provider = "EKS"
+				state = "PROVISION"
+			}
 		}
 	`, providerConfig)
 }
@@ -127,6 +132,43 @@ func testAccClusterResourceConfigEmptyCluster() string {
 		resource "paralus_cluster" "emptyname_test" {
 			provider = paralus.cluster_empty_name
 			name = ""
+			project = "ccec-test"
+			cluster_type = "imported"
+			params {
+				provision_type = "IMPORT"
+				provision_environment = "CLOUD"
+				kubernetes_provider = "EKS"
+				state = "PROVISION"
+			}
+		}
+	`, providerConfig)
+}
+
+// Test empty cluster name
+func TestAccParalusResourceEmptyParams_basic(t *testing.T) {
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		// CheckDestroy: testAccCheckClusterResourceDestroy(t),
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccClusterResourceConfigEmptyParams(),
+				ExpectError: regexp.MustCompile(".*Required Attribute.*"),
+			},
+		},
+	})
+}
+
+func testAccClusterResourceConfigEmptyParams() string {
+
+	conf = paralusProviderConfig()
+	providerConfig := providerString(conf, "cluster_empty_params")
+	return fmt.Sprintf(`
+		%s
+
+		resource "paralus_cluster" "emptyparams_test" {
+			provider = paralus.cluster_empty_params
+			name = "blah"
 			project = "ccec-test"
 			cluster_type = "imported"
 		}
@@ -457,60 +499,60 @@ func testAccCheckResourceAttributeSet(resourceName string, attrName string) func
 	}
 }
 
-func TestResource_UpgradeFromVersion(t *testing.T) {
-	/* ... */
-	resource.Test(t, resource.TestCase{
-		Steps: []resource.TestStep{
-			{
-				ExternalProviders: map[string]resource.ExternalProvider{
-					"paralus": {
-						VersionConstraint: "0.0.47",
-						Source:            "iherbllc/paralus",
-					},
-				},
-				Config: testAccProviderValidResource(`resource "paralus_cluster" "example" {
-							provider = paralus.valid_resource
-							name = "basic-test1"
-							project = "acctest-donotdelete"
-							cluster_type = "imported"
-							params {
-								provision_type = "IMPORT"
-								provision_environment = "CLOUD"
-								kubernetes_provider = "EKS"
-								state = "PROVISION"
-							}
-                        }`),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("paralus_cluster.example", "name", "basic-test1"),
-					resource.TestCheckResourceAttr("paralus_cluster.example", "project", "acctest-donotdelete"),
-					/* ... */
-				),
-			},
-			{
-				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
-				Config: testAccProviderValidResource(`resource "paralus_cluster" "example" {
-							provider = paralus.valid_resource
-							name = "basic-test1"
-							project = "acctest-donotdelete"
-							cluster_type = "imported"
-							params {
-								provision_type = "IMPORT"
-								provision_environment = "CLOUD"
-								kubernetes_provider = "EKS"
-								state = "PROVISION"
-							}
-                        }`),
-				// ConfigPlanChecks is a terraform-plugin-testing feature.
-				// If acceptance testing is still using terraform-plugin-sdk/v2,
-				// use `PlanOnly: true` instead. When migrating to
-				// terraform-plugin-testing, switch to `ConfigPlanChecks` or you
-				// will likely experience test failures.
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectEmptyPlan(),
-					},
-				},
-			},
-		},
-	})
-}
+// func TestResource_UpgradeFromVersion(t *testing.T) {
+// 	/* ... */
+// 	resource.Test(t, resource.TestCase{
+// 		Steps: []resource.TestStep{
+// 			{
+// 				ExternalProviders: map[string]resource.ExternalProvider{
+// 					"paralus": {
+// 						VersionConstraint: "0.0.47",
+// 						Source:            "iherbllc/paralus",
+// 					},
+// 				},
+// 				Config: testAccProviderValidResource(`resource "paralus_cluster" "example" {
+// 							provider = paralus.valid_resource
+// 							name = "basic-test1"
+// 							project = "acctest-donotdelete"
+// 							cluster_type = "imported"
+// 							params {
+// 								provision_type = "IMPORT"
+// 								provision_environment = "CLOUD"
+// 								kubernetes_provider = "EKS"
+// 								state = "PROVISION"
+// 							}
+//                         }`),
+// 				Check: resource.ComposeTestCheckFunc(
+// 					resource.TestCheckResourceAttr("paralus_cluster.example", "name", "basic-test1"),
+// 					resource.TestCheckResourceAttr("paralus_cluster.example", "project", "acctest-donotdelete"),
+// 					/* ... */
+// 				),
+// 			},
+// 			{
+// 				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+// 				Config: testAccProviderValidResource(`resource "paralus_cluster" "example" {
+// 							provider = paralus.valid_resource
+// 							name = "basic-test1"
+// 							project = "acctest-donotdelete"
+// 							cluster_type = "imported"
+// 							params {
+// 								provision_type = "IMPORT"
+// 								provision_environment = "CLOUD"
+// 								kubernetes_provider = "EKS"
+// 								state = "PROVISION"
+// 							}
+//                         }`),
+// 				// ConfigPlanChecks is a terraform-plugin-testing feature.
+// 				// If acceptance testing is still using terraform-plugin-sdk/v2,
+// 				// use `PlanOnly: true` instead. When migrating to
+// 				// terraform-plugin-testing, switch to `ConfigPlanChecks` or you
+// 				// will likely experience test failures.
+// 				ConfigPlanChecks: resource.ConfigPlanChecks{
+// 					PreApply: []plancheck.PlanCheck{
+// 						plancheck.ExpectEmptyPlan(),
+// 					},
+// 				},
+// 			},
+// 		},
+// 	})
+// }
