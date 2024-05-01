@@ -5,109 +5,153 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/iherbllc/terraform-provider-paralus/internal/structs"
 	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
-	"github.com/pkg/errors"
-
 	"github.com/paralus/cli/pkg/config"
 
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-// Paralus DataSource Group
-func DataSourceGroup() *schema.Resource {
-	return &schema.Resource{
-		Description: "Retrieves a paralus group's information. Uses the [pctl](https://github.com/paralus/cli) library",
-		ReadContext: datasourceGroupRead,
-		Schema: map[string]*schema.Schema{
-			"id": {
-				Type:        schema.TypeString,
-				Description: "Group ID in the format \"GROUP_NAME\"",
-				Computed:    true,
+var _ datasource.DataSource = (*DsGroup)(nil)
+
+func DataSourceGroup() datasource.DataSource {
+	return &DsGroup{}
+}
+
+type DsGroup struct {
+	cfg *config.Config
+}
+
+func (d *DsGroup) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_group"
+}
+
+// Paralus DataSource Cluster
+func (d *DsGroup) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+	resp.Schema = schema.Schema{
+		MarkdownDescription: "Retrieves a paralus group's information. Uses the [pctl](https://github.com/paralus/cli) library",
+		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				MarkdownDescription: "Group ID in the format \"GROUP_NAME\"",
+				Computed:            true,
 			},
-			"name": {
-				Type:        schema.TypeString,
-				Description: "Group name",
-				Required:    true,
+			"name": schema.StringAttribute{
+				MarkdownDescription: "Group name",
+				Required:            true,
 			},
-			"description": {
-				Type:        schema.TypeString,
-				Description: "Group description",
-				Computed:    true,
+			"description": schema.StringAttribute{
+				MarkdownDescription: "Group description",
+				Computed:            true,
 			},
-			"project_roles": {
-				Type:        schema.TypeList,
-				Description: "Project roles attached to group, containing group or namespace",
-				Computed:    true,
-				Optional:    true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"project": {
-							Type:     schema.TypeString,
+			"users": schema.ListAttribute{
+				MarkdownDescription: "Users attached to group",
+				Computed:            true,
+				ElementType:         types.StringType,
+			},
+			"type": schema.StringAttribute{
+				MarkdownDescription: "Type of group",
+				Computed:            true,
+			},
+		},
+		Blocks: map[string]schema.Block{
+			"project_roles": schema.ListNestedBlock{
+				MarkdownDescription: "Project roles attached to group, containing group or namespace",
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"project": schema.StringAttribute{
 							Computed: true,
 						},
-						"role": {
-							Type:     schema.TypeString,
+						"role": schema.StringAttribute{
 							Computed: true,
 						},
-						"namespace": {
-							Type:     schema.TypeString,
+						"namespace": schema.StringAttribute{
 							Computed: true,
 						},
-						"group": {
-							Type:     schema.TypeString,
+						"group": schema.StringAttribute{
 							Computed: true,
 						},
 					},
 				},
 			},
-			"users": {
-				Type:        schema.TypeList,
-				Description: "Users attached to group",
-				Computed:    true,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
-			},
-			"type": {
-				Type:        schema.TypeString,
-				Description: "Type of group",
-				Computed:    true,
-			},
 		},
 	}
 }
 
-// Retreive group info
-func datasourceGroupRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	var diags diag.Diagnostics
+func (d *DsGroup) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+	// Always perform a nil check when handling ProviderData because Terraform
+	// sets that data after it calls the ConfigureProvider RPC.
+	if req.ProviderData == nil {
+		return
+	}
 
-	groupId := d.Get("name").(string)
+	cfg, ok := req.ProviderData.(*config.Config)
+
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Unexpected Data Source Configure Type",
+			fmt.Sprintf("Expected *config.Config, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+		)
+
+		return
+	}
+
+	d.cfg = cfg
+}
+
+// Retreive group info
+func (d *DsGroup) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	// Prevent panic if the provider has not been configured.
+	if d.cfg == nil {
+		resp.Diagnostics.AddError(
+			"Unconfigured PCTL Config",
+			"Expected configured PCTL config. Please ensure the values are passed in or report this issue to the provider developers.",
+		)
+		return
+	}
+
+	var data *structs.Group
+	diags := req.Config.Get(ctx, &data)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	groupId := data.Name.ValueString()
 
 	diags = utils.AssertStringNotEmpty("group name", groupId)
-	if diags.HasError() {
-		return diags
+	resp.Diagnostics.Append(diags...)
+
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	tflog.Trace(ctx, "Retrieving group info", map[string]interface{}{
 		"group": groupId,
 	})
 
-	cfg := m.(*config.Config)
-	auth := cfg.GetAppAuthProfile()
-	tflog.Debug(ctx, fmt.Sprintf("datasourceGroupRead provider config used: %s", utils.GetConfigAsMap(cfg)))
+	auth := d.cfg.GetAppAuthProfile()
+	tflog.Debug(ctx, fmt.Sprintf("Read provider config used: %s", utils.GetConfigAsMap(d.cfg)))
 
 	group, err := utils.GetGroupByName(ctx, groupId, auth)
 	if err != nil {
-		return diag.FromErr(errors.Wrapf(err, "error locating group %s",
-			groupId))
+		resp.Diagnostics.AddError(fmt.Sprintf("error locating group %s",
+			groupId), err.Error())
+		return
 	}
 
-	utils.BuildResourceFromGroupStruct(group, d)
+	utils.BuildResourceFromGroupStruct(ctx, group, data)
 
-	d.SetId(groupId)
+	if resp.Diagnostics.HasError() {
+		data.Id = types.StringNull()
+		return
+	}
 
-	return diags
+	data.Id = types.StringValue(groupId)
+
+	diags = resp.State.Set(ctx, &data)
+	resp.Diagnostics.Append(diags...)
 
 }

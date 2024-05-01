@@ -7,15 +7,15 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
 )
 
 // Test cluster not found
 func TestAccParalusClusterNotFound_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccDataSourceClusterConfig("blah"),
@@ -29,7 +29,7 @@ func TestAccParalusClusterNotFound_basic(t *testing.T) {
 func TestAccParalusDataSourceCluster_basic(t *testing.T) {
 	dsResourceName := "data.paralus_cluster.test"
 	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceClusterConfig("man-acctest"),
@@ -104,7 +104,7 @@ func TestAccParalusDataSourceCluster_Full(t *testing.T) {
 	dsResourceClusterName := "data.paralus_cluster.test"
 	dsResourceProjectName := "data.paralus_project.test"
 	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceClusterFullConfig("man-acctest"),

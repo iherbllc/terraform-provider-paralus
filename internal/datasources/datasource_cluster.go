@@ -5,167 +5,194 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
-
-	"github.com/paralus/cli/pkg/config"
-
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/pkg/errors"
+	"github.com/iherbllc/terraform-provider-paralus/internal/structs"
+	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
+	"github.com/paralus/cli/pkg/config"
 )
 
+var _ datasource.DataSource = (*DsCluster)(nil)
+
+func DataSourceCluster() datasource.DataSource {
+	return &DsCluster{}
+}
+
+type DsCluster struct {
+	cfg *config.Config
+}
+
+func (d *DsCluster) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_cluster"
+}
+
 // Paralus DataSource Cluster
-func DataSourceCluster() *schema.Resource {
-	return &schema.Resource{
-		Description: "Retrieves a paralus cluster's information. Uses the [pctl](https://github.com/paralus/cli) library",
-		ReadContext: datasourceClusterRead,
-		Schema: map[string]*schema.Schema{
-			"id": {
-				Type:        schema.TypeString,
-				Description: "Cluster ID in the format \"PROJECT_NAME:CLUSTER_NAME\"",
-				Computed:    true,
+func (d *DsCluster) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+	resp.Schema = schema.Schema{
+		MarkdownDescription: "Retrieves a paralus cluster's information. Uses the [pctl](https://github.com/paralus/cli) library",
+		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				MarkdownDescription: "Cluster ID in the format \"PROJECT_NAME:CLUSTER_NAME\"",
+				Computed:            true,
 			},
-			"name": {
-				Type:        schema.TypeString,
-				Description: "Cluster name",
-				Required:    true,
+			"name": schema.StringAttribute{
+				MarkdownDescription: "Cluster name",
+				Required:            true,
 			},
-			"description": {
-				Type:        schema.TypeString,
-				Description: "Cluster description",
-				Computed:    true,
+			"description": schema.StringAttribute{
+				MarkdownDescription: "Cluster description",
+				Computed:            true,
 			},
-			"cluster_type": {
-				Type:        schema.TypeString,
-				Description: "Cluster type. For example, \"imported.\" ",
-				Computed:    true,
+			"cluster_type": schema.StringAttribute{
+				MarkdownDescription: "Cluster type. For example, \"imported.\" ",
+				Computed:            true,
 			},
-			"uuid": {
-				Type:        schema.TypeString,
-				Description: "Cluster UUID",
-				Computed:    true,
+			"uuid": schema.StringAttribute{
+				MarkdownDescription: "Cluster UUID",
+				Computed:            true,
 			},
-			"params": {
-				Type:        schema.TypeSet,
-				Description: "Import parameters",
-				Computed:    true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"provision_type": {
-							Type:        schema.TypeString,
-							Description: "Provision Type. For example, \"IMPORT\"",
-							Computed:    true,
-						},
-						"provision_environment": {
-							Type:        schema.TypeString,
-							Description: "Provision Environment. For example, \"CLOUD\"",
-							Computed:    true,
-						},
-						"provision_package_type": {
-							Type:        schema.TypeString,
-							Description: "Provision Type. For example, \"LINUX\"",
-							Computed:    true,
-						},
-						"environment_provider": {
-							Type:        schema.TypeString,
-							Description: "Provision Type. For example, \"GCP\"",
-							Computed:    true,
-						},
-						"kubernetes_provider": {
-							Type:        schema.TypeString,
-							Description: "Provision Type. For example, \"EKS\"",
-							Computed:    true,
-						},
-						"state": {
-							Type:        schema.TypeString,
-							Description: "Provision Type. For example, \"PROVISION\"",
-							Computed:    true,
-						},
+			"project": schema.StringAttribute{
+				MarkdownDescription: "Project containing cluster",
+				Required:            true,
+			},
+			// Will only ever be updated by provider
+			"bootstrap_files_combined": schema.StringAttribute{
+				MarkdownDescription: "YAML files used to deploy paralus agent to the cluster stored as a single massive file",
+				Computed:            true,
+			},
+			// Will only ever be updated by provider
+			"bootstrap_files": schema.ListAttribute{
+				MarkdownDescription: "YAML files used to deploy paralus agent to the cluster stored as a list",
+				Computed:            true,
+				ElementType:         types.StringType,
+			},
+			"labels": schema.MapAttribute{
+				MarkdownDescription: "Map of lables to include for cluster",
+				Computed:            true,
+				ElementType:         types.StringType,
+			},
+			"annotations": schema.MapAttribute{
+				MarkdownDescription: "Map of annotations to include for cluster",
+				Computed:            true,
+				ElementType:         types.StringType,
+			},
+			"relays": schema.StringAttribute{
+				MarkdownDescription: "Relays information",
+				Computed:            true,
+			},
+		},
+		Blocks: map[string]schema.Block{
+			"params": schema.SingleNestedBlock{
+				MarkdownDescription: "Import parameters",
+				Attributes: map[string]schema.Attribute{
+					"provision_type": schema.StringAttribute{
+						MarkdownDescription: "Provision Type. For example, \"IMPORT\"",
+						Computed:            true,
+					},
+					"provision_environment": schema.StringAttribute{
+						MarkdownDescription: "Provision Environment. For example, \"CLOUD\"",
+						Computed:            true,
+					},
+					"provision_package_type": schema.StringAttribute{
+						MarkdownDescription: "Provision Type. For example, \"LINUX\"",
+						Computed:            true,
+					},
+					"environment_provider": schema.StringAttribute{
+						MarkdownDescription: "Provision Type. For example, \"GCP\"",
+						Computed:            true,
+					},
+					"kubernetes_provider": schema.StringAttribute{
+						MarkdownDescription: "Provision Type. For example, \"EKS\"",
+						Computed:            true,
+					},
+					"state": schema.StringAttribute{
+						MarkdownDescription: "Provision Type. For example, \"PROVISION\"",
+						Computed:            true,
 					},
 				},
-			},
-			"project": {
-				Type:        schema.TypeString,
-				Description: "Project containing cluster",
-				Required:    true,
-			},
-			// Will only ever be updated by provider
-			"bootstrap_files_combined": {
-				Type:        schema.TypeString,
-				Description: "YAML files used to deploy paralus agent to the cluster stored as a single massive file",
-				Computed:    true,
-			},
-			// Will only ever be updated by provider
-			"bootstrap_files": {
-				Type:        schema.TypeList,
-				Description: "YAML files used to deploy paralus agent to the cluster stored as a list",
-				Computed:    true,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
-			},
-			"labels": {
-				Type:        schema.TypeMap,
-				Description: "Map of lables to include for cluster",
-				Computed:    true,
-			},
-			"annotations": {
-				Type:        schema.TypeMap,
-				Description: "Map of annotations to include for cluster",
-				Computed:    true,
-			},
-			"relays": {
-				Type:        schema.TypeString,
-				Description: "Relays information",
-				Computed:    true,
 			},
 		},
 	}
 }
 
-// Retreive cluster JSON info
-func datasourceClusterRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	var diags diag.Diagnostics
+func (d *DsCluster) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+	// Always perform a nil check when handling ProviderData because Terraform
+	// sets that data after it calls the ConfigureProvider RPC.
+	if req.ProviderData == nil {
+		return
+	}
 
-	clusterId := d.Get("name").(string)
-	projectId := d.Get("project").(string)
+	cfg, ok := req.ProviderData.(*config.Config)
+
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Unexpected Data Source Configure Type",
+			fmt.Sprintf("Expected *config.Config, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+		)
+
+		return
+	}
+
+	d.cfg = cfg
+}
+
+// Retreive cluster JSON info
+func (d *DsCluster) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+
+	// Prevent panic if the provider has not been configured.
+	if d.cfg == nil {
+		resp.Diagnostics.AddError(
+			"Unconfigured PCTL Config",
+			"Expected configured PCTL config. Please ensure the values are passed in or report this issue to the provider developers.",
+		)
+		return
+	}
+
+	var data *structs.Cluster
+	diags := req.Config.Get(ctx, &data)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	projectId := data.Project.ValueString()
+	clusterId := data.Name.ValueString()
 
 	diags = utils.AssertStringNotEmpty("cluster project", projectId)
-	if diags.HasError() {
-		return diags
-	}
-
+	resp.Diagnostics.Append(diags...)
 	diags = utils.AssertStringNotEmpty("cluster name", clusterId)
-	if diags.HasError() {
-		return diags
+	resp.Diagnostics.Append(diags...)
+
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
-	d.SetId(clusterId + ":" + projectId)
+	data.Id = types.StringValue(clusterId + ":" + projectId)
 
-	tflog.Trace(ctx, "Retrieving cluster info", map[string]interface{}{
+	tflog.Trace(ctx, "Retrieving bootstrap info", map[string]interface{}{
 		"cluster": clusterId,
 		"project": projectId,
 	})
-
-	cfg := m.(*config.Config)
-	auth := cfg.GetAppAuthProfile()
-	tflog.Debug(ctx, fmt.Sprintf("datasourceClusterRead provider config used: %s", utils.GetConfigAsMap(cfg)))
+	auth := d.cfg.GetAppAuthProfile()
+	tflog.Debug(ctx, fmt.Sprintf("Read provider config used: %s", utils.GetConfigAsMap(d.cfg)))
 
 	clusterStruct, err := utils.GetCluster(ctx, clusterId, projectId, auth)
 
 	if err != nil {
-		d.SetId("")
-		return diag.FromErr(errors.Wrapf(err, "error locating cluster %s in project %s",
-			clusterId, projectId))
+		resp.Diagnostics.AddError(fmt.Sprintf("error locating cluster %s in project %s",
+			clusterId, projectId), err.Error())
+		return
 	}
 
-	utils.BuildResourceFromClusterStruct(clusterStruct, d)
-	err = utils.SetBootstrapFileAndRelays(ctx, d, auth)
-	if err != nil {
-		return diag.FromErr(err)
+	diags = utils.BuildResourceFromClusterStruct(ctx, clusterStruct, data, auth)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
-	return diags
+	diags = resp.State.Set(ctx, &data)
+	resp.Diagnostics.Append(diags...)
 
 }

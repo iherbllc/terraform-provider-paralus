@@ -28,15 +28,14 @@ Retrieves a user's kubeconfig information. Uses the [pctl](https://github.com/pa
 
 - `client_certificate_data` (String, Sensitive) Client certificate data
 - `client_key_data` (String, Sensitive) Client key data
-- `cluster_info` (List of Object) KubeConfig cluster information (see [below for nested schema](#nestedatt--cluster_info))
-- `id` (String) The ID of this resource.
+- `cluster_info` (Attributes List) KubeConfig cluster information (see [below for nested schema](#nestedatt--cluster_info))
 
 <a id="nestedatt--cluster_info"></a>
 ### Nested Schema for `cluster_info`
 
 Read-Only:
 
-- `certificate_authority_data` (String)
-- `server` (String)
+- `certificate_authority_data` (String, Sensitive) Certificate authority data for cluster
+- `server` (String) URL to server
 
 

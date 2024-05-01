@@ -8,8 +8,8 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
 )
 
@@ -17,7 +17,7 @@ import (
 func TestAccParalusResourceMissingCluster_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		// CheckDestroy: testAccCheckClusterResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
@@ -45,7 +45,7 @@ func testAccClusterResourceConfigMissingCluster() string {
 func TestAccParalusResourceClusterMissingProject_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		// CheckDestroy: testAccCheckClusterResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
@@ -74,7 +74,7 @@ func testAccClusterResourceConfigMissingProject() string {
 func TestAccParalusResourceClusterEmptyProject_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		// CheckDestroy: testAccCheckClusterResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
@@ -97,6 +97,12 @@ func testAccClusterResourceConfiEmptyProject() string {
 			name = "crcep-test"
 			project = ""
 			cluster_type = "imported"
+			params {
+				provision_type = "IMPORT"
+				provision_environment = "CLOUD"
+				kubernetes_provider = "EKS"
+				state = "PROVISION"
+			}
 		}
 	`, providerConfig)
 }
@@ -105,7 +111,7 @@ func testAccClusterResourceConfiEmptyProject() string {
 func TestAccParalusResourceEmptyCluster_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		// CheckDestroy: testAccCheckClusterResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
@@ -128,6 +134,43 @@ func testAccClusterResourceConfigEmptyCluster() string {
 			name = ""
 			project = "ccec-test"
 			cluster_type = "imported"
+			params {
+				provision_type = "IMPORT"
+				provision_environment = "CLOUD"
+				kubernetes_provider = "EKS"
+				state = "PROVISION"
+			}
+		}
+	`, providerConfig)
+}
+
+// Test empty cluster name
+func TestAccParalusResourceEmptyParams_basic(t *testing.T) {
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		// CheckDestroy: testAccCheckClusterResourceDestroy(t),
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccClusterResourceConfigEmptyParams(),
+				ExpectError: regexp.MustCompile(".*Required Attribute.*"),
+			},
+		},
+	})
+}
+
+func testAccClusterResourceConfigEmptyParams() string {
+
+	conf = paralusProviderConfig()
+	providerConfig := providerString(conf, "cluster_empty_params")
+	return fmt.Sprintf(`
+		%s
+
+		resource "paralus_cluster" "emptyparams_test" {
+			provider = paralus.cluster_empty_params
+			name = "blah"
+			project = "ccec-test"
+			cluster_type = "imported"
 		}
 	`, providerConfig)
 }
@@ -139,9 +182,9 @@ func TestAccParalusResourceProjectCluster_full(t *testing.T) {
 	clusterRsName := "paralus_cluster.testcluster"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccConfigPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckClusterResourceDestroy(t),
+		PreCheck:                 func() { testAccConfigPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckClusterResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccProviderValidResource(`
@@ -176,9 +219,10 @@ func TestAccParalusResourceProjectCluster_full(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      clusterRsName,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            clusterRsName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"annotations", "labels"},
 			},
 			{
 				ResourceName:      projectRsName,
@@ -193,9 +237,9 @@ func TestAccParalusResourceProjectCluster_full(t *testing.T) {
 func TestAccParalusResourceCluster_MissingClusterType(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccConfigPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckClusterResourceDestroy(t),
+		PreCheck:                 func() { testAccConfigPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckClusterResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccProviderValidResource(`
@@ -214,9 +258,9 @@ func TestAccParalusResourceCluster_MissingClusterType(t *testing.T) {
 func TestAccParalusResourceClusterUnknownProject_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccConfigPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckClusterResourceDestroy(t),
+		PreCheck:                 func() { testAccConfigPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckClusterResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccProviderValidResource(`
@@ -242,9 +286,9 @@ func TestAccParalusResourceClusterUnknownProject_basic(t *testing.T) {
 func TestAccParalusResourceCluster_WithProjectDatasource(t *testing.T) {
 	clusterRsName := "paralus_cluster.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccConfigPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckClusterResourceDestroy(t),
+		PreCheck:                 func() { testAccConfigPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckClusterResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccProviderValidResource(`
@@ -271,9 +315,10 @@ func TestAccParalusResourceCluster_WithProjectDatasource(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      clusterRsName,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            clusterRsName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"annotations", "labels"},
 			},
 		},
 	})
@@ -284,9 +329,9 @@ func TestAccParalusResourceCluster_Full(t *testing.T) {
 	clusterRsName := "paralus_cluster.test"
 	projectRsName := "paralus_project.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccConfigPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckClusterResourceDestroy(t),
+		PreCheck:                 func() { testAccConfigPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckClusterResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccProviderValidResource(`
@@ -317,9 +362,10 @@ func TestAccParalusResourceCluster_Full(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      clusterRsName,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            clusterRsName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"annotations", "labels"},
 			},
 			{
 				ResourceName:      projectRsName,
@@ -334,9 +380,9 @@ func TestAccParalusResourceCluster_Full(t *testing.T) {
 func TestAccParalusResourceCluster_basic(t *testing.T) {
 	clusterRsName := "paralus_cluster.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccConfigPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckClusterResourceDestroy(t),
+		PreCheck:                 func() { testAccConfigPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckClusterResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccProviderValidResource(`
@@ -360,9 +406,10 @@ func TestAccParalusResourceCluster_basic(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      clusterRsName,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            clusterRsName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"annotations", "labels"},
 			},
 		},
 	})
@@ -451,3 +498,61 @@ func testAccCheckResourceAttributeSet(resourceName string, attrName string) func
 		return nil
 	}
 }
+
+// func TestResource_UpgradeFromVersion(t *testing.T) {
+// 	/* ... */
+// 	resource.Test(t, resource.TestCase{
+// 		Steps: []resource.TestStep{
+// 			{
+// 				ExternalProviders: map[string]resource.ExternalProvider{
+// 					"paralus": {
+// 						VersionConstraint: "0.0.47",
+// 						Source:            "iherbllc/paralus",
+// 					},
+// 				},
+// 				Config: testAccProviderValidResource(`resource "paralus_cluster" "example" {
+// 							provider = paralus.valid_resource
+// 							name = "basic-test1"
+// 							project = "acctest-donotdelete"
+// 							cluster_type = "imported"
+// 							params {
+// 								provision_type = "IMPORT"
+// 								provision_environment = "CLOUD"
+// 								kubernetes_provider = "EKS"
+// 								state = "PROVISION"
+// 							}
+//                         }`),
+// 				Check: resource.ComposeTestCheckFunc(
+// 					resource.TestCheckResourceAttr("paralus_cluster.example", "name", "basic-test1"),
+// 					resource.TestCheckResourceAttr("paralus_cluster.example", "project", "acctest-donotdelete"),
+// 					/* ... */
+// 				),
+// 			},
+// 			{
+// 				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+// 				Config: testAccProviderValidResource(`resource "paralus_cluster" "example" {
+// 							provider = paralus.valid_resource
+// 							name = "basic-test1"
+// 							project = "acctest-donotdelete"
+// 							cluster_type = "imported"
+// 							params {
+// 								provision_type = "IMPORT"
+// 								provision_environment = "CLOUD"
+// 								kubernetes_provider = "EKS"
+// 								state = "PROVISION"
+// 							}
+//                         }`),
+// 				// ConfigPlanChecks is a terraform-plugin-testing feature.
+// 				// If acceptance testing is still using terraform-plugin-sdk/v2,
+// 				// use `PlanOnly: true` instead. When migrating to
+// 				// terraform-plugin-testing, switch to `ConfigPlanChecks` or you
+// 				// will likely experience test failures.
+// 				ConfigPlanChecks: resource.ConfigPlanChecks{
+// 					PreApply: []plancheck.PlanCheck{
+// 						plancheck.ExpectEmptyPlan(),
+// 					},
+// 				},
+// 			},
+// 		},
+// 	})
+// }

@@ -41,14 +41,14 @@ resource "paralus_cluster" "testcluster" {
 
 - `annotations` (Map of String) Map of annotations to include for cluster
 - `labels` (Map of String) Map of lables to include for cluster
-- `params` (Block Set, Max: 1) Import parameters (see [below for nested schema](#nestedblock--params))
+- `params` (Block, Optional) Import parameters (see [below for nested schema](#nestedblock--params))
 
 ### Read-Only
 
 - `bootstrap_files` (List of String) YAML files used to deploy paralus agent to the cluster stored as a list of files
 - `bootstrap_files_combined` (String) YAML files used to deploy paralus agent to the cluster stored as a single massive file
 - `description` (String) Cluster description. Paralus API sets it the same as cluster name
-- `id` (String) Cluster ID in the format "PROJECT_NAME:CLUSTER_NAME"
+- `id` (String, Deprecated) Cluster ID in the format "PROJECT_NAME:CLUSTER_NAME"
 - `relays` (String) Relays information
 - `uuid` (String) Cluster UUID
 

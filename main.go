@@ -2,10 +2,11 @@
 package main
 
 import (
+	"context"
 	"flag"
+	"log"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/plugin"
+	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/iherbllc/terraform-provider-paralus/internal/provider"
 )
 
@@ -19,13 +20,16 @@ func main() {
 	flag.BoolVar(&debug, "debug", false, "set to true to run the provider with support for debuggers like delve")
 	flag.Parse()
 
-	opts := &plugin.ServeOpts{
-		Debug:        debug,
-		ProviderAddr: "github.com/iherbllc/paralus",
-		ProviderFunc: func() *schema.Provider {
-			return provider.Provider()
+	err := providerserver.Serve(
+		context.Background(),
+		provider.New,
+		providerserver.ServeOpts{
+			Debug:   debug,
+			Address: "github.com/iherbllc/paralus",
 		},
-	}
+	)
 
-	plugin.Serve(opts)
+	if err != nil {
+		log.Fatal(err)
+	}
 }

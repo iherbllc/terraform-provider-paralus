@@ -8,11 +8,11 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/iherbllc/terraform-provider-paralus/internal/structs"
 	"github.com/jpillora/backoff"
-	"github.com/pkg/errors"
 
 	"github.com/paralus/cli/pkg/authprofile"
 	"github.com/paralus/cli/pkg/config"
@@ -22,76 +22,117 @@ import (
 )
 
 // Build the project struct from a schema resource
-func BuildProjectStructFromResource(d *schema.ResourceData) *systemv3.Project {
+func BuildProjectStructFromResource(ctx context.Context, data *structs.Project) (*systemv3.Project, diag.Diagnostics) {
 
 	projectStruct := systemv3.Project{
 		Kind: "Project",
 		Metadata: &commonv3.Metadata{
-			Name:        d.Get("name").(string),
-			Description: d.Get("description").(string),
-			Id:          d.Get("uuid").(string),
+			Name:        data.Name.ValueString(),
+			Description: data.Description.ValueString(),
+			Id:          data.Id.ValueString(),
 		},
 		Spec: &systemv3.ProjectSpec{},
 	}
 	// define project roles
-	if projectRoles, ok := d.GetOk("project_roles"); ok {
+	if !data.ProjectRoles.IsNull() {
+		projectRoles := make([]structs.ProjectRole, 0, len(data.ProjectRoles.Elements()))
+		diags := data.ProjectRoles.ElementsAs(ctx, &projectRoles, false)
+		if diags.HasError() {
+			return nil, diags
+		}
 		projectStruct.Spec.ProjectNamespaceRoles = make([]*userv3.ProjectNamespaceRole, 0)
-		rolesList := projectRoles.([]interface{})
-		for _, eachRole := range rolesList {
-			if role, ok := eachRole.(map[string]interface{}); ok {
-				namespace := role["namespace"].(string)
-				group := role["group"].(string)
-				projectStruct.Spec.ProjectNamespaceRoles = append(projectStruct.Spec.ProjectNamespaceRoles, &userv3.ProjectNamespaceRole{
-					Project:   &projectStruct.Metadata.Name, // project will always default to the project name to avoid user error
-					Role:      role["role"].(string),
-					Namespace: &namespace,
-					Group:     &group,
-				})
-			}
+		for _, projectRole := range projectRoles {
+			namespace := projectRole.Namespace.ValueString()
+			group := projectRole.Group.ValueString()
+			projectStruct.Spec.ProjectNamespaceRoles = append(projectStruct.Spec.ProjectNamespaceRoles, &userv3.ProjectNamespaceRole{
+				Project:   &projectStruct.Metadata.Name, // project will always default to the project name to avoid user error
+				Role:      projectRole.Role.ValueString(),
+				Namespace: &namespace,
+				Group:     &group,
+			})
 		}
 	}
 	// define user roles
-	if userRoles, ok := d.GetOk("user_roles"); ok {
+	if !data.UserRoles.IsNull() {
+		userRoles := make([]structs.UserRole, 0, len(data.UserRoles.Elements()))
+		diags := data.UserRoles.ElementsAs(ctx, &userRoles, false)
+		if diags.HasError() {
+			return nil, diags
+		}
 		projectStruct.Spec.UserRoles = make([]*userv3.UserRole, 0)
-		rolesList := userRoles.([]interface{})
-		for _, eachRole := range rolesList {
-			if role, ok := eachRole.(map[string]interface{}); ok {
-				projectStruct.Spec.UserRoles = append(projectStruct.Spec.UserRoles, &userv3.UserRole{
-					User:      role["user"].(string),
-					Role:      role["role"].(string),
-					Namespace: role["namespace"].(string),
-				})
-			}
+		for _, userRole := range userRoles {
+			projectStruct.Spec.UserRoles = append(projectStruct.Spec.UserRoles, &userv3.UserRole{
+				User:      userRole.User.ValueString(),
+				Role:      userRole.Role.ValueString(),
+				Namespace: userRole.Namespace.ValueString(),
+			})
 		}
 	}
 
-	return &projectStruct
+	return &projectStruct, nil
 }
 
 // Build the schema resource from project Struct
-func BuildResourceFromProjectStruct(project *systemv3.Project, d *schema.ResourceData) {
-	d.Set("name", project.Metadata.Name)
-	d.Set("description", project.Metadata.Description)
-	d.Set("uuid", project.Metadata.Id)
-	projectRoles := make([]map[string]interface{}, 0)
-	for _, role := range project.Spec.GetProjectNamespaceRoles() {
-		projectRoles = append(projectRoles, map[string]interface{}{
-			"project":   role.Project,
-			"role":      role.Role,
-			"namespace": role.Namespace,
-			"group":     role.Group,
+func BuildResourceFromProjectStruct(ctx context.Context, project *systemv3.Project, data *structs.Project) diag.Diagnostics {
+	var diagsReturn diag.Diagnostics
+	var diags diag.Diagnostics
+	data.Id = types.StringValue(project.Metadata.Name)
+	data.Name = types.StringValue(project.Metadata.Name)
+	data.Description = types.StringValue(project.Metadata.Description)
+	data.Uuid = types.StringValue(project.Metadata.Id)
+	projectRoles := make([]structs.ProjectRole, 0)
+	for _, role := range project.Spec.ProjectNamespaceRoles {
+		project := types.StringValue(project.Metadata.Name)
+		if project == types.StringValue("") {
+			project = types.StringNull()
+		}
+		namespace := types.StringValue(DerefString(role.Namespace))
+		if namespace == types.StringValue("") {
+			namespace = types.StringNull()
+		}
+		roleVal := types.StringValue(role.Role)
+		if roleVal == types.StringValue("") {
+			roleVal = types.StringNull()
+		}
+		group := types.StringValue(DerefString(role.Group))
+		if group == types.StringValue("") {
+			group = types.StringNull()
+		}
+		projectRoles = append(projectRoles, structs.ProjectRole{
+			Project:   project,
+			Role:      roleVal,
+			Namespace: namespace,
+			Group:     group,
 		})
 	}
-	d.Set("project_roles", projectRoles)
-	userRoles := make([]map[string]interface{}, 0)
+
+	// Couresty of https://github.com/hashicorp/terraform-plugin-framework/issues/713#issuecomment-1577729734
+	data.ProjectRoles, diags = types.ListValueFrom(ctx, types.ObjectType{AttrTypes: structs.ProjectRole{}.AttributeTypes()}, projectRoles)
+	diagsReturn.Append(diags...)
+
+	userRoles := make([]structs.UserRole, 0)
 	for _, role := range project.Spec.UserRoles {
-		userRoles = append(userRoles, map[string]interface{}{
-			"user":      role.User,
-			"role":      role.Role,
-			"namespace": role.Namespace,
+		userVal := types.StringValue(role.User)
+		if userVal == types.StringValue("") {
+			userVal = types.StringNull()
+		}
+		namespace := types.StringValue(role.Namespace)
+		if namespace == types.StringValue("") {
+			namespace = types.StringNull()
+		}
+		roleVal := types.StringValue(role.Role)
+		if roleVal == types.StringValue("") {
+			roleVal = types.StringNull()
+		}
+		userRoles = append(userRoles, structs.UserRole{
+			User:      userVal,
+			Role:      roleVal,
+			Namespace: namespace,
 		})
 	}
-	d.Set("user_roles", userRoles)
+	data.UserRoles, diags = types.ListValueFrom(ctx, types.ObjectType{AttrTypes: structs.UserRole{}.AttributeTypes()}, userRoles)
+	diagsReturn.Append(diags...)
+	return diags
 }
 
 // Check to make sure that the list of roles from ProjectNamespaceRole has unique role values.
@@ -103,7 +144,8 @@ func AssertUniqueRoles(pnrStruct []*userv3.ProjectNamespaceRole) diag.Diagnostic
 		pnrStructMap := make(map[string]string)
 		for _, role := range pnrStruct {
 			if _, exists := pnrStructMap[role.Role]; exists {
-				return diag.FromErr(errors.New("roles must be distinct between project_roles blocks. If the same is required, then grant through the group instead"))
+				diags.AddError("roles must be distinct between project_roles blocks. If the same is required, then grant through the group instead", "")
+				return diags
 			}
 			pnrStructMap[role.Role] = "unique"
 		}
@@ -121,7 +163,8 @@ func AssertUniquePRNStruct(pnrStruct []*userv3.ProjectNamespaceRole) diag.Diagno
 		for _, role := range pnrStruct {
 			pnrkey := fmt.Sprintf("%s,%s,%s,%s", *role.Group, *role.Namespace, *role.Project, role.Role)
 			if _, exists := pnrStructMap[pnrkey]; exists {
-				return diag.FromErr(fmt.Errorf("group, namespace, project, and role entry already found: '%s'. must have a unique combination", pnrkey))
+				diags.AddError(fmt.Sprintf("group, namespace, project, and role entry already found: '%s'. must have a unique combination", pnrkey), "")
+				return diags
 			}
 			pnrStructMap[pnrkey] = "unique"
 		}
@@ -150,10 +193,11 @@ func CheckProjectsFromPNRStructExist(ctx context.Context, pnrStruct []*userv3.Pr
 				_, err := GetProjectByName(ctx, *projectName, auth)
 				if err != nil {
 					if err == ErrResourceNotExists {
-						return diag.FromErr(fmt.Errorf("project '%s' does not exist", *projectName))
+						diags.AddError(fmt.Sprintf("project '%s' does not exist", *projectName), "")
+						return diags
 					}
-					return diag.FromErr(errors.Wrapf(err, "error getting project %s info",
-						*projectName))
+					diags.AddError(fmt.Sprintf("error getting project %s info", *projectName), err.Error())
+					return diags
 				}
 
 			}
@@ -175,8 +219,8 @@ func CheckAllowEmptyProject(role string) diag.Diagnostics {
 			return diags
 		}
 	}
-
-	return diag.FromErr(fmt.Errorf("project must be specified when assigning role '%s'", role))
+	diags.AddError(fmt.Sprintf("project must be specified when assigning role '%s'", role), "")
+	return diags
 }
 
 // Get project by name
@@ -203,7 +247,11 @@ func ApplyProject(ctx context.Context, proj *systemv3.Project, auth *authprofile
 	if projExisting != nil {
 		tflog.Debug(context.Background(), fmt.Sprintf("updating project: %s", proj.Metadata.Name))
 		uri := fmt.Sprintf("/auth/v3/partner/%s/organization/%s/project/%s", cfg.Partner, cfg.Organization, proj.Metadata.Name)
-		_, err := makeRestCall(ctx, uri, "PUT", proj, auth)
+		resp, err := makeRestCall(ctx, uri, "PUT", proj, auth)
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal([]byte(resp), proj)
 		if err != nil {
 			return err
 		}
@@ -213,7 +261,11 @@ func ApplyProject(ctx context.Context, proj *systemv3.Project, auth *authprofile
 		}
 		tflog.Debug(context.Background(), fmt.Sprintf("creating project: %s", proj.Metadata.Name))
 		uri := fmt.Sprintf("/auth/v3/partner/%s/organization/%s/project", cfg.Partner, cfg.Organization)
-		_, err := makeRestCall(ctx, uri, "POST", proj, auth)
+		resp, err := makeRestCall(ctx, uri, "POST", proj, auth)
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal([]byte(resp), proj)
 		if err != nil {
 			return err
 		}

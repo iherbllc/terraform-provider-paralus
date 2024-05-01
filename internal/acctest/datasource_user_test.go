@@ -7,15 +7,15 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
 // Test empty project name
 func TestAccParalusDataSourceNoUsersReturned_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		// CheckDestroy: testAccCheckProjectDataSourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
@@ -36,7 +36,7 @@ func TestAccParalusDataSourceNoUsersReturned_basic(t *testing.T) {
 func TestAccParalusDataSourceMoreThan1QFilterSpecified_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		// CheckDestroy: testAccCheckProjectDataSourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
@@ -60,7 +60,7 @@ func TestAccParalusDataSourceBadEmailFilter_basic(t *testing.T) {
 	resource_name := "users"
 	email := "blah.com"
 	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccProviderValidResource(fmt.Sprintf(`
@@ -82,7 +82,7 @@ func TestAccParalusDataSourceFilterUsersEmail_basic(t *testing.T) {
 	resource_name := "users"
 	email := "local-user@example.com"
 	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccProviderValidResource(fmt.Sprintf(`
@@ -107,7 +107,7 @@ func TestAccParalusDataSourceNoFilteredUserFoundCaseSensitive_basic(t *testing.T
 	resource_name := "users"
 	fname := "local"
 	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccProviderValidResource(fmt.Sprintf(`
@@ -130,7 +130,7 @@ func TestAccParalusDataSourceFirstName_basic(t *testing.T) {
 	resource_name := "users"
 	fname := "Local"
 	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccProviderValidResource(fmt.Sprintf(`
@@ -154,7 +154,7 @@ func TestAccParalusDataSourceFilterUsersLastNameGT1Allowed_basic(t *testing.T) {
 	resource_name := "users"
 	lname := "User"
 	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccProviderValidResource(fmt.Sprintf(`
@@ -181,7 +181,7 @@ func TestAccParalusDataSourceFilterUsersFirstName_basic(t *testing.T) {
 	resource_name := "users"
 	fname := "Local"
 	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccProviderValidResource(fmt.Sprintf(`
@@ -205,7 +205,7 @@ func TestAccParalusDataSourceFilterByProject_basic(t *testing.T) {
 	resource_name := "users"
 	project := "default"
 	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccProviderValidResource(fmt.Sprintf(`
@@ -231,7 +231,7 @@ func TestAccParalusDataSourceFilterByGroup_basic(t *testing.T) {
 	resource_name := "users"
 	group := "acctest-group"
 	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccProviderValidResource(fmt.Sprintf(`
@@ -257,7 +257,7 @@ func TestAccParalusDataSourceFilterByRole_basic(t *testing.T) {
 	resource_name := "users"
 	role := "NAMESPACE_READ_ONLY"
 	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccProviderValidResource(fmt.Sprintf(`
@@ -282,7 +282,7 @@ func TestAccParalusDataSourceNoFilter_basic(t *testing.T) {
 
 	resource_name := "users"
 	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccProviderValidResource(fmt.Sprintf(`

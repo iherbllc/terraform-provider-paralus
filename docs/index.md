@@ -58,7 +58,7 @@ provider "paralus" {
 - `pctl_organization` (String)
 - `pctl_partner` (String)
 - `pctl_profile` (String) PCTL Profile
-- `pctl_rest_endpoint` (String) Rest Endpoint
+- `pctl_rest_endpoint` (String) PCTL Profile
 - `pctl_skip_server_cert_valid` (String)
 
 ## Important Notes

@@ -7,8 +7,8 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
 )
 
@@ -16,7 +16,7 @@ import (
 func TestAccParalusResourceMissingGroup_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		// CheckDestroy: testAccCheckGroupResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
@@ -44,7 +44,7 @@ func testAccGroupResourceConfigMissingGroup() string {
 func TestAccParalusResourceEmptyGroup_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		// CheckDestroy: testAccCheckGroupResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
@@ -73,7 +73,7 @@ func testAccGroupResourceConfigEmptyGroup() string {
 // func TestAccParalusResourceGroupBadOrg_basic(t *testing.T) {
 
 // 	resource.Test(t, resource.TestCase{
-// 		Providers: testAccProviders,
+// 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 // 		// CheckDestroy: testAccCheckGroupResourceDestroy(t),
 // 		Steps: []resource.TestStep{
 // 			{
@@ -106,9 +106,9 @@ func TestAccParalusResourceGroup_basic(t *testing.T) {
 	groupRsName := "paralus_group.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccConfigPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckGroupResourceDestroy(t),
+		PreCheck:                 func() { testAccConfigPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckGroupResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccProviderValidResource(`
@@ -222,9 +222,9 @@ func TestAccParalusResourceGroup_Project(t *testing.T) {
 	groupRsName := "paralus_group.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccConfigPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckGroupResourceDestroy(t),
+		PreCheck:                 func() { testAccConfigPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckGroupResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccProviderValidResource(`
@@ -250,9 +250,10 @@ func TestAccParalusResourceGroup_Project(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      groupRsName,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            groupRsName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"project_roles"},
 			},
 		},
 	})
@@ -286,9 +287,9 @@ func TestAccParalusResourceGroups_AddToProject(t *testing.T) {
 	groupRsName2 := "paralus_group.test2"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccConfigPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckGroupResourceDestroy(t),
+		PreCheck:                 func() { testAccConfigPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckGroupResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
 				ExpectNonEmptyPlan: true,
@@ -348,19 +349,22 @@ func TestAccParalusResourceGroups_AddToProject(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      groupRsName1,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            groupRsName1,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"project_roles"},
 			},
 			{
-				ResourceName:      groupRsName2,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            groupRsName2,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"project_roles"},
 			},
 			{
-				ResourceName:      projectRsName,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            projectRsName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"project_roles"},
 			},
 		},
 	})
@@ -371,9 +375,9 @@ func TestAccParalusResourceGroup_AddUser(t *testing.T) {
 	groupRsName1 := "paralus_group.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccConfigPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckGroupResourceDestroy(t),
+		PreCheck:                 func() { testAccConfigPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckGroupResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccProviderValidResource(`
@@ -403,9 +407,9 @@ func TestAccParalusResourceGroup_AddUser(t *testing.T) {
 // Test adding a non-existing user to a group
 func TestAccParalusResourceGroup_AddNonExistingUser(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccConfigPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckGroupResourceDestroy(t),
+		PreCheck:                 func() { testAccConfigPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckGroupResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccProviderValidResource(`
@@ -424,9 +428,9 @@ func TestAccParalusResourceGroup_AddNonExistingUser(t *testing.T) {
 // Test adding a non-existing project to a group
 func TestAccParalusResourceGroup_AddNonExistingProject(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccConfigPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckGroupResourceDestroy(t),
+		PreCheck:                 func() { testAccConfigPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckGroupResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccProviderValidResource(`
@@ -448,9 +452,9 @@ func TestAccParalusResourceGroup_AddNonExistingProject(t *testing.T) {
 // Test requesting a project role witihout specifying a project
 func TestAccParalusResourceProject_NoProjectSpecified(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccConfigPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckGroupResourceDestroy(t),
+		PreCheck:                 func() { testAccConfigPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckGroupResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccProviderValidResource(`
@@ -500,9 +504,9 @@ func testAccCheckResourceGroupCheckUserList(resourceName string, user string) fu
 // Test multinamespace groups with same namespace
 func TestAccParalusNamespaceGroups_Multi(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccConfigPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckGroupResourceDestroy(t),
+		PreCheck:                 func() { testAccConfigPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckGroupResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccProviderValidResource(`
@@ -542,6 +546,74 @@ func TestAccParalusNamespaceGroups_Multi(t *testing.T) {
 						role      = "NAMESPACE_READ_ONLY"
 					  }
 					}`),
+				ExpectError: regexp.MustCompile(".*must have a unique combination.*"),
+			},
+		},
+	})
+}
+
+// Test multinamespace groups with same namespace
+func TestAccParalusNamespaceGroups_MultiDynamic(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccConfigPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckGroupResourceDestroy(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderValidResource(`
+				locals {
+					groups = [
+						{
+							description =  "catalog namespace read group"
+							name =  "Catalog Namespace Read"
+							type =  "SYSTEM"
+							users =  [ "acctest2-user@example.com", "acctest-user@example.com"]
+							project_roles = [
+								{
+									namespace =  "catalog"
+									project =  "acctest-donotdelete"
+									role =  "NAMESPACE_READ_ONLY"
+								},
+								{
+									namespace =  "garden"
+									project =  "acctest-donotdelete"
+									role =  "NAMESPACE_READ_ONLY"
+								},
+								{
+									namespace = "telemetry"
+									project =  "acctest-donotdelete"
+									role =  "NAMESPACE_READ_ONLY"
+								},
+								{
+									namespace =  "garden"
+									project =  "acctest-donotdelete"
+									role =  "NAMESPACE_READ_ONLY"
+								},
+								{
+									namespace =  "web"
+									project =  "acctest-donotdelete"
+									role =  "NAMESPACE_READ_ONLY"
+								}
+							]
+						}
+					]
+				}
+				resource "paralus_group" "namespace_read" {
+					for_each = { for group in local.groups : group.name => group }
+
+					name = each.value.name
+					description = each.value.description
+					users = can(each.value.users) ? each.value.users : []
+				  
+					dynamic "project_roles" {
+					  for_each = each.value.project_roles
+					  content {
+						role  = project_roles.value.role
+						project = project_roles.value.project
+						namespace = project_roles.value.namespace
+					  }
+					}
+				}`),
 				ExpectError: regexp.MustCompile(".*must have a unique combination.*"),
 			},
 		},

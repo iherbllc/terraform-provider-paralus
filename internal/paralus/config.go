@@ -6,51 +6,48 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
 	"github.com/paralus/cli/pkg/config"
 	"github.com/pkg/errors"
 )
 
 // Generates a new config either from a json file or via environment variables
-func NewConfig(ctx context.Context, d *schema.ResourceData) (*config.Config, diag.Diagnostics) {
+func NewConfig(ctx context.Context, profile string, rest_endpoint string,
+	ops_endpoint string, api_key string, api_secret string, config_json string, partner string,
+	organization string, skip_cert_valid string) (*config.Config, error) {
 
-	// Warning or errors can be collected in a slice type
-	var diags diag.Diagnostics
-
-	if configJson, ok := d.GetOk("pctl_config_json"); ok {
-		tflog.Debug(ctx, fmt.Sprintf("Using PCTL config json %s", configJson))
-		newConfig, err := NewConfigFromFile(configJson.(string))
+	if config_json != "" {
+		tflog.Debug(ctx, fmt.Sprintf("Using PCTL config json %s", config_json))
+		newConfig, err := NewConfigFromFile(config_json)
 		if err != nil {
-			return nil, diag.FromErr(errors.Wrapf(err,
-				"error parsing config_json file %s", configJson))
+			return nil, errors.Wrapf(err,
+				"error parsing config_json file %s", config_json)
 		}
 
 		err = utils.AssertConfigNotEmpty(newConfig)
 		if err != nil {
-			return nil, diag.FromErr(errors.Wrap(err, fmt.Sprintf("invalid loaded config %s", configJson)))
+			return nil, errors.Wrap(err, fmt.Sprintf("invalid loaded config %s", config_json))
 		}
 
-		return newConfig, diags
+		return newConfig, nil
 	}
 
 	newConfig := config.GetConfig()
-	newConfig.Profile = d.Get("pctl_profile").(string)
-	newConfig.RESTEndpoint = d.Get("pctl_rest_endpoint").(string)
-	newConfig.OPSEndpoint = d.Get("pctl_ops_endpoint").(string)
-	newConfig.APIKey = d.Get("pctl_api_key").(string)
-	newConfig.APISecret = d.Get("pctl_api_secret").(string)
-	newConfig.SkipServerCertValid = d.Get("pctl_skip_server_cert_valid").(string)
-	newConfig.Partner = d.Get("pctl_partner").(string)
-	newConfig.Organization = d.Get("pctl_organization").(string)
+	newConfig.Profile = profile
+	newConfig.RESTEndpoint = rest_endpoint
+	newConfig.OPSEndpoint = ops_endpoint
+	newConfig.APIKey = api_key
+	newConfig.APISecret = api_secret
+	newConfig.SkipServerCertValid = skip_cert_valid
+	newConfig.Partner = partner
+	newConfig.Organization = organization
 
 	err := utils.AssertConfigNotEmpty(newConfig)
 	if err != nil {
-		return nil, diag.FromErr(errors.Wrap(err, "error assigning config values"))
+		return nil, errors.Wrap(err, "error assigning config values")
 	}
 
-	return newConfig, diags
+	return newConfig, nil
 }
 
 // Generate a new PCTL Config from a json path

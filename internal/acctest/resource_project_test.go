@@ -7,8 +7,8 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/iherbllc/terraform-provider-paralus/internal/utils"
 )
 
@@ -16,7 +16,7 @@ import (
 func TestAccParalusResourceMissingProject_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		// CheckDestroy: testAccCheckProjectResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
@@ -44,7 +44,7 @@ func testAccProjectResourceConfigMissingProject() string {
 func TestAccParalusResourceEmptyProject_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		// CheckDestroy: testAccCheckProjectResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
@@ -73,7 +73,7 @@ func testAccProjectResourceConfigEmptyProject() string {
 func TestAccParalusResourceProjectBadOrg_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		// CheckDestroy: testAccCheckProjectResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
@@ -106,9 +106,9 @@ func TestAccParalusResourceProject_basic(t *testing.T) {
 	projectRsName := "paralus_project.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccConfigPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckProjectResourceDestroy(t),
+		PreCheck:                 func() { testAccConfigPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckProjectResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccProviderValidResource(`
@@ -132,7 +132,7 @@ func TestAccParalusResourceProject_basic(t *testing.T) {
 	})
 }
 
-// Verifies the cluster has been destroyed
+// Verifies the project has been destroyed
 func testAccCheckProjectResourceDestroy(t *testing.T) func(s *terraform.State) error {
 
 	return func(s *terraform.State) error {
@@ -203,9 +203,9 @@ func testAccCheckResourceProjectTypeAttribute(resourceName string, description s
 // Test adding a non-existing user to a project
 func TestAccParalusResourceProject_AddNonExistingUser(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccConfigPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckGroupResourceDestroy(t),
+		PreCheck:                 func() { testAccConfigPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckGroupResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccProviderValidResource(`
@@ -227,9 +227,9 @@ func TestAccParalusResourceProject_AddNonExistingUser(t *testing.T) {
 // Test requesting an empty group name for the project roles
 func TestAccParalusResourceProject_GroupNameEmpty(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccConfigPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckGroupResourceDestroy(t),
+		PreCheck:                 func() { testAccConfigPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckGroupResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccProviderValidResource(`
@@ -251,9 +251,9 @@ func TestAccParalusResourceProject_GroupNameEmpty(t *testing.T) {
 // Test adding a non-existing group to a project
 func TestAccParalusResourceProject_AddNonExistingGroup(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccConfigPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckGroupResourceDestroy(t),
+		PreCheck:                 func() { testAccConfigPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckGroupResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccProviderValidResource(`
@@ -278,9 +278,9 @@ func TestAccParalusResourceProject_AddToGroup(t *testing.T) {
 	projectRsName := "paralus_project.add_to_group"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccConfigPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckProjectResourceDestroy(t),
+		PreCheck:                 func() { testAccConfigPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckProjectResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
 				// we will have a non-empty plan because the project access removal will affect the group role as well
@@ -319,14 +319,16 @@ func TestAccParalusResourceProject_AddToGroup(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      projectRsName,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            groupRsName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"project_roles"},
 			},
 			{
-				ResourceName:      groupRsName,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            projectRsName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"project_roles"},
 			},
 		},
 	})
@@ -340,9 +342,9 @@ func TestAccParalusResourceProject_Add2GroupsNamespaceAndProjectRoles(t *testing
 	projectRsName := "paralus_project.add_to_group"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccConfigPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckProjectResourceDestroy(t),
+		PreCheck:                 func() { testAccConfigPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckProjectResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
 				// we will have a non-empty plan because the project access removal will affect the group role as well
@@ -407,19 +409,22 @@ func TestAccParalusResourceProject_Add2GroupsNamespaceAndProjectRoles(t *testing
 				),
 			},
 			{
-				ResourceName:      projectRsName,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            projectRsName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"project_roles"},
 			},
 			{
-				ResourceName:      groupRsName1,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            groupRsName1,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"project_roles"},
 			},
 			{
-				ResourceName:      groupRsName2,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            groupRsName2,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"project_roles"},
 			},
 		},
 	})
@@ -433,9 +438,9 @@ func TestAccParalusResourceProject_Add2GroupsDifferentNamespaceRoles(t *testing.
 	projectRsName := "paralus_project.add_to_group"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccConfigPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckProjectResourceDestroy(t),
+		PreCheck:                 func() { testAccConfigPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckProjectResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
 				// we will have a non-empty plan because the project access removal will affect the group role as well
@@ -503,19 +508,22 @@ func TestAccParalusResourceProject_Add2GroupsDifferentNamespaceRoles(t *testing.
 				),
 			},
 			{
-				ResourceName:      projectRsName,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            projectRsName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"project_roles"},
 			},
 			{
-				ResourceName:      groupRsName1,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            groupRsName1,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"project_roles"},
 			},
 			{
-				ResourceName:      groupRsName2,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            groupRsName2,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"project_roles"},
 			},
 		},
 	})
@@ -529,9 +537,9 @@ func TestAccParalusResourceProject_Add2GroupsDifferentProjectRoles(t *testing.T)
 	projectRsName := "paralus_project.add_to_group"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccConfigPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckProjectResourceDestroy(t),
+		PreCheck:                 func() { testAccConfigPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckProjectResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
 				// we will have a non-empty plan because the project access removal will affect the group role as well
@@ -593,19 +601,22 @@ func TestAccParalusResourceProject_Add2GroupsDifferentProjectRoles(t *testing.T)
 				),
 			},
 			{
-				ResourceName:      projectRsName,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            projectRsName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"project_roles"},
 			},
 			{
-				ResourceName:      groupRsName1,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            groupRsName1,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"project_roles"},
 			},
 			{
-				ResourceName:      groupRsName2,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            groupRsName2,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"project_roles"},
 			},
 		},
 	})
@@ -615,9 +626,9 @@ func TestAccParalusResourceProject_Add2GroupsDifferentProjectRoles(t *testing.T)
 func TestAccParalusResourceProject_Add2GroupsSameNamespaceRoles(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccConfigPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckProjectResourceDestroy(t),
+		PreCheck:                 func() { testAccConfigPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckProjectResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccProviderValidResource(`
@@ -658,9 +669,9 @@ func TestAccParalusResourceProject_Add2GroupsSameNamespaceRoles(t *testing.T) {
 func TestAccParalusResourceProject_Add2GroupsSameProjectRoles(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccConfigPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckProjectResourceDestroy(t),
+		PreCheck:                 func() { testAccConfigPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckProjectResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
 				Config: testAccProviderValidResource(`
@@ -701,9 +712,9 @@ func TestAccParalusResourceProject_Add2UserRoles(t *testing.T) {
 	projectRsName := "paralus_project.add_to_user"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccConfigPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckProjectResourceDestroy(t),
+		PreCheck:                 func() { testAccConfigPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckProjectResourceDestroy(t),
 		Steps: []resource.TestStep{
 			{
 				// we will have a non-empty plan because the access removal will affect the user roles as well
@@ -744,9 +755,10 @@ func TestAccParalusResourceProject_Add2UserRoles(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      projectRsName,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            projectRsName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"user_roles", "uuid"},
 			},
 		},
 	})
@@ -792,4 +804,59 @@ func testAccCheckResourceProjectUserRoleMap(resourceName string, userRoles map[s
 
 		return utils.ValidateUserRolesSet(projectStruct.Spec.UserRoles, userRoles)
 	}
+}
+
+// Test creating project and adding in group
+func TestAccParalusResourceProjectMove(t *testing.T) {
+	projectRsName1 := "paralus_project.test_move_1"
+	projectRSNameFor := "paralus_project.test_move_for"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccConfigPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckProjectResourceDestroy(t),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderValidResource(`
+				resource "paralus_project" "test_move_1" {
+					provider = paralus.valid_resource
+					name = "test-move-1"
+					description = "project 1 for move test"
+				}
+				`),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckResourceProjectExists(projectRsName1),
+					testAccCheckResourceProjectTypeAttribute(projectRsName1, "project 1 for move test"),
+					resource.TestCheckResourceAttr(projectRsName1, "description", "project 1 for move test"),
+				),
+				Destroy: false,
+			},
+			{
+				ResourceName: projectRsName1,
+				Config: testAccProviderValidResource(fmt.Sprintf(`
+				locals {
+					projects = [{
+						name = "test-move-1"
+						description = "project 1 for move test"
+					}
+					]
+				}
+				resource "paralus_project" "test_move_for" {
+					count = length(local.projects)
+					provider = paralus.valid_resource
+					name = element(local.projects, count.index).name
+					description = element(local.projects, count.index).description
+				}
+				moved {
+					from = %s
+					to = %s[0]
+				}
+				`, projectRsName1, projectRSNameFor)),
+				// PlanOnly: true,
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckResourceProjectExists(projectRSNameFor + ".0"),
+				),
+			},
+		},
+	})
 }

@@ -88,7 +88,7 @@ resource "paralus_group" "test" {
 
 ### Read-Only
 
-- `id` (String) Group ID in the format "GROUP_NAME"
+- `id` (String, Deprecated) Group ID in the format "GROUP_NAME"
 
 <a id="nestedblock--project_roles"></a>
 ### Nested Schema for `project_roles`
